@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/*
+  Venv design tokens — see DESIGN.md for the full rationale.
+  The home board is a floor plan of a shared workplace, so the whole
+  system borrows from technical/architectural drawings: hairline
+  borders, a faint grid, tick-mark rulers — instead of the rounded
+  card + soft-shadow SaaS default.
+*/
+:root {
+  --bg-base: #10161d;
+  --bg-surface: #182029;
+  --bg-surface-raised: #1f2933;
+
+  --line-grid: #1c2530;
+  --border: #2b3946;
+  --border-strong: #3b4c5c;
+
+  --text-primary: #edeff2;
+  --text-secondary: #8a97a6;
+  --text-muted: #5c6773;
+
+  --accent: #e8a33d;
+  --accent-strong: #f3b65a;
+  --accent-text: #3d2a0c;
+
+  --agent-manager: #e8a33d;
+  --agent-mentor: #4fb286;
+  --agent-hr: #a78bfa;
+
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+}
+
+@theme inline {
+  --color-bg-base: var(--bg-base);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-surface-raised: var(--bg-surface-raised);
+  --color-line-grid: var(--line-grid);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-text: var(--accent-text);
+  --color-agent-manager: var(--agent-manager);
+  --color-agent-mentor: var(--agent-mentor);
+  --color-agent-hr: var(--agent-hr);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+/* Faint blueprint grid, used behind the home board and other full-bleed
+   surfaces. Kept subtle on purpose — it's texture, not decoration. */
+.bg-blueprint-grid {
+  background-image:
+    linear-gradient(var(--line-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
