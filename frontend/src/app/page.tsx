@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="bg-blueprint-grid flex flex-1 flex-col items-center justify-center px-6">
@@ -19,6 +21,12 @@ export default function Home() {
         >
           Upload your CV to start
         </button>
+        <Link
+          href="/board"
+          className="text-xs text-text-muted transition-colors hover:text-text-secondary"
+        >
+          Preview: home board
+        </Link>
       </div>
     </main>
   );
