@@ -76,7 +76,7 @@ export default function BoardPage() {
   );
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="grid h-dvh grid-rows-[auto_1fr]">
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <div>
           <Link
@@ -93,7 +93,7 @@ export default function BoardPage() {
           preview
         </span>
       </header>
-      <div className="relative flex-1">
+      <div className="relative min-h-0">
         <ReactFlow
           nodes={nodes}
           edges={edges}

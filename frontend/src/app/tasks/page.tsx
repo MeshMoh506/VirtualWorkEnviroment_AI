@@ -62,7 +62,7 @@ export default function TasksPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="grid h-dvh grid-rows-[auto_1fr]">
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <div>
           <Link
@@ -80,7 +80,7 @@ export default function TasksPage() {
         </span>
       </header>
 
-      <div className="flex flex-1 gap-4 overflow-x-auto p-6">
+      <div className="flex min-h-0 gap-4 overflow-x-auto p-6">
         {STATUS_ORDER.map((status) => (
           <div key={status} className="flex w-72 shrink-0 flex-col">
             <div className="mb-3 flex items-baseline gap-2">
