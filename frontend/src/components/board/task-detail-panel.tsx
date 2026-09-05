@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { GitPullRequest } from "lucide-react";
 import { AGENTS } from "@/lib/agents";
@@ -120,10 +121,17 @@ export function TaskDetailPanel({
                   </div>
                 )}
                 {task.status === "reviewed" && (
-                  <p className="text-sm text-text-secondary">
-                    Reviewed. The review view (feedback + rubric score) is
-                    coming next.
-                  </p>
+                  <div className="flex flex-col items-start gap-2">
+                    <p className="text-sm text-text-secondary">
+                      Reviewed by the mentor.
+                    </p>
+                    <Link
+                      href={`/tasks/${task.id}/review`}
+                      className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
+                    >
+                      See the review
+                    </Link>
+                  </div>
                 )}
               </div>
 
