@@ -60,6 +60,20 @@ smoke_test.py` any time to sanity-check the whole auth → task → thread flow.
 See `backend/README.md` for schema details and exactly where each track's
 work is meant to plug in.
 
+**3. Run the frontend:**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Needs Node.js 18.18+ (`node -v` to check). Open http://localhost:3000 —
+the entry screen links to `/board` (the home board) and `/tasks` (the
+task board). Both currently run on local mock data, not the backend
+above — see `frontend/README.md` and `frontend/DESIGN.md` for the
+structure and design system before adding new UI.
+
 ## Git workflow
 
 Keep `main` deployable. For any real chunk of work:
