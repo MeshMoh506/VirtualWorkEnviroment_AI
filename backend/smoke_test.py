@@ -4,7 +4,9 @@ Run: python smoke_test.py
 """
 import os
 
-os.environ["DATABASE_URL"] = "sqlite:///./smoke_test.db"
+os.environ["DATABASE_URL"] = os.environ.get(
+    "DATABASE_URL", "sqlite:///./smoke_test.db"
+)
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402

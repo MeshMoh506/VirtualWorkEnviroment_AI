@@ -5,14 +5,19 @@ Employee File that the Manager/Mentor/HR agents will read and write.
 
 ## Quickstart
 
+From the **repo root** first, start Postgres via Docker (see root README):
+```bash
+docker compose up -d
+```
+
+Then, from this `backend/` folder:
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 cp .env.example .env
-# edit .env — either point DATABASE_URL at a real Postgres instance,
-# or for a quick local run without installing Postgres, set:
-# DATABASE_URL=sqlite:///./dev.db
+# .env already points at the Docker Postgres above — no edits needed.
+# Quick local check without Docker? Set DATABASE_URL=sqlite:///./dev.db instead.
 
 uvicorn app.main:app --reload
 ```

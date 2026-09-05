@@ -24,7 +24,21 @@ track (junior developer) and these three agents.
 | Frontend | `frontend/` | Node board, task board, thread UI, performance page |
 | Product, integration & QA | across both | task bank content, Mentor's review rubric, end-to-end testing |
 
-## Getting started (backend)
+## Getting started
+
+**1. Start the database.** Install [Docker
+Desktop](https://www.docker.com/products/docker-desktop/) once, then from the
+repo root:
+
+```bash
+docker compose up -d
+```
+
+This runs a real Postgres in the background, already matching the credentials
+in `backend/.env.example` — no extra config needed. Leave it running while you
+work; `docker compose down` stops it.
+
+**2. Run the backend:**
 
 ```bash
 cd backend
@@ -32,9 +46,13 @@ python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-cp .env.example .env             # sqlite works for local dev, no Postgres install needed
+cp .env.example .env             # already points at the Docker Postgres above
 uvicorn app.main:app --reload
 ```
+
+No Docker yet, or just testing something quick? Set `DATABASE_URL=sqlite:///./dev.db`
+in `.env` instead — the app runs fine on either, but **Postgres is what the
+team should actually develop against**, since that's what we'll deploy on.
 
 Open http://localhost:8000/docs for the interactive API. Run `python
 smoke_test.py` any time to sanity-check the whole auth → task → thread flow.
