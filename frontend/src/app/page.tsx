@@ -15,12 +15,12 @@ export default function Home() {
           tasks, a mentor reviews the work, HR tracks how you grow — all
           three sharing one employee file.
         </p>
-        <button
-          type="button"
+        <Link
+          href="/login"
           className="rounded border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong hover:border-accent-strong"
         >
-          Upload your CV to start
-        </button>
+          Get started
+        </Link>
         <Link
           href="/board"
           className="text-xs text-text-muted transition-colors hover:text-text-secondary"

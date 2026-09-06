@@ -23,6 +23,7 @@ across the team.
 | `text-secondary` | `#8a97a6` | supporting text |
 | `text-muted` | `#5c6773` | placeholders, timestamps |
 | `accent` | `#e8a33d` | the one signal color — primary buttons, active states, notifications |
+| `danger` | `#d9765f` | error text only (failed requests, form validation) — never a background |
 
 Three extra colors identify the agents, used only as small tags (a dot,
 a border-left, a badge) — never as a full background:
