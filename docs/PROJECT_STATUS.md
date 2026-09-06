@@ -1,7 +1,8 @@
 # Project Status — Venv
 
-_Last updated: Sep 2026, after the frontend scaffold, home board, and task
-board. Next up: agent logic (Manager/Mentor/HR), in a new chat._
+_Last updated: Sep 2026, after the frontend scaffold, home board, task
+board, and Mentor's review view. Next up: HR's growth view (frontend,
+continuing here) and agent logic (backend, new chat)._
 
 ## Where things stand right now
 
@@ -17,7 +18,7 @@ board. Next up: agent logic (Manager/Mentor/HR), in a new chat._
 - Confirmed running locally via `uvicorn app.main:app --reload` →
   `http://localhost:8000/docs`
 
-**Frontend: scaffold, home board, and task board built.**
+**Frontend: scaffold, home board, task board, and Mentor's review view built.**
 - Next.js (App Router, TypeScript, Tailwind v4), a real design system
   documented in `frontend/DESIGN.md` — a dark "blueprint" look (hairline
   borders, faint grid, one accent color) instead of a generic SaaS theme.
@@ -30,35 +31,43 @@ board. Next up: agent logic (Manager/Mentor/HR), in a new chat._
   Click a card for the full description, a status stepper, the right
   action for that stage (start / submit with a GitHub link / waiting on
   review), and a comment thread.
+- `/tasks/[id]/review` — Mentor's review: verdict (approved/needs
+  changes), a rubric meter per category, categorized inline comments.
+  Reachable from a reviewed task's detail panel, and directly from the
+  home board's Mentor node ("See a review example"). **The rubric
+  categories are a proposed shape, not an agreed contract** — there's no
+  Pydantic schema or endpoint for `Review` yet, and the rubric itself is
+  still an open decision (see "Not built yet" below). Shape lives in
+  `frontend/src/lib/reviews.ts`.
 - **Runs entirely on local mock data right now — not wired to the backend
-  API yet.** No login, no real tasks. Task/message field names in
-  `frontend/src/lib/tasks.ts` mirror `backend/app/schemas.py`'s
+  API yet.** No login, no real tasks or reviews. Task/message field names
+  in `frontend/src/lib/tasks.ts` mirror `backend/app/schemas.py`'s
   `TaskOut`/`TaskDetailOut` exactly, so wiring the real API later is a
   rename job, not a redesign.
 - One real bug hit and fixed along the way: React Flow rendered nothing at
   all on `/board` because its container didn't have a measured height —
   flex-1 chains up through `body`/`html` can silently resolve to zero.
-  Fixed with a self-contained `h-dvh` + CSS grid layout on both `/board`
-  and `/tasks`. Worth remembering if a future page adds another canvas or
+  Fixed with a self-contained `h-dvh` + CSS grid layout on `/board` and
+  `/tasks`. Worth remembering if a future page adds another canvas or
   graph-style component.
 
 **Repo:** https://github.com/MeshMoh506/VirtualWorkEnviroment_AI — `main`
-has 5 merged PRs (repo scaffold + VS Code config, backend + Docker
-Postgres, this status doc, frontend scaffold + design system, home board).
-**One PR still open, not yet merged:** `feature/task-board` (task board +
-the React Flow height fix) —
-https://github.com/MeshMoh506/VirtualWorkEnviroment_AI/pull/new/feature/task-board
+has 8 merged PRs (repo scaffold + VS Code config, backend + Docker
+Postgres, project status doc, frontend scaffold + design system, home
+board, task board, the React Flow height fix + docs update, Mentor's
+review view). Nothing currently open.
 
 **Not built yet:**
 - Agent logic (Manager/Mentor/HR prompts, orchestrator, tool-calling) —
   `backend/app/agents/` exists with a README scoping the work, no code yet
-  — **this is the next piece, in a new chat**
-- Frontend ↔ backend wiring: real auth, real task data, real messages
-  (currently all mock)
-- CV upload flow, Mentor's review view, HR's growth view — next pieces
-  after the frontend is wired to real data
-- Concrete task bank content, Mentor's review rubric, final LLM provider
-  choice — still open from the proposal
+  — **this is the next backend piece, in a new chat**
+- HR's growth view (frontend) — **this is the next piece here**
+- Frontend ↔ backend wiring: real auth, real task data, real messages,
+  real reviews (currently all mock)
+- CV upload flow — next piece after the frontend is wired to real data
+- Concrete task bank content, Mentor's review rubric (the real one, not
+  the frontend's placeholder shape), final LLM provider choice — still
+  open from the proposal
 - Alembic migrations — schema currently created via `create_all` on
   startup; fine while the schema is still moving
 
@@ -70,8 +79,8 @@ https://github.com/MeshMoh506/VirtualWorkEnviroment_AI/pull/new/feature/task-boa
 ├── backend/             FastAPI — done, tested, running
 │   └── app/agents/       Manager/Mentor/HR logic — scoped, not started
 ├── frontend/             Next.js + React Flow — scaffold, home board,
-│                         task board built; mock data only, not wired
-│                         to the backend yet
+│                         task board, and Mentor's review view built;
+│                         mock data only, not wired to the backend yet
 └── .vscode/              shared editor config
 ```
 
@@ -137,9 +146,13 @@ This is the next piece of work, and it's backend-side, so it starts fresh:
 - Task board: `GET /tasks` (list), `POST /tasks` (create), `GET /tasks/{id}`
   (detail + thread), `PATCH /tasks/{id}/status`, `POST
   /tasks/{id}/messages`.
-- Next pieces, in rough order: wire real auth + real task data into
-  `/tasks` (replacing `src/lib/tasks.ts`'s mock data with fetch calls),
-  then the CV upload flow, then Mentor's review view, then HR's growth
-  view.
+- Next piece: **HR's growth view** — a timeline across a user's reviews
+  and how they're trending. This is where Recharts (already installed,
+  unused so far) actually earns its place, unlike the Mentor review's
+  hand-built `RubricBar` meters.
+- After that: wire real auth + real task/review data into `/tasks` and
+  `/tasks/[id]/review` (replacing `src/lib/tasks.ts` and
+  `src/lib/reviews.ts`'s mock data with fetch calls), then the CV upload
+  flow.
 - `frontend/DESIGN.md` has the full design rationale — read it before
   adding new colors, fonts, or components.
