@@ -131,4 +131,58 @@ export const INITIAL_TASKS: Task[] = [
     updatedAt: agoISO(0, 6),
     messages: [],
   },
+  {
+    id: "t6",
+    title: "Build the login page UI",
+    description:
+      "A login form with email/password fields and client-side validation, matching the design system.",
+    status: "reviewed",
+    githubLink: "https://github.com/example/venv-frontend/pull/7",
+    createdByAgent: "manager",
+    createdAt: agoISO(7),
+    updatedAt: agoISO(4),
+    messages: [
+      {
+        id: "m4",
+        senderType: "user",
+        agentType: null,
+        content: "Submitting — validation covers empty fields and bad email format.",
+        createdAt: agoISO(4, 2),
+      },
+      {
+        id: "m5",
+        senderType: "agent",
+        agentType: "mentor",
+        content: "Works, but no tests and the README wasn't updated. Approved anyway — small enough to fix on the next task.",
+        createdAt: agoISO(4),
+      },
+    ],
+  },
+  {
+    id: "t7",
+    title: "Add a notifications dropdown",
+    description:
+      "A header dropdown showing the last few agent messages across all tasks.",
+    status: "reviewed",
+    githubLink: "https://github.com/example/venv-frontend/pull/9",
+    createdByAgent: "manager",
+    createdAt: agoISO(3),
+    updatedAt: agoISO(1),
+    messages: [
+      {
+        id: "m6",
+        senderType: "user",
+        agentType: null,
+        content: "This one's ready — added a basic test for the unread count too.",
+        createdAt: agoISO(1),
+      },
+      {
+        id: "m7",
+        senderType: "agent",
+        agentType: "mentor",
+        content: "Good jump from last time — tests included this round, and the PR description actually explains the approach. Approved.",
+        createdAt: agoISO(0, 20),
+      },
+    ],
+  },
 ];
