@@ -1,23 +1,45 @@
 # Project Status — Venv
 
-_Last updated: Sep 2026, after HR's growth view. All four frontend
-screens from the original plan now exist (home board, task board,
-Mentor's review, HR's growth view) — frontend pauses here. Next up:
-agent logic (backend, new chat)._
+_Last updated: Sep 2026, after agent logic (Manager/Mentor/HR) went in.
+Backend now has real AI agents on top of the schema; frontend is still on
+mock data — wiring it to this is the next piece._
 
 ## Where things stand right now
 
-**Backend: built, tested, running.** (No change since last update.)
+**Backend: built, tested, running — now with agent logic.**
 - Schema live: `Organization`, `User`, `EmployeeFile`, `Task`, `TaskMessage`, `Review`
   (`organization_id` nullable everywhere, so Stage 3 multi-tenancy is additive later)
 - JWT auth, task board CRUD with status transitions, per-task threaded messages,
   CV intake endpoint
 - `EmployeeFile` auto-created per user at registration — the shared context
-  object all three agents will read/write
+  object all three agents read/write
 - Verified with `smoke_test.py` (17 checks) against real Postgres
 - Local dev database: `docker compose up -d` from repo root
 - Confirmed running locally via `uvicorn app.main:app --reload` →
   `http://localhost:8000/docs`
+
+**Agent logic (`backend/app/agents/`) — new this round.**
+- LLM: Anthropic Claude (`ANTHROPIC_API_KEY` + `LLM_MODEL` in `.env`,
+  default `claude-sonnet-5`). Orchestration is a plain custom router, not a
+  framework (CrewAI was considered — not worth the dependency at 3-agent scale).
+- **Manager** — assigns tasks calibrated to CV/skills (`assign_task`),
+  replies in the task thread (`respond_in_thread`). New `Task` rows are
+  only ever created via the former; the latter only posts messages.
+- **Mentor** — reads a submitted task's real public `github_link` (via a
+  new unauthenticated `github_client.py`), writes a structured `Review`
+  (verdict + 4-category rubric + inline comments, matching the frontend's
+  proposed shape in `reviews.ts`), and moves the task to `reviewed`.
+- **HR** — rolls up Mentor review history into `EmployeeFile` (skills,
+  strengths, growth areas, summary) plus a standalone rollup `Review`.
+- New endpoints: `POST /agents/manager/assign-task`, `POST
+  /agents/manager/reply/{task_id}`, `POST /agents/mentor/review/{task_id}`,
+  `POST /agents/hr/rollup`; reads via `GET /tasks/{id}/review`, `GET
+  /users/me/employee-file`, `GET /users/me/reviews`.
+- Tested with `smoke_test_agents.py` (17 checks) — mocks the three LLM
+  calls (no API key needed to run it) but hits the real GitHub API for
+  Mentor's repo fetch. Both smoke tests pass together, no regressions.
+- Full detail and what's still open (task bank, rubric finalization, HR
+  cadence, CV parsing) in `backend/app/agents/README.md`.
 
 **Frontend: all four planned screens built, on mock data.**
 - Next.js (App Router, TypeScript, Tailwind v4), a real design system
@@ -61,23 +83,21 @@ agent logic (backend, new chat)._
   height from the start for exactly this reason).
 
 **Repo:** https://github.com/MeshMoh506/VirtualWorkEnviroment_AI — `main`
-has 10 merged PRs (repo scaffold + VS Code config, backend + Docker
-Postgres, project status doc, frontend scaffold + design system, home
-board, task board, the React Flow height fix + docs update, Mentor's
-review view, a docs refresh, HR's growth view). Nothing currently open.
+had 10 merged PRs as of the last frontend update (repo scaffold + VS Code
+config, backend + Docker Postgres, project status doc, frontend scaffold +
+design system, home board, task board, the React Flow height fix + docs
+update, Mentor's review view, a docs refresh, HR's growth view). This
+round adds agent logic on a new branch, not yet merged — see below.
 
 **Not built yet:**
-- Agent logic (Manager/Mentor/HR prompts, orchestrator, tool-calling) —
-  `backend/app/agents/` exists with a README scoping the work, no code yet
-  — **this is the next piece, in a new chat**
 - Frontend ↔ backend wiring: real auth, real tasks, reviews, and employee
-  file data (currently all mock) — **makes more sense once agent logic
-  exists to actually generate this data**, so this naturally follows the
-  backend piece rather than running in parallel
+  file data (currently all mock) — **now unblocked, since agent logic
+  exists to actually generate this data** — this is the natural next piece
 - CV upload flow — next frontend piece after wiring is real
-- Concrete task bank content, Mentor's review rubric (the real one, not
-  the frontend's placeholder shape), final LLM provider choice — still
-  open from the proposal
+- Concrete task bank content, finalized Mentor rubric (current one is a
+  first pass, not team-agreed) — still open, see
+  `backend/app/agents/README.md`'s "Still open" section
+- HR rollup cadence (currently manual/on-demand only)
 - Alembic migrations — schema currently created via `create_all` on
   startup; fine while the schema is still moving
 
@@ -87,7 +107,7 @@ review view, a docs refresh, HR's growth view). Nothing currently open.
 .
 ├── docker-compose.yml   one-command local Postgres
 ├── backend/             FastAPI — done, tested, running
-│   └── app/agents/       Manager/Mentor/HR logic — scoped, not started
+│   └── app/agents/       Manager/Mentor/HR — implemented, see its README
 ├── frontend/             Next.js + React Flow — all 4 screens (home
 │                         board, task board, review, growth) built;
 │                         mock data only, not wired to the backend yet
@@ -122,33 +142,10 @@ review view, a docs refresh, HR's growth view). Nothing currently open.
   content (IDs, timestamps, links) rather than every label — see
   `frontend/DESIGN.md` before adding new UI.
 
-## Handoff notes for the agent-logic track (starting in a new chat)
+## Handoff notes for frontend ↔ backend wiring (starting in a new chat)
 
-This is the next piece of work, and it's backend-side, so it starts fresh:
-
-- `backend/app/agents/README.md` already scopes what each agent does —
-  read that first.
-- `EmployeeFile` (on the `User` model) is the shared memory: `skills_json`,
-  `strengths_json`, `growth_areas_json`, `summary_text`. Every agent should
-  read from and write to these same fields, not keep separate state.
-- The Manager's task-creation path already exists at `POST /tasks` — per
-  `backend/app/routers/tasks.py`'s comment, that's the same path the
-  Manager agent's tool-calling should call into once it's live, not a
-  separate endpoint.
-- Status transitions: the user drives `todo → in_progress → submitted`
-  (via `PATCH /tasks/{id}/status`, requiring a `github_link` to reach
-  `submitted`). Moving a task to `reviewed` is the Mentor agent's job, not
-  the user's — the frontend's task detail panel already assumes this split.
-- LLM provider is still an open decision (see "Not built yet" above) —
-  worth settling early in that chat since it shapes the orchestrator.
-- The frontend's task board (`/tasks`) is ready to receive real data the
-  moment agent logic exists — its mock task shape already matches
-  `TaskOut`/`TaskDetailOut` field-for-field.
-- Same for `frontend/src/lib/employee-file.ts` — its mock shape (skills,
-  strengths, growth areas, summary) is a reasonable reference for what
-  the HR agent should actually populate on `EmployeeFile`.
-
-## Handoff notes for continuing the frontend (after agent logic exists)
+This is the next piece of work — replace the frontend's mock data with
+real fetch calls against the now-complete backend:
 
 - Backend base URL in dev: `http://localhost:8000`. Interactive schema for
   every endpoint at `/docs`.
@@ -157,12 +154,22 @@ This is the next piece of work, and it's backend-side, so it starts fresh:
   flow) → `{access_token, token_type}`. Send `Authorization: Bearer <token>`
   on everything after.
 - Task board: `GET /tasks` (list), `POST /tasks` (create), `GET /tasks/{id}`
-  (detail + thread), `PATCH /tasks/{id}/status`, `POST
-  /tasks/{id}/messages`.
+  (detail + thread), `PATCH /tasks/{id}/status`, `POST /tasks/{id}/messages`,
+  `GET /tasks/{id}/review`.
+- Agents: `POST /agents/manager/assign-task`, `POST
+  /agents/manager/reply/{task_id}`, `POST /agents/mentor/review/{task_id}`,
+  `POST /agents/hr/rollup`. `GET /users/me/employee-file`, `GET
+  /users/me/reviews`.
 - All four screens exist on mock data — `/board`, `/tasks`,
-  `/tasks/[id]/review`, `/growth`. Next piece: replace `src/lib/tasks.ts`,
-  `reviews.ts`, and `employee-file.ts`'s mock data with real fetch calls,
-  once there's an agent-logic backend actually producing that data. Then
-  the CV upload flow.
+  `/tasks/[id]/review`, `/growth`. Replace `src/lib/tasks.ts`, `reviews.ts`,
+  and `employee-file.ts`'s mock data with real fetch calls. `tasks.ts` and
+  `reviews.ts` should be close to a rename job; `employee-file.ts` needs a
+  small `.items` unwrap on `skills_json`/`strengths_json`/`growth_areas_json`
+  (see `backend/app/agents/hr.py`'s storage note) since those are `{}` until
+  HR's first rollup, then `{"items": [...]}`.
+- The home board (`/board`) is a natural place to wire the "assign task" /
+  "run review" / "run HR rollup" triggers — its Manager/Mentor/HR nodes
+  already exist, they just don't call anything real yet.
+- Then the CV upload flow.
 - `frontend/DESIGN.md` has the full design rationale — read it before
   adding new colors, fonts, or components.
