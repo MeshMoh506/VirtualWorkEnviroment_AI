@@ -9,6 +9,7 @@ import { STATUS_LABEL, STATUS_ORDER, type Task } from "@/lib/tasks";
 
 interface TaskDetailPanelProps {
   task: Task | null;
+  busy?: "review" | "reply" | null;
   onClose: () => void;
   onAdvance: (githubLink?: string) => void;
   onAddMessage: (content: string) => void;
@@ -16,6 +17,7 @@ interface TaskDetailPanelProps {
 
 export function TaskDetailPanel({
   task,
+  busy = null,
   onClose,
   onAdvance,
   onAddMessage,
@@ -98,26 +100,31 @@ export function TaskDetailPanel({
                     <input
                       value={linkDraft}
                       onChange={(e) => setLinkDraft(e.target.value)}
-                      placeholder="https://github.com/you/repo/pull/1"
-                      className="rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
+                      placeholder="https://github.com/you/repo"
+                      disabled={busy === "review"}
+                      className="rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none disabled:opacity-50"
                     />
                     <button
                       type="button"
-                      disabled={!linkDraft.trim()}
+                      disabled={!linkDraft.trim() || busy === "review"}
                       onClick={() => {
                         onAdvance(linkDraft.trim());
                         setLinkDraft("");
                       }}
                       className="self-start rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Submit for review
+                      {busy === "review" ? "Submitting..." : "Submit for review"}
                     </button>
                   </div>
                 )}
                 {task.status === "submitted" && (
                   <div className="flex items-center gap-2 text-sm text-text-secondary">
                     <GitPullRequest className="h-4 w-4" />
-                    <span>Waiting on the mentor&apos;s review.</span>
+                    <span>
+                      {busy === "review"
+                        ? "The mentor is reviewing this now..."
+                        : "Waiting on the mentor's review."}
+                    </span>
                   </div>
                 )}
                 {task.status === "reviewed" && (
@@ -173,6 +180,13 @@ export function TaskDetailPanel({
                       </div>
                     );
                   })}
+                  {busy === "reply" && (
+                    <div className="rounded border border-dashed border-border px-3 py-2">
+                      <p className="font-mono text-[11px] text-text-muted">
+                        Manager is replying...
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -183,18 +197,19 @@ export function TaskDetailPanel({
                   value={messageDraft}
                   onChange={(e) => setMessageDraft(e.target.value)}
                   placeholder="Add a comment"
-                  className="flex-1 rounded border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
+                  disabled={busy === "reply"}
+                  className="flex-1 rounded border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none disabled:opacity-50"
                 />
                 <button
                   type="button"
-                  disabled={!messageDraft.trim()}
+                  disabled={!messageDraft.trim() || busy === "reply"}
                   onClick={() => {
                     onAddMessage(messageDraft.trim());
                     setMessageDraft("");
                   }}
                   className="rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Send
+                  {busy === "reply" ? "..." : "Send"}
                 </button>
               </div>
               <button

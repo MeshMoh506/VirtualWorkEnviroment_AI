@@ -24,6 +24,11 @@
   --accent-strong: #f3b65a;
   --accent-text: #3d2a0c;
 
+  /* Real API calls can now fail (bad login, server down, etc.) — one
+     muted color for error text, kept desaturated to match the palette
+     rather than a stock bright red. */
+  --danger: #d9765f;
+
   --agent-manager: #e8a33d;
   --agent-mentor: #4fb286;
   --agent-hr: #a78bfa;
@@ -45,6 +50,7 @@
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-text: var(--accent-text);
+  --color-danger: var(--danger);
   --color-agent-manager: var(--agent-manager);
   --color-agent-mentor: var(--agent-mentor);
   --color-agent-hr: var(--agent-hr);

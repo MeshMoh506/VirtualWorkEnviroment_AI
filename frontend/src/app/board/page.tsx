@@ -10,6 +10,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { AGENT_ORDER, type AgentId } from "@/lib/agents";
+import { useRequireAuth } from "@/lib/auth-context";
 import { AgentNode, EmployeeFileNode, UserNode } from "@/components/board/nodes";
 import { DetailPanel, type BoardSelection } from "@/components/board/detail-panel";
 
@@ -26,6 +27,7 @@ const AGENT_POSITIONS: Record<AgentId, { x: number; y: number }> = {
 };
 
 export default function BoardPage() {
+  const { user, loading, logout } = useRequireAuth();
   const [selection, setSelection] = useState<BoardSelection>(null);
 
   const nodes: Node[] = useMemo(
@@ -75,6 +77,14 @@ export default function BoardPage() {
     []
   );
 
+  if (loading || !user) {
+    return (
+      <main className="flex flex-1 items-center justify-center">
+        <p className="text-sm text-text-muted">Loading...</p>
+      </main>
+    );
+  }
+
   return (
     <main className="grid h-dvh grid-rows-[auto_1fr]">
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
@@ -89,9 +99,18 @@ export default function BoardPage() {
             Home board
           </h1>
         </div>
-        <span className="rounded border border-border bg-bg-surface px-3 py-1 font-mono text-xs text-text-secondary">
-          preview
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-xs text-text-muted">
+            {user.email}
+          </span>
+          <button
+            type="button"
+            onClick={logout}
+            className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+          >
+            Log out
+          </button>
+        </div>
       </header>
       <div className="relative min-h-0">
         <ReactFlow
@@ -115,3 +134,4 @@ export default function BoardPage() {
     </main>
   );
 }
+
