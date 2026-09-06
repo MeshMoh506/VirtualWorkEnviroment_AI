@@ -1,8 +1,9 @@
 # Project Status — Venv
 
-_Last updated: Sep 2026, after the frontend scaffold, home board, task
-board, and Mentor's review view. Next up: HR's growth view (frontend,
-continuing here) and agent logic (backend, new chat)._
+_Last updated: Sep 2026, after HR's growth view. All four frontend
+screens from the original plan now exist (home board, task board,
+Mentor's review, HR's growth view) — frontend pauses here. Next up:
+agent logic (backend, new chat)._
 
 ## Where things stand right now
 
@@ -18,7 +19,7 @@ continuing here) and agent logic (backend, new chat)._
 - Confirmed running locally via `uvicorn app.main:app --reload` →
   `http://localhost:8000/docs`
 
-**Frontend: scaffold, home board, task board, and Mentor's review view built.**
+**Frontend: all four planned screens built, on mock data.**
 - Next.js (App Router, TypeScript, Tailwind v4), a real design system
   documented in `frontend/DESIGN.md` — a dark "blueprint" look (hairline
   borders, faint grid, one accent color) instead of a generic SaaS theme.
@@ -39,32 +40,41 @@ continuing here) and agent logic (backend, new chat)._
   Pydantic schema or endpoint for `Review` yet, and the rubric itself is
   still an open decision (see "Not built yet" below). Shape lives in
   `frontend/src/lib/reviews.ts`.
+- `/growth` — HR's view: the Employee File snapshot (skills, strengths,
+  growth areas, summary — mirrors `User.employee_file`'s real fields), a
+  Recharts line chart of average rubric score per reviewed task, and a
+  timeline linking back to each review. Reachable from the home board's
+  HR node and — since this is genuinely the real view of that file — from
+  the Employee File node too, which no longer just points at "coming
+  next."
 - **Runs entirely on local mock data right now — not wired to the backend
-  API yet.** No login, no real tasks or reviews. Task/message field names
-  in `frontend/src/lib/tasks.ts` mirror `backend/app/schemas.py`'s
-  `TaskOut`/`TaskDetailOut` exactly, so wiring the real API later is a
-  rename job, not a redesign.
+  API yet.** No login, no real tasks, reviews, or employee file. Field
+  names in `frontend/src/lib/tasks.ts` and `reviews.ts` mirror
+  `backend/app/schemas.py`'s shapes closely, so wiring the real API later
+  is mostly a rename job, not a redesign.
 - One real bug hit and fixed along the way: React Flow rendered nothing at
   all on `/board` because its container didn't have a measured height —
   flex-1 chains up through `body`/`html` can silently resolve to zero.
   Fixed with a self-contained `h-dvh` + CSS grid layout on `/board` and
   `/tasks`. Worth remembering if a future page adds another canvas or
-  graph-style component.
+  chart-style component (Recharts on `/growth` used an explicit pixel
+  height from the start for exactly this reason).
 
 **Repo:** https://github.com/MeshMoh506/VirtualWorkEnviroment_AI — `main`
-has 8 merged PRs (repo scaffold + VS Code config, backend + Docker
+has 10 merged PRs (repo scaffold + VS Code config, backend + Docker
 Postgres, project status doc, frontend scaffold + design system, home
 board, task board, the React Flow height fix + docs update, Mentor's
-review view). Nothing currently open.
+review view, a docs refresh, HR's growth view). Nothing currently open.
 
 **Not built yet:**
 - Agent logic (Manager/Mentor/HR prompts, orchestrator, tool-calling) —
   `backend/app/agents/` exists with a README scoping the work, no code yet
-  — **this is the next backend piece, in a new chat**
-- HR's growth view (frontend) — **this is the next piece here**
-- Frontend ↔ backend wiring: real auth, real task data, real messages,
-  real reviews (currently all mock)
-- CV upload flow — next piece after the frontend is wired to real data
+  — **this is the next piece, in a new chat**
+- Frontend ↔ backend wiring: real auth, real tasks, reviews, and employee
+  file data (currently all mock) — **makes more sense once agent logic
+  exists to actually generate this data**, so this naturally follows the
+  backend piece rather than running in parallel
+- CV upload flow — next frontend piece after wiring is real
 - Concrete task bank content, Mentor's review rubric (the real one, not
   the frontend's placeholder shape), final LLM provider choice — still
   open from the proposal
@@ -78,8 +88,8 @@ review view). Nothing currently open.
 ├── docker-compose.yml   one-command local Postgres
 ├── backend/             FastAPI — done, tested, running
 │   └── app/agents/       Manager/Mentor/HR logic — scoped, not started
-├── frontend/             Next.js + React Flow — scaffold, home board,
-│                         task board, and Mentor's review view built;
+├── frontend/             Next.js + React Flow — all 4 screens (home
+│                         board, task board, review, growth) built;
 │                         mock data only, not wired to the backend yet
 └── .vscode/              shared editor config
 ```
@@ -134,8 +144,11 @@ This is the next piece of work, and it's backend-side, so it starts fresh:
 - The frontend's task board (`/tasks`) is ready to receive real data the
   moment agent logic exists — its mock task shape already matches
   `TaskOut`/`TaskDetailOut` field-for-field.
+- Same for `frontend/src/lib/employee-file.ts` — its mock shape (skills,
+  strengths, growth areas, summary) is a reasonable reference for what
+  the HR agent should actually populate on `EmployeeFile`.
 
-## Handoff notes for continuing the frontend (if picked up in a new chat)
+## Handoff notes for continuing the frontend (after agent logic exists)
 
 - Backend base URL in dev: `http://localhost:8000`. Interactive schema for
   every endpoint at `/docs`.
@@ -146,13 +159,10 @@ This is the next piece of work, and it's backend-side, so it starts fresh:
 - Task board: `GET /tasks` (list), `POST /tasks` (create), `GET /tasks/{id}`
   (detail + thread), `PATCH /tasks/{id}/status`, `POST
   /tasks/{id}/messages`.
-- Next piece: **HR's growth view** — a timeline across a user's reviews
-  and how they're trending. This is where Recharts (already installed,
-  unused so far) actually earns its place, unlike the Mentor review's
-  hand-built `RubricBar` meters.
-- After that: wire real auth + real task/review data into `/tasks` and
-  `/tasks/[id]/review` (replacing `src/lib/tasks.ts` and
-  `src/lib/reviews.ts`'s mock data with fetch calls), then the CV upload
-  flow.
+- All four screens exist on mock data — `/board`, `/tasks`,
+  `/tasks/[id]/review`, `/growth`. Next piece: replace `src/lib/tasks.ts`,
+  `reviews.ts`, and `employee-file.ts`'s mock data with real fetch calls,
+  once there's an agent-logic backend actually producing that data. Then
+  the CV upload flow.
 - `frontend/DESIGN.md` has the full design rationale — read it before
   adding new colors, fonts, or components.
