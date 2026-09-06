@@ -15,18 +15,19 @@ const NEXT_UP: Record<AgentId, string> = {
   manager: "The task board is live — see and act on what the manager assigns.",
   mentor:
     "See a worked example: feedback plus a rubric score on a submitted task.",
-  hr: "Growth view — a timeline of reviews and how you're trending.",
+  hr: "The growth view is live — a score trend and timeline across reviews.",
 };
 
 const BOX_LABEL: Record<AgentId, string> = {
   manager: "task board",
   mentor: "example review",
-  hr: "next up",
+  hr: "growth view",
 };
 
 const AGENT_LINK: Partial<Record<AgentId, { href: string; label: string }>> = {
   manager: { href: "/tasks", label: "Open task board" },
   mentor: { href: "/tasks/t1/review", label: "See a review example" },
+  hr: { href: "/growth", label: "Open growth view" },
 };
 
 export function DetailPanel({ selection, onClose }: DetailPanelProps) {
@@ -101,11 +102,19 @@ export function DetailPanel({ selection, onClose }: DetailPanelProps) {
                   or partial picture of you.
                 </p>
                 <div className="mt-8 rounded border border-border bg-bg-surface px-4 py-3">
-                  <p className="font-mono text-xs text-text-muted">next up</p>
-                  <p className="mt-1 text-sm text-text-secondary">
-                    A real view of this file — skills, strengths, growth
-                    areas — once it&apos;s wired to the backend.
+                  <p className="font-mono text-xs text-text-muted">
+                    growth view
                   </p>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    Skills, strengths, growth areas, and the score trend
+                    behind them — HR&apos;s view of this same file.
+                  </p>
+                  <Link
+                    href="/growth"
+                    className="mt-3 inline-block rounded border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong"
+                  >
+                    Open growth view
+                  </Link>
                 </div>
               </>
             )}

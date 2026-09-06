@@ -76,4 +76,71 @@ export const REVIEWS_BY_TASK: Record<string, Review> = {
       Date.now() - 5 * 24 * 60 * 60 * 1000
     ).toISOString(),
   },
+  t6: {
+    id: "r2",
+    taskId: "t6",
+    agentType: "mentor",
+    verdict: "approved",
+    content:
+      "Works end to end and the validation logic is solid. Two gaps this time though: no tests, and the README wasn't touched even though the login flow changed how the app starts. Approved since neither blocks the next task, but worth tightening up.",
+    categories: [
+      { key: "correctness", label: "Meets requirements", score: 4 },
+      { key: "code_quality", label: "Code quality", score: 4 },
+      { key: "testing", label: "Testing", score: 2 },
+      { key: "documentation", label: "Documentation", score: 2 },
+    ],
+    comments: [
+      {
+        id: "c5",
+        category: "testing",
+        content:
+          "No tests on the validation logic — that's exactly the kind of thing worth covering, since it's easy to regress silently.",
+      },
+      {
+        id: "c6",
+        category: "documentation",
+        content:
+          "The README still describes the old (no-login) flow. Update it in the same PR next time, not as a follow-up.",
+      },
+    ],
+    createdAt: new Date(
+      Date.now() - 4 * 24 * 60 * 60 * 1000
+    ).toISOString(),
+  },
+  t7: {
+    id: "r3",
+    taskId: "t7",
+    agentType: "mentor",
+    verdict: "approved",
+    content:
+      "Good jump from last time. Tests are in this round, and the PR description actually explains the approach instead of just what changed. This is the standard to keep hitting going forward.",
+    categories: [
+      { key: "correctness", label: "Meets requirements", score: 5 },
+      { key: "code_quality", label: "Code quality", score: 5 },
+      { key: "testing", label: "Testing", score: 4 },
+      { key: "documentation", label: "Documentation", score: 4 },
+    ],
+    comments: [
+      {
+        id: "c7",
+        category: "testing",
+        content:
+          "Test for the unread count is exactly the right thing to cover — that's the part most likely to silently break.",
+      },
+      {
+        id: "c8",
+        category: "code_quality",
+        content:
+          "Dropdown closes on outside click and on Escape — small detail, but it's the kind of thing that makes a feature feel finished.",
+      },
+    ],
+    createdAt: new Date(
+      Date.now() - 1 * 24 * 60 * 60 * 1000
+    ).toISOString(),
+  },
 };
+
+export function averageScore(review: Review): number {
+  const total = review.categories.reduce((sum, c) => sum + c.score, 0);
+  return total / review.categories.length;
+}
