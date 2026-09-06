@@ -5,6 +5,7 @@ import "@fontsource/space-grotesk/600.css";
 import "@fontsource/jetbrains-mono/400.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
   title: "Venv — Virtual Work Environment",
@@ -16,7 +17,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-bg-base text-text-primary">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
