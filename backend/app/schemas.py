@@ -84,3 +84,30 @@ class TaskOut(BaseModel):
 
 class TaskDetailOut(TaskOut):
     messages: list[TaskMessageOut] = []
+
+
+# ---- Review & Employee File (agent logic output — see app/agents/) ----
+
+class ReviewOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    task_id: str | None
+    agent_type: AgentType
+    content: str
+    # Mentor: {verdict, categories, comments} — see agents/tools.py's
+    # SUBMIT_REVIEW_TOOL. HR: {reviewed_task_count, average_score}.
+    metrics_json: dict | None
+    created_at: datetime
+
+
+class EmployeeFileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    # Each holds {} until HR's first rollup, then {"items": [...]} — see
+    # agents/hr.py's storage note.
+    skills_json: dict
+    strengths_json: dict
+    growth_areas_json: dict
+    summary_text: str | None
+    updated_at: datetime

@@ -3,8 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import SenderType, Task, TaskMessage, User
+from app.models import AgentType, Review, SenderType, Task, TaskMessage, User
 from app.schemas import (
+    ReviewOut,
     TaskCreate,
     TaskDetailOut,
     TaskMessageCreate,
@@ -91,3 +92,22 @@ def post_message(
     db.commit()
     db.refresh(message)
     return message
+
+
+@router.get("/{task_id}/review", response_model=ReviewOut)
+def get_task_review(
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mentor's review for this task — powers the review view once it exists."""
+    task = _get_owned_task(task_id, current_user, db)
+    review = (
+        db.query(Review)
+        .filter(Review.task_id == task.id, Review.agent_type == AgentType.MENTOR)
+        .order_by(Review.created_at.desc())
+        .first()
+    )
+    if not review:
+        raise HTTPException(status_code=404, detail="No review yet for this task")
+    return review
