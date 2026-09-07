@@ -23,10 +23,11 @@ export default function LoginPage() {
     try {
       if (mode === "login") {
         await login(email, password);
+        router.push("/board");
       } else {
         await register(email, password, fullName);
+        router.push("/onboarding/cv");
       }
-      router.push("/board");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong.");
     } finally {
