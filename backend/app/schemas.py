@@ -34,6 +34,7 @@ class UserOut(BaseModel):
     track: TrackEnum
     is_active: bool
     created_at: datetime
+    has_cv: bool
 
 
 class CVIntake(BaseModel):

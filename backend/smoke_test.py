@@ -57,6 +57,7 @@ check("wrong password rejected", r.status_code == 401)
 # get me
 r = client.get("/users/me", headers=headers)
 check("get current user", r.status_code == 200 and r.json()["email"] == "grad@example.com")
+check("has_cv starts false", r.json()["has_cv"] is False)
 
 # no token -> 401
 r = client.get("/users/me")
@@ -65,6 +66,10 @@ check("unauthenticated request rejected", r.status_code == 401)
 # submit CV
 r = client.post("/users/me/cv", json={"cv_raw_text": "Experienced in Python and React."}, headers=headers)
 check("submit cv", r.status_code == 200)
+check("submit cv response has_cv is true", r.json()["has_cv"] is True)
+
+r = client.get("/users/me", headers=headers)
+check("has_cv persists on refetch", r.json()["has_cv"] is True)
 
 # create task (simulating what the Manager agent will do later)
 r = client.post(
