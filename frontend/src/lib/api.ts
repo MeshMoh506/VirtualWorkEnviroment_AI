@@ -78,6 +78,7 @@ export interface UserApiOut {
   track: string;
   is_active: boolean;
   created_at: string;
+  has_cv: boolean;
 }
 
 export interface TaskMessageApiOut {
@@ -159,6 +160,14 @@ export const api = {
   },
 
   me: () => request<UserApiOut>("/users/me"),
+
+  cv: {
+    submit: (cvRawText: string) =>
+      request<UserApiOut>("/users/me/cv", {
+        method: "POST",
+        body: JSON.stringify({ cv_raw_text: cvRawText }),
+      }),
+  },
 
   tasks: {
     list: () => request<TaskApiOut[]>("/tasks"),
