@@ -1,9 +1,10 @@
 # Project Status — Venv
 
-_Last updated: Sep 2026, after the frontend was wired to the real backend
-+ agent logic. Auth, tasks, reviews, and the employee file are all real
-now — no more mock data anywhere in the app. Next piece: the CV upload
-flow._
+_Last updated: Sep 2026, after the CV upload flow went in. All four
+planned frontend pieces from the original proposal are now done: home
+board, task board, review view, growth view, and CV intake — all wired
+to a real backend with real agents. Next up is polish/refinement work,
+not new core features — see "Not built yet" below._
 
 ## Where things stand right now
 
@@ -42,23 +43,32 @@ flow._
 - Full detail and what's still open (task bank, rubric finalization, HR
   cadence, CV parsing) in `backend/app/agents/README.md`.
 
-**Frontend: all four screens built and wired to the real backend — no mock data left.**
+**Frontend: all four screens plus CV intake, wired to the real backend — no mock data left.**
 - Next.js (App Router, TypeScript, Tailwind v4), a real design system
   documented in `frontend/DESIGN.md` — a dark "blueprint" look (hairline
   borders, faint grid, one accent color) instead of a generic SaaS theme.
   Fonts self-hosted via `@fontsource`, no external font CDN call.
 - **Auth is real**: `/login` (toggles sign-in/register), `lib/auth-context.tsx`
   (`AuthProvider`, `useAuth`, `useRequireAuth` — redirects signed-out
-  visitors to `/login`). JWT in `localStorage`. Every other page is
+  visitors to `/login`, `refreshUser()` to re-sync after something changes
+  server-side mid-session). JWT in `localStorage`. Every other page is
   auth-gated.
 - **`lib/api.ts`** is the one place that knows the backend's wire format
   (snake_case, matching `schemas.py` exactly) — every page/lib function
   goes through it, nothing calls `fetch` directly elsewhere.
+- **`/onboarding/cv`** — paste-a-CV step, shown once right after
+  registration (Manager handles a missing CV gracefully, so skipping is a
+  real option, not a dead end). Copy adapts to an "update" framing if
+  `user.hasCv` is already true, reachable anytime from the board's
+  Employee File panel. `UserOut` gained a `has_cv` boolean (derived from
+  `cv_raw_text`, not the raw text itself) specifically so returning users
+  aren't re-prompted every login.
 - `/board` — React Flow canvas: a You node connects to Manager, Mentor, and
   HR, all three feeding into a shared Employee File node (dashed, animated
   edges — the shared-memory differentiator made visible, not just claimed).
-  Clicking a node opens a slide-over detail panel. Header now shows the
-  signed-in user's email + a logout button.
+  Clicking a node opens a slide-over detail panel. Header shows the
+  signed-in user's email + a logout button. Employee File panel now shows
+  CV status with an Add/Update link.
 - `/tasks` — kanban board (To do / In progress / Submitted / Reviewed),
   fetching real tasks. "Ask manager for a task" button calls
   `POST /agents/manager/assign-task`. Submitting a task auto-triggers the
@@ -67,7 +77,7 @@ flow._
   reply (`POST /agents/manager/reply/{id}`) — it's a live conversation now,
   not a one-way comment box. `TaskDetailPanel` shows which agent is
   currently working (`busy: "review" | "reply" | null`).
-- `/tasks/[id]/review` — Mentor's review, now a client component fetching
+- `/tasks/[id]/review` — Mentor's review, a client component fetching
   the real task + `GET /tasks/{id}/review`. **The rubric categories are
   still a first pass, not a finalized contract** — see
   `backend/app/agents/README.md`'s "Still open" section.
@@ -84,29 +94,28 @@ flow._
   false-positive on the standard "fetch on mount" pattern across three
   files — targeted, commented `eslint-disable-next-line`s rather than
   restructuring working code; see the comments at each site for why.
-- Verified end-to-end against the real running backend (not just
-  `npm run build`/`lint`): register → login → `/users/me` → task
-  create/detail/status/messages → employee-file/reviews reads. Every
-  response matched the TypeScript wire types field-for-field, including
-  CORS preflight from `localhost:3000`.
+- Verified end-to-end against the real running backend at every stage
+  (not just `npm run build`/`lint`): register → login → `/users/me` →
+  task create/detail/status/messages → employee-file/reviews reads → CV
+  submit flipping `has_cv`. Every response matched the TypeScript wire
+  types field-for-field, including CORS preflight from `localhost:3000`.
 
 **Repo:** https://github.com/MeshMoh506/VirtualWorkEnviroment_AI — `main`
-had 12 merged PRs as of the agent-logic update (repo scaffold + VS Code
-config, backend + Docker Postgres, project status doc, frontend scaffold +
-design system, home board, task board, the React Flow height fix + docs
-update, Mentor's review view, a docs refresh, HR's growth view, agent
-logic). This round adds frontend wiring on a new branch, not yet merged —
-see below.
+had 13 merged PRs as of the frontend-wiring update (repo scaffold + VS
+Code config, backend + Docker Postgres, project status doc, frontend
+scaffold + design system, home board, task board, the React Flow height
+fix + docs update, Mentor's review view, a docs refresh, HR's growth
+view, agent logic, frontend wiring). This round adds the CV upload flow
+on a new branch, not yet merged — see below.
 
 **Not built yet:**
-- CV upload flow — the natural next piece; Manager already handles a
-  missing CV gracefully (falls back to "no CV or history yet" in its
-  prompt), so this isn't blocking anything, just missing
 - Concrete task bank content, finalized Mentor rubric (current one is a
   first pass, not team-agreed) — still open, see
   `backend/app/agents/README.md`'s "Still open" section
 - HR rollup cadence (currently manual/on-demand only, via the "Ask HR for
   a review" button)
+- CV file upload (PDF/docx) — currently paste-only; no file parsing
+  exists anywhere in the stack
 - Alembic migrations — schema currently created via `create_all` on
   startup; fine while the schema is still moving
 
@@ -118,8 +127,8 @@ see below.
 ├── backend/             FastAPI — done, tested, running
 │   └── app/agents/       Manager/Mentor/HR — implemented, see its README
 ├── frontend/             Next.js + React Flow — all 4 screens (home
-│                         board, task board, review, growth) built AND
-│                         wired to the real backend — no mock data left
+│                         board, task board, review, growth) plus CV
+│                         intake, all wired to the real backend
 └── .vscode/              shared editor config
 ```
 
@@ -151,39 +160,40 @@ see below.
   content (IDs, timestamps, links) rather than every label — see
   `frontend/DESIGN.md` before adding new UI.
 
-## Handoff notes for the CV upload flow (starting in a new chat)
+## Handoff notes for whatever's next (starting in a new chat)
 
-This is the next piece of work:
+No single obvious "next piece" this round — pick from what's open in
+"Not built yet" above based on what the team needs most:
 
-- Backend already has what's needed: `POST /users/me/cv` takes
-  `{cv_raw_text}` — see `backend/app/routers/users.py` and
-  `schemas.py`'s `CVIntake`. It's plain text, no file parsing on the
-  backend side (no PDF/docx extraction exists) — the frontend either
-  collects pasted text directly, or extracts text from an uploaded file
-  client-side before sending it.
-- Manager already reads `User.cv_raw_text` when assigning a task (see
-  `backend/app/agents/manager.py`'s `_cv_context`) and degrades
-  gracefully with no CV — so this piece is additive, not fixing anything
-  broken.
-- Natural place for it: right after registration, before landing on
-  `/board` for the first time — a short "tell us about yourself" step.
-  Could also be reachable later from the board (e.g. via the Employee
-  File node) for graduates who skip it initially and add a CV later.
-- `lib/auth-context.tsx`'s `register()` already exists — this would sit
-  right after it in the sign-up flow, calling a new `api.submitCv(text)`
-  function (add to `lib/api.ts`, following the same pattern as everything
-  else there).
+- **Task bank + rubric**: the Manager currently improvises tasks from
+  scratch each time (no curated bank), and the Mentor's 4-category rubric
+  (`correctness`, `code_quality`, `testing`, `documentation` — see
+  `backend/app/agents/tools.py`'s `SUBMIT_REVIEW_TOOL`) is a first pass,
+  not team-agreed. This is mostly a content/product decision, not code —
+  good for a session with the whole team weighing in, not just backend.
+- **HR cadence**: currently only runs when the graduate clicks "Ask HR
+  for a review" on `/growth`. Automating it (after every N reviews? on a
+  schedule?) is a small backend change once the cadence itself is
+  decided — see `backend/app/agents/hr.py`'s docstring.
+- **CV file upload**: right now `/onboarding/cv` is paste-only text. Real
+  file upload (PDF/docx) would need client-side text extraction (no
+  parsing exists on the backend — `POST /users/me/cv` just stores
+  whatever text it's given) before this is worth doing.
+- **Alembic migrations**: schema is still created via `create_all()` on
+  startup. Worth setting up once the schema itself feels stable — every
+  session so far has still been adding fields.
 - `frontend/DESIGN.md` has the full design rationale — read it before
   adding new colors, fonts, or components.
 
-## Reference: full API surface (for the CV flow or anything else)
+## Reference: full API surface
 
 - Backend base URL in dev: `http://localhost:8000`. Interactive schema
   for every endpoint at `/docs`.
 - Auth: `POST /auth/register` → `{email, password, full_name}`. `POST
   /auth/login` → **form-encoded** `username`/`password` (OAuth2 password
-  flow) → `{access_token, token_type}`. `GET /users/me`.
-- CV: `POST /users/me/cv` → `{cv_raw_text}`.
+  flow) → `{access_token, token_type}`. `GET /users/me` (includes
+  `has_cv`).
+- CV: `POST /users/me/cv` → `{cv_raw_text}` → returns `UserOut`.
 - Tasks: `GET /tasks`, `POST /tasks` (manual/admin — the app itself never
   calls this; real tasks come from the Manager agent), `GET /tasks/{id}`,
   `PATCH /tasks/{id}/status`, `POST /tasks/{id}/messages`,
@@ -193,4 +203,4 @@ This is the next piece of work:
   `POST /agents/hr/rollup`.
 - `GET /users/me/employee-file`, `GET /users/me/reviews`.
 - All of this is already wired into `frontend/src/lib/api.ts`,
-  `tasks.ts`, `reviews.ts`, and `employee-file.ts` except the CV endpoint.
+  `auth-context.tsx`, `tasks.ts`, `reviews.ts`, and `employee-file.ts`.

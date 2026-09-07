@@ -8,6 +8,7 @@ export type BoardSelection = AgentId | "employee-file" | null;
 
 interface DetailPanelProps {
   selection: BoardSelection;
+  hasCv: boolean;
   onClose: () => void;
 }
 
@@ -30,7 +31,7 @@ const AGENT_LINK: Partial<Record<AgentId, { href: string; label: string }>> = {
   hr: { href: "/growth", label: "Open growth view" },
 };
 
-export function DetailPanel({ selection, onClose }: DetailPanelProps) {
+export function DetailPanel({ selection, hasCv, onClose }: DetailPanelProps) {
   const isAgent = selection !== null && selection !== "employee-file";
   const meta = isAgent ? AGENTS[selection as AgentId] : null;
 
@@ -114,6 +115,20 @@ export function DetailPanel({ selection, onClose }: DetailPanelProps) {
                     className="mt-3 inline-block rounded border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong"
                   >
                     Open growth view
+                  </Link>
+                </div>
+                <div className="mt-3 rounded border border-border bg-bg-surface px-4 py-3">
+                  <p className="font-mono text-xs text-text-muted">cv</p>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    {hasCv
+                      ? "On file — the manager uses it to calibrate your tasks."
+                      : "Not on file yet — the manager is working from your task history alone."}
+                  </p>
+                  <Link
+                    href="/onboarding/cv"
+                    className="mt-3 inline-block rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+                  >
+                    {hasCv ? "Update your CV" : "Add your CV"}
                   </Link>
                 </div>
               </>

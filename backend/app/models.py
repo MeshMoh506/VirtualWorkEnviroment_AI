@@ -80,6 +80,13 @@ class User(Base):
     # AI/Agents team and can populate employee_file.skills_json downstream.
     cv_raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    @property
+    def has_cv(self) -> bool:
+        """Whether cv_raw_text has been set — exposed via UserOut so the
+        frontend can offer the CV step once without re-nagging on every
+        login, and without shipping the raw text itself in /users/me."""
+        return bool(self.cv_raw_text)
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(

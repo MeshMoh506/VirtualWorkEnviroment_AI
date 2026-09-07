@@ -129,7 +129,11 @@ export default function BoardPage() {
             color="var(--line-grid)"
           />
         </ReactFlow>
-        <DetailPanel selection={selection} onClose={() => setSelection(null)} />
+        <DetailPanel
+          selection={selection}
+          hasCv={user.hasCv}
+          onClose={() => setSelection(null)}
+        />
       </div>
     </main>
   );

@@ -14,6 +14,7 @@ export interface AuthUser {
   id: string;
   email: string;
   fullName: string;
+  hasCv: boolean;
 }
 
 interface AuthContextValue {
@@ -22,12 +23,20 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => void;
+  /** Re-fetches /users/me — call after anything that changes the user
+   * server-side but isn't part of login/register (e.g. submitting a CV). */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function toAuthUser(u: { id: string; email: string; full_name: string }): AuthUser {
-  return { id: u.id, email: u.email, fullName: u.full_name };
+function toAuthUser(u: {
+  id: string;
+  email: string;
+  full_name: string;
+  has_cv: boolean;
+}): AuthUser {
+  return { id: u.id, email: u.email, fullName: u.full_name, hasCv: u.has_cv };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -69,8 +78,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/login");
   }
 
+  async function refreshUser() {
+    const me = await api.me();
+    setUser(toAuthUser(me));
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
