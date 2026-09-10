@@ -5,13 +5,21 @@ tasks, a **Mentor** agent reviews submitted code, and an **HR** agent tracks
 growth over time. Stage 1 (this bootcamp, Sep 1 – Oct 1 2026) is scoped to one
 track (junior developer) and these three agents.
 
+**Current status**: auth, the task board, agent logic, and the CV intake flow
+are all built and wired end-to-end — see `docs/PROJECT_STATUS.md` for exactly
+what's live. The next body of work is the weekly-cycle flow (big task → 5
+subtasks, deadlines, end-of-week Mentor → Manager → HR evaluation) specced
+in `docs/STAGE1_PRODUCT_FLOW.md` — **read that before starting new backend
+work**, since it changes the schema.
+
 ## Repo structure
 
 ```
 .
+├── docs/        PROJECT_STATUS.md (living handoff doc) + STAGE1_PRODUCT_FLOW.md (the spec)
 ├── backend/     FastAPI + PostgreSQL — auth, task board API, agent orchestration
 │   └── app/agents/   Manager / Mentor / HR prompts + orchestrator (AI/Agents track)
-├── frontend/    React + React Flow — node board, task board, thread UI
+├── frontend/    Next.js + React Flow — node board, task board, thread UI, growth view
 └── .vscode/     Shared editor settings so the whole team gets the same setup
 ```
 
@@ -65,14 +73,17 @@ work is meant to plug in.
 ```bash
 cd frontend
 npm install
+cp .env.example .env.local     # optional — defaults to localhost:8000 anyway
 npm run dev
 ```
 
 Needs Node.js 18.18+ (`node -v` to check). Open http://localhost:3000 —
-the entry screen links to `/board` (the home board) and `/tasks` (the
-task board). Both currently run on local mock data, not the backend
-above — see `frontend/README.md` and `frontend/DESIGN.md` for the
-structure and design system before adding new UI.
+the entry screen links to `/login` (sign in / register), then `/board`
+(the home board) and `/tasks` (the task board). **The frontend talks to
+the real backend above** — auth, tasks, reviews, and the employee file
+are all live, not mock data. See `frontend/README.md` and
+`frontend/DESIGN.md` for the structure and design system before adding
+new UI.
 
 ## Git workflow
 

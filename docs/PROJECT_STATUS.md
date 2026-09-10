@@ -1,10 +1,12 @@
 # Project Status — Venv
 
-_Last updated: Sep 2026, after the CV upload flow went in. All four
-planned frontend pieces from the original proposal are now done: home
-board, task board, review view, growth view, and CV intake — all wired
-to a real backend with real agents. Next up is polish/refinement work,
-not new core features — see "Not built yet" below._
+_Last updated: Sep 2026, after Meshari specced out Stage 1's actual weekly-
+cycle product flow (big task → 5 subtasks, deadlines, end-of-week
+Mentor → Manager → HR evaluation cascade). Full spec: **`docs/STAGE1_PRODUCT_FLOW.md`**
+— read that before starting the next body of work. Everything below this
+line describes what's actually built today, which predates that spec:
+a flat one-task-at-a-time model with no weeks, deadlines, or behavioral
+evaluation yet._
 
 ## Where things stand right now
 
@@ -109,15 +111,21 @@ view, agent logic, frontend wiring). This round adds the CV upload flow
 on a new branch, not yet merged — see below.
 
 **Not built yet:**
+- **The Stage 1 weekly-cycle flow — see `docs/STAGE1_PRODUCT_FLOW.md`.
+  This is the primary next piece of work**, and it reframes or absorbs
+  several of the smaller items below (task source ties into task bank
+  content; end-of-week HR evaluation reframes HR cadence).
 - Concrete task bank content, finalized Mentor rubric (current one is a
   first pass, not team-agreed) — still open, see
   `backend/app/agents/README.md`'s "Still open" section
 - HR rollup cadence (currently manual/on-demand only, via the "Ask HR for
-  a review" button)
+  a review" button) — likely superseded by the end-of-week cadence in
+  the new flow doc rather than solved independently
 - CV file upload (PDF/docx) — currently paste-only; no file parsing
   exists anywhere in the stack
 - Alembic migrations — schema currently created via `create_all` on
-  startup; fine while the schema is still moving
+  startup; worth doing once the Stage 1 flow's new tables land, not
+  before (no point migrating twice)
 
 ## Repo map
 
@@ -162,8 +170,15 @@ on a new branch, not yet merged — see below.
 
 ## Handoff notes for whatever's next (starting in a new chat)
 
-No single obvious "next piece" this round — pick from what's open in
-"Not built yet" above based on what the team needs most:
+**Start with `docs/STAGE1_PRODUCT_FLOW.md`** — that's the actual next
+piece, specced by Meshari (weekly cycles, big-task decomposition,
+deadlines, the Mentor → Manager → HR end-of-week evaluation cascade). It
+has its own "open questions worth settling" list; work through those
+with Meshari before writing schema code, since they change the shape of
+the new tables (Project, Week, deadline handling, iterative review).
+
+If that's blocked or deprioritized, the smaller standalone items are
+still open:
 
 - **Task bank + rubric**: the Manager currently improvises tasks from
   scratch each time (no curated bank), and the Mentor's 4-category rubric
@@ -171,17 +186,10 @@ No single obvious "next piece" this round — pick from what's open in
   `backend/app/agents/tools.py`'s `SUBMIT_REVIEW_TOOL`) is a first pass,
   not team-agreed. This is mostly a content/product decision, not code —
   good for a session with the whole team weighing in, not just backend.
-- **HR cadence**: currently only runs when the graduate clicks "Ask HR
-  for a review" on `/growth`. Automating it (after every N reviews? on a
-  schedule?) is a small backend change once the cadence itself is
-  decided — see `backend/app/agents/hr.py`'s docstring.
 - **CV file upload**: right now `/onboarding/cv` is paste-only text. Real
   file upload (PDF/docx) would need client-side text extraction (no
   parsing exists on the backend — `POST /users/me/cv` just stores
   whatever text it's given) before this is worth doing.
-- **Alembic migrations**: schema is still created via `create_all()` on
-  startup. Worth setting up once the schema itself feels stable — every
-  session so far has still been adding fields.
 - `frontend/DESIGN.md` has the full design rationale — read it before
   adding new colors, fonts, or components.
 
