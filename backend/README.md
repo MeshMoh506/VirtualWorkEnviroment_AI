@@ -1,7 +1,7 @@
 # Venv Backend (Stage 1)
 
-FastAPI + PostgreSQL backend for Venv — auth, task board, and the shared
-Employee File that the Manager/Mentor/HR agents will read and write.
+FastAPI + PostgreSQL backend for Venv — auth, task board, agent logic
+(Manager/Mentor/HR), and the shared Employee File they all read and write.
 
 ## Quickstart
 
@@ -36,10 +36,13 @@ python smoke_test.py
 | `app/models.py` | SQLAlchemy schema: Organization, User, EmployeeFile, Task, TaskMessage, Review |
 | `app/schemas.py` | Pydantic request/response shapes |
 | `app/auth.py` | Password hashing + JWT issue/verify + `get_current_user` dependency |
+| `app/agents/` | Manager, Mentor, HR — prompts, tools, orchestrator (see its own README) |
 | `app/routers/auth.py` | `POST /auth/register`, `POST /auth/login` |
-| `app/routers/users.py` | `GET /users/me`, `POST /users/me/cv` |
-| `app/routers/tasks.py` | Task board CRUD + threaded messages |
-| `smoke_test.py` | End-to-end check of the whole flow against sqlite |
+| `app/routers/users.py` | `GET /users/me`, `POST /users/me/cv`, `GET /users/me/employee-file`, `GET /users/me/reviews` |
+| `app/routers/tasks.py` | Task board CRUD, threaded messages, `GET /tasks/{id}/review` |
+| `app/routers/agents.py` | Endpoints that trigger the three agents |
+| `smoke_test.py` | End-to-end check of auth/task/thread/CV flow against sqlite |
+| `smoke_test_agents.py` | End-to-end check of the three agents (LLM calls mocked, real GitHub fetch) |
 
 ## Schema notes for the rest of the team
 
@@ -53,29 +56,35 @@ python smoke_test.py
   task-difficulty calibration, the Mentor's findings, and HR's rollup reviews — write
   to `skills_json` / `strengths_json` / `growth_areas_json` / `summary_text` rather
   than inventing a parallel structure.
-- **`Task.created_by_agent`** defaults to `manager`. Right now `POST /tasks` is a
-  plain authenticated endpoint for testing the board — once the Manager agent's
-  tool-calling is live, it should call this same endpoint (or the same service
-  function) rather than writing to the DB directly, so task creation stays in one
-  code path.
-- **`TaskMessage.sender_type`** is derived automatically: pass `agent_type` in the
-  request body and it's recorded as an agent message; omit it and it's recorded as
-  the user. This is the endpoint the AI/Agents track should call to post agent
+- **`Task.created_by_agent`** defaults to `manager`. `POST /tasks` is still a
+  plain authenticated endpoint (useful for testing); the Manager agent itself
+  builds `Task` rows directly rather than calling its own HTTP endpoint — see
+  `app/agents/manager.py`'s docstring for why that's an equivalent, not a
+  shortcut.
+- **`TaskMessage.sender_type`** is derived automatically: pass `agent_type` in
+  the request body and it's recorded as an agent message; omit it and it's
+  recorded as the user. The Manager agent calls this same path to post
   replies into a task's thread.
-- **CV parsing is intentionally not done here.** `POST /users/me/cv` just stores
-  `cv_raw_text`. Turning that into structured `EmployeeFile.skills_json` is AI/Agents
-  work — the column is already there waiting for it.
+- **CV parsing is intentionally shallow.** `POST /users/me/cv` just stores
+  `cv_raw_text` and returns `has_cv: true`. Turning that into structured
+  `EmployeeFile.skills_json` doesn't happen at intake — the Manager agent
+  reads the raw text directly as prompt context instead.
 
-## Still open (from the proposal)
+## Still open
 
-- Example task bank content — not modeled as a separate table yet; Manager can
-  either generate tasks live or `POST /tasks` from a seed script once the bank
-  exists.
-- Mentor's exact review checklist / rubric — will likely shape `Review.metrics_json`.
-- Final LLM provider choice — doesn't affect this schema either way.
-- Migrations: tables are currently created via `Base.metadata.create_all` on startup
-  for dev speed. Once the schema stabilizes (probably after Week 2), switch to
-  Alembic so schema changes don't require dropping data — happy to set that up next.
+See **`docs/STAGE1_PRODUCT_FLOW.md`** at the repo root — that's the current
+priority, and it'll add new tables (a Project/Week-shaped entity, task
+deadlines, end-of-week evaluation records) on top of what's here. Smaller
+standalone items:
+
+- Example task bank content — not modeled as a separate table yet; the
+  Manager currently improvises tasks live from CV/skills context alone.
+- Mentor's rubric (`SUBMIT_REVIEW_TOOL` in `app/agents/tools.py`) is a first
+  pass, not team-agreed.
+- CV file upload (PDF/docx) — currently paste-only, no parsing anywhere.
+- Migrations: tables are still created via `Base.metadata.create_all` on
+  startup. Worth switching to Alembic once the Stage 1 flow's new tables
+  land, not before — no point migrating the schema twice.
 
 ## Auth flow for the frontend team
 
