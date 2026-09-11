@@ -1,20 +1,24 @@
 """
-Thin routing layer between the API (routers/agents.py) and the three agent
+Thin routing layer between the API (routers/agents.py) and the agent
 modules. Nothing here talks to the LLM directly — it just calls into
-manager.py / mentor.py / hr.py, so the router doesn't need to import them
-directly or know their internals. This is the seam agents/README.md
-describes: as Stage 2 adds more tracks and user-selectable agents, new
-routing decisions (e.g. "which agent handles this track") live here, not in
-the router or in an individual agent module.
+weekly_cycle.py / manager.py / mentor.py / hr.py, so the router doesn't
+need to import them directly or know their internals. This is the seam
+agents/README.md describes: as Stage 2 adds more tracks and user-
+selectable agents, new routing decisions (e.g. "which agent handles this
+track") live here, not in the router or in an individual agent module.
 """
 from sqlalchemy.orm import Session
 
-from app.agents import hr, manager, mentor
+from app.agents import hr, manager, mentor, weekly_cycle
 from app.models import Review, Task, TaskMessage, User
 
 
 def manager_assign_task(db: Session, user: User) -> Task:
-    return manager.assign_task(db, user)
+    """The graduate's next task — bootstraps their Project/Week on the
+    first call, hands out the next subtask, or (once a week's 5 are all
+    approved) runs the end-of-week cascade and rolls into the next week.
+    See weekly_cycle.get_next_task."""
+    return weekly_cycle.get_next_task(db, user)
 
 
 def manager_reply(db: Session, task: Task, user: User) -> TaskMessage:

@@ -1,32 +1,52 @@
 """
-Manager agent. Two jobs, matching agents/README.md:
-  1. Assign a task, calibrated against the graduate's CV / Employee File.
-  2. Reply in a task's comment thread when the graduate posts something.
+Manager agent. Jobs, matching agents/README.md and docs/STAGE1_PRODUCT_FLOW.md:
+  1. Introduce the graduate's main Project (once, at their very first task).
+  2. Plan each Week: one big task broken into 5 subtasks.
+  3. Hand out one subtask at a time as a real Task row (no LLM call — the
+     plan was already decided in plan_week).
+  4. Reply in a task's comment thread when the graduate posts something.
+  5. At the end of each Week, write the progress review that HR's
+     behavioral review reads alongside.
 
-Creating a Task here has the same effect as POST /tasks (see
-routers/tasks.py's comment) — this module builds the row directly rather
-than making an HTTP call to its own server, which avoids a pointless
-self-request but produces an identical row.
-
-Scoping note: new Task rows are only ever created via `assign_task` (called
-again once the current task reaches 'reviewed'). `respond_in_thread` only
-posts messages — it never assigns a new task mid-conversation. That keeps
-"who can create a task" unambiguous as the agent logic grows.
+Nothing here decides *when* to do these — that state machine (bootstrap a
+Project, advance to the next subtask, or run the end-of-week cascade) lives
+in weekly_cycle.py, which calls into this module's functions in order.
+Keeping the "what" (this file) separate from the "when" (weekly_cycle.py)
+is deliberate: this file is one LLM call each, easy to reason about in
+isolation.
 """
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from app.agents.llm_client import call_agentic, call_with_tool
-from app.agents.tools import CREATE_TASK_TOOL, POST_MESSAGE_TOOL
-from app.models import AgentType, SenderType, Task, TaskMessage, User
+from app.agents.tools import (
+    CREATE_PROJECT_TOOL,
+    PLAN_WEEK_TOOL,
+    POST_MESSAGE_TOOL,
+    WEEK_PROGRESS_TOOL,
+)
+from app.models import (
+    AgentType,
+    Project,
+    Review,
+    ReviewKind,
+    SenderType,
+    Task,
+    TaskMessage,
+    User,
+    Week,
+)
+from app.scheduling import n_workdays_from
 
 SYSTEM_PROMPT = (
     "You are the Manager at Venv, a simulated software team a recent "
-    "graduate has just joined. Your job is to assign one clear, scoped "
-    "task at a time from the AI-powered-web-apps track, calibrated to "
+    "graduate has just joined. Your job is to introduce their main "
+    "project, plan each week's work as one big task broken into 5 "
+    "scoped subtasks, and hand those out one at a time — calibrated to "
     "what you know about this graduate's skills so far. Keep your tone "
     "professional and encouraging, like a good real manager onboarding a "
-    "junior engineer — brief context, then a concrete, testable "
-    "deliverable. Never assign more than one task at once."
+    "junior engineer."
 )
 
 
@@ -42,29 +62,103 @@ def _cv_context(user: User) -> str:
     return "\n\n".join(parts) if parts else "No CV or history yet — this is their first task."
 
 
-def assign_task(db: Session, user: User) -> Task:
-    """Assigns the next task and posts the intro message in its thread."""
-    existing_titles = [t.title for t in user.tasks]
+def create_project(db: Session, user: User) -> Project:
+    """Called once per graduate, the first time weekly_cycle.get_next_task
+    finds no active Project yet."""
     prompt = (
         f"{_cv_context(user)}\n\n"
-        f"Tasks already assigned so far: {existing_titles or 'none'}.\n"
-        "Assign the next task now via the create_task tool."
+        "Introduce this graduate to the main project they'll be working on "
+        "throughout the program. Create it now via the create_project tool."
     )
     result = call_with_tool(
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
-        tools=[CREATE_TASK_TOOL],
-        force_tool="create_task",
+        tools=[CREATE_PROJECT_TOOL],
+        force_tool="create_project",
     )
     data = result["input"]
 
-    task = Task(
-        title=data["title"],
-        description=data["description"],
+    project = Project(user_id=user.id, title=data["title"], description=data["description"])
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+def plan_week(db: Session, user: User, project: Project) -> Week:
+    """Defines the week's big task + exactly 5 subtasks, with each
+    subtask's deadline decided up front (Sun-Thu workdays — see
+    scheduling.py) rather than recomputed whenever it's actually released,
+    so a late-running week doesn't silently push deadlines back."""
+    week_number = max((w.week_number for w in project.weeks), default=0) + 1
+    started_at = datetime.utcnow()
+    workday_deadlines = n_workdays_from(started_at, 5)
+
+    prior_weeks_text = "\n\n".join(
+        f"Week {w.week_number}: {w.big_task_title}" for w in project.weeks
+    ) or "None yet — this is the first week."
+    prompt = (
+        f"Project: {project.title}\n{project.description}\n\n"
+        f"{_cv_context(user)}\n\n"
+        f"Prior weeks:\n{prior_weeks_text}\n\n"
+        f"Plan week {week_number} now via the plan_week tool."
+    )
+    result = call_with_tool(
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+        tools=[PLAN_WEEK_TOOL],
+        force_tool="plan_week",
+        max_tokens=2000,
+    )
+    data = result["input"]
+    subtasks = data["subtasks"]
+    if len(subtasks) < 5:
+        raise ValueError(f"plan_week expected 5 subtasks, got {len(subtasks)}")
+
+    subtasks_plan = [
+        {
+            "title": s["title"],
+            "description": s["description"],
+            "deadline": workday_deadlines[i].isoformat(),
+        }
+        for i, s in enumerate(subtasks[:5])
+    ]
+
+    week = Week(
+        project_id=project.id,
         user_id=user.id,
+        week_number=week_number,
+        big_task_title=data["big_task_title"],
+        big_task_description=data["big_task_description"],
+        subtasks_plan_json=subtasks_plan,
+        next_subtask_index=0,
+        started_at=started_at,
+        target_end_at=workday_deadlines[-1],
+    )
+    db.add(week)
+    db.commit()
+    db.refresh(week)
+    return week
+
+
+def release_next_subtask(db: Session, week: Week) -> Task:
+    """Turns the next planned subtask into a real Task row. No LLM call —
+    the plan (and its deadline) was already decided in plan_week; this just
+    hands it out."""
+    idx = week.next_subtask_index
+    plan = week.subtasks_plan_json[idx]
+
+    task = Task(
+        title=plan["title"],
+        description=plan["description"],
+        user_id=week.user_id,
+        week_id=week.id,
+        deadline=datetime.fromisoformat(plan["deadline"]),
         created_by_agent=AgentType.MANAGER,
     )
     db.add(task)
+    week.next_subtask_index = idx + 1
+    db.add(week)
     db.commit()
     db.refresh(task)
 
@@ -79,6 +173,47 @@ def assign_task(db: Session, user: User) -> Task:
     db.commit()
     db.refresh(task)
     return task
+
+
+def submit_week_progress(db: Session, user: User, week: Week) -> Review:
+    """The Manager's end-of-week review, based on the Mentor's per-subtask
+    reviews — the first step of the end-of-week cascade, before HR's
+    behavioral review reads it alongside."""
+    mentor_reviews = [r for r in week.reviews if r.kind == ReviewKind.TASK_REVIEW]
+    history_text = "\n\n".join(
+        f"Subtask {i + 1} (verdict: {(r.metrics_json or {}).get('verdict', '?')}): {r.content}"
+        for i, r in enumerate(mentor_reviews)
+    ) or "No Mentor reviews recorded this week."
+    prompt = (
+        f"Week {week.week_number} big task: {week.big_task_title}\n"
+        f"{week.big_task_description}\n\n"
+        f"Mentor's reviews of this week's subtasks:\n{history_text}\n\n"
+        "Submit the week's progress review now via the submit_week_progress tool."
+    )
+    result = call_with_tool(
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+        tools=[WEEK_PROGRESS_TOOL],
+        force_tool="submit_week_progress",
+    )
+    data = result["input"]
+
+    review = Review(
+        user_id=user.id,
+        task_id=None,
+        week_id=week.id,
+        agent_type=AgentType.MANAGER,
+        kind=ReviewKind.WEEK_PROGRESS,
+        content=data["summary"],
+        metrics_json={
+            "subtasks_completed": data["subtasks_completed"],
+            "subtasks_needed_changes": data["subtasks_needed_changes"],
+        },
+    )
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+    return review
 
 
 def respond_in_thread(db: Session, task: Task, user: User) -> TaskMessage:

@@ -1,11 +1,18 @@
 """
-HR agent. Periodically rolls up a graduate's Mentor review history into an
-updated Employee File (the shared record Manager and Mentor also read) plus
-a standalone rollup Review (task_id=None — see the Review model's
-docstring in models.py). Run cadence (after every task? weekly?) is still
-an open decision per docs/PROJECT_STATUS.md; this module just implements
-"run it once now" — call it from a manual endpoint, a cron job, or after N
-reviews, whichever gets decided later.
+HR agent. Two jobs:
+  1. `run_rollup` — periodically rolls up a graduate's Mentor review
+     history into an updated Employee File (the shared record Manager and
+     Mentor also read) plus a standalone SKILLS_ROLLUP Review. Run cadence
+     (after every task? weekly?) is still an open decision per
+     docs/PROJECT_STATUS.md; this just implements "run it once now."
+  2. `run_behavioral_review` — the end-of-week behavioral evaluation
+     (attendance, consistency, absence) from docs/STAGE1_PRODUCT_FLOW.md,
+     called by weekly_cycle.py right after the Manager's week_progress
+     review. Attendance/lateness figures are computed in code from
+     existing Task/TaskMessage timestamps ("meaningful progress" days,
+     confirmed with Meshari — a status change, submission, or resubmission
+     counts, not just opening the app) — the LLM only writes the narrative
+     and a rating on top of numbers it's handed, not the figures themselves.
 
 Storage note: EmployeeFile.skills_json / strengths_json / growth_areas_json
 are typed `dict` in models.py (so the SQLAlchemy default of `{}` before any
@@ -16,8 +23,9 @@ this instead of its current mock arrays.
 from sqlalchemy.orm import Session
 
 from app.agents.llm_client import call_with_tool
-from app.agents.tools import UPDATE_EMPLOYEE_FILE_TOOL
-from app.models import AgentType, Review, ReviewKind, User
+from app.agents.tools import BEHAVIORAL_REVIEW_TOOL, UPDATE_EMPLOYEE_FILE_TOOL
+from app.models import AgentType, Review, ReviewKind, User, Week
+from app.scheduling import n_workdays_from
 
 SYSTEM_PROMPT = (
     "You are HR at Venv. You maintain one graduate's Employee File based "
@@ -26,6 +34,13 @@ SYSTEM_PROMPT = (
     "evidence-based — reference what actually happened in the reviews, "
     "not generic praise. Growth areas should be actionable, not vague "
     "('add tests alongside the feature' rather than 'improve quality')."
+)
+
+BEHAVIORAL_SYSTEM_PROMPT = (
+    "You are HR at Venv, writing a graduate's end-of-week behavioral "
+    "evaluation — attendance, consistency, and absence. You'll be given "
+    "the actual attendance and lateness figures for the week; write a "
+    "fair, specific summary grounded in those numbers, not a generic one."
 )
 
 
@@ -79,6 +94,70 @@ def run_rollup(db: Session, user: User) -> Review:
         metrics_json={
             "reviewed_task_count": len(mentor_reviews),
             "average_score": average_score,
+        },
+    )
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+    return review
+
+
+def _active_days(week: Week) -> set:
+    """Calendar dates with 'meaningful progress' on this week's subtasks —
+    a status change, submission, or resubmission — per the definition
+    Meshari confirmed. Derived entirely from timestamps that already exist
+    (no new tracking): a task's creation/submission/completion, plus every
+    message in its thread (which includes every Mentor review, including
+    ones after a needs_changes resubmit)."""
+    days = set()
+    for task in week.tasks:
+        days.add(task.created_at.date())
+        if task.submitted_at:
+            days.add(task.submitted_at.date())
+        if task.completed_at:
+            days.add(task.completed_at.date())
+        for m in task.messages:
+            days.add(m.created_at.date())
+    return days
+
+
+def run_behavioral_review(db: Session, user: User, week: Week) -> Review:
+    """The second step of the end-of-week cascade (after the Manager's
+    week_progress review) — see weekly_cycle.py."""
+    workdays = {d.date() for d in n_workdays_from(week.started_at, 5)}
+    active = _active_days(week) & workdays
+    attended_days = len(active)
+    absent_days = max(0, 5 - attended_days)
+    late_count = sum(1 for t in week.tasks if t.is_late)
+
+    prompt = (
+        f"Week {week.week_number} ({week.big_task_title}):\n"
+        f"  {attended_days}/5 workdays had meaningful progress\n"
+        f"  {absent_days}/5 workdays had none\n"
+        f"  {late_count} of {len(week.tasks)} subtasks completed late\n\n"
+        "Write the behavioral evaluation now via the submit_behavioral_review tool."
+    )
+    result = call_with_tool(
+        system=BEHAVIORAL_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+        tools=[BEHAVIORAL_REVIEW_TOOL],
+        force_tool="submit_behavioral_review",
+    )
+    data = result["input"]
+
+    review = Review(
+        user_id=user.id,
+        task_id=None,
+        week_id=week.id,
+        agent_type=AgentType.HR,
+        kind=ReviewKind.BEHAVIORAL,
+        content=data["summary"],
+        metrics_json={
+            "attended_days": attended_days,
+            "absent_days": absent_days,
+            "late_task_count": late_count,
+            "total_subtasks": len(week.tasks),
+            "consistency_rating": data["consistency_rating"],
         },
     )
     db.add(review)
