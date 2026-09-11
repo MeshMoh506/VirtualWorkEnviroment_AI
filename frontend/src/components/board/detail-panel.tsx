@@ -9,13 +9,14 @@ export type BoardSelection = AgentId | "employee-file" | null;
 interface DetailPanelProps {
   selection: BoardSelection;
   hasCv: boolean;
+  /** The graduate's own most recently reviewed task, if any — powers the
+   * mentor card's example link. null until they actually have one. */
+  reviewedTaskId: string | null;
   onClose: () => void;
 }
 
-const NEXT_UP: Record<AgentId, string> = {
+const NEXT_UP: Partial<Record<AgentId, string>> = {
   manager: "The task board is live — see and act on what the manager assigns.",
-  mentor:
-    "See a worked example: feedback plus a rubric score on a submitted task.",
   hr: "The growth view is live — a score trend and timeline across reviews.",
 };
 
@@ -27,13 +28,36 @@ const BOX_LABEL: Record<AgentId, string> = {
 
 const AGENT_LINK: Partial<Record<AgentId, { href: string; label: string }>> = {
   manager: { href: "/tasks", label: "Open task board" },
-  mentor: { href: "/tasks/t1/review", label: "See a review example" },
   hr: { href: "/growth", label: "Open growth view" },
 };
 
-export function DetailPanel({ selection, hasCv, onClose }: DetailPanelProps) {
+export function DetailPanel({
+  selection,
+  hasCv,
+  reviewedTaskId,
+  onClose,
+}: DetailPanelProps) {
   const isAgent = selection !== null && selection !== "employee-file";
   const meta = isAgent ? AGENTS[selection as AgentId] : null;
+  // Mentor is the one card whose link depends on real data: point at the
+  // graduate's own reviewed task once they have one, otherwise fall back
+  // to the task board rather than link to a demo task that doesn't exist.
+  const agentLink =
+    meta?.id === "mentor"
+      ? reviewedTaskId
+        ? { href: `/tasks/${reviewedTaskId}/review`, label: "See your review" }
+        : { href: "/tasks", label: "Open task board" }
+      : meta
+        ? AGENT_LINK[meta.id]
+        : undefined;
+  const nextUpText =
+    meta?.id === "mentor"
+      ? reviewedTaskId
+        ? "See a worked example: feedback plus a rubric score on your own submitted task."
+        : "Submit a task first — the mentor reviews it with feedback and a rubric score."
+      : meta
+        ? NEXT_UP[meta.id]
+        : undefined;
 
   return (
     <AnimatePresence>
@@ -75,14 +99,14 @@ export function DetailPanel({ selection, hasCv, onClose }: DetailPanelProps) {
                     {BOX_LABEL[meta.id]}
                   </p>
                   <p className="mt-1 text-sm text-text-secondary">
-                    {NEXT_UP[meta.id]}
+                    {nextUpText}
                   </p>
-                  {AGENT_LINK[meta.id] && (
+                  {agentLink && (
                     <Link
-                      href={AGENT_LINK[meta.id]!.href}
+                      href={agentLink.href}
                       className="mt-3 inline-block rounded border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong"
                     >
-                      {AGENT_LINK[meta.id]!.label}
+                      {agentLink.label}
                     </Link>
                   )}
                 </div>
