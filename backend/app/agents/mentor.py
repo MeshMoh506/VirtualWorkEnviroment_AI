@@ -6,12 +6,14 @@ frontend/src/lib/reviews.ts's proposed shape), posts a summary message in
 the task thread, and moves the task to 'reviewed' — per agents/README.md,
 that transition is the Mentor's job, not the graduate's.
 """
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from app.agents.github_client import fetch_repo_context
 from app.agents.llm_client import call_with_tool
 from app.agents.tools import SUBMIT_REVIEW_TOOL
-from app.models import AgentType, Review, SenderType, Task, TaskMessage, TaskStatus, User
+from app.models import AgentType, Review, ReviewKind, SenderType, Task, TaskMessage, TaskStatus, User
 
 SYSTEM_PROMPT = (
     "You are the Mentor at Venv, reviewing a recent graduate's submitted "
@@ -46,7 +48,9 @@ def review_task(db: Session, task: Task, user: User) -> Review:
     review = Review(
         user_id=user.id,
         task_id=task.id,
+        week_id=task.week_id,
         agent_type=AgentType.MENTOR,
+        kind=ReviewKind.TASK_REVIEW,
         content=data["summary"],
         metrics_json={
             "verdict": data["verdict"],
@@ -56,7 +60,15 @@ def review_task(db: Session, task: Task, user: User) -> Review:
     )
     db.add(review)
 
-    task.status = TaskStatus.REVIEWED
+    # Iterative review (STAGE1_PRODUCT_FLOW.md): a task isn't done until the
+    # Mentor is satisfied. 'approved' completes it; 'needs_changes' bounces
+    # it back to in_progress so the graduate can revise and resubmit,
+    # rather than dead-ending in 'reviewed' either way.
+    if data["verdict"] == "approved":
+        task.status = TaskStatus.REVIEWED
+        task.completed_at = datetime.utcnow()
+    else:
+        task.status = TaskStatus.IN_PROGRESS
     db.add(task)
 
     db.add(

@@ -1,23 +1,35 @@
 # Project Status — Venv
 
-_Last updated: Sep 2026, after Meshari specced out Stage 1's actual weekly-
-cycle product flow (big task → 5 subtasks, deadlines, end-of-week
-Mentor → Manager → HR evaluation cascade). Full spec: **`docs/STAGE1_PRODUCT_FLOW.md`**
-— read that before starting the next body of work. Everything below this
-line describes what's actually built today, which predates that spec:
-a flat one-task-at-a-time model with no weeks, deadlines, or behavioral
-evaluation yet._
+_Last updated: Sep 2026 — the weekly-cycle **schema** from
+`docs/STAGE1_PRODUCT_FLOW.md` is now built (`Project`, `Week`, `Task`
+deadline/lateness fields, `Review.kind`/`week_id`), plus a fix to make
+Mentor review iterative (`needs_changes` now bounces a task back to
+`in_progress` instead of dead-ending in `reviewed`). What's **not** built
+yet is the orchestration that actually creates/advances a `Project`/`Week`
+— see "Not built yet" below. Read `docs/STAGE1_PRODUCT_FLOW.md` for the
+full spec and which open questions still need a sanity check with Meshari
+before that orchestration lands._
 
 ## Where things stand right now
 
-**Backend: built, tested, running — now with agent logic.**
-- Schema live: `Organization`, `User`, `EmployeeFile`, `Task`, `TaskMessage`, `Review`
-  (`organization_id` nullable everywhere, so Stage 3 multi-tenancy is additive later)
+**Backend: built, tested, running — now with agent logic + weekly-cycle schema.**
+- Schema live: `Organization`, `User`, `EmployeeFile`, `Task`, `TaskMessage`,
+  `Review`, `Project`, `Week` (`organization_id` nullable everywhere, so
+  Stage 3 multi-tenancy is additive later)
+- `Task` gained `week_id`, `deadline`, `submitted_at`, `completed_at`, and a
+  computed `is_late` property. `Review` gained `kind` (`task_review` /
+  `week_progress` / `behavioral` / `skills_rollup`) and `week_id`. None of
+  this is exposed by new endpoints yet — `TaskOut`/`ReviewOut` surface the
+  new fields, but nothing creates a `Project` or `Week` through the API.
 - JWT auth, task board CRUD with status transitions, per-task threaded messages,
   CV intake endpoint
 - `EmployeeFile` auto-created per user at registration — the shared context
   object all three agents read/write
-- Verified with `smoke_test.py` (17 checks) against real Postgres
+- Verified with `smoke_test.py` (19 checks), `smoke_test_agents.py` (17
+  checks), and the new `smoke_test_weekly_cycle.py` (18 checks, covers the
+  new schema fields + the needs_changes bounce-back) — all three pass
+  against sqlite; `smoke_test.py` was originally verified against real
+  Postgres too
 - Local dev database: `docker compose up -d` from repo root
 - Confirmed running locally via `uvicorn app.main:app --reload` →
   `http://localhost:8000/docs`
@@ -111,21 +123,26 @@ view, agent logic, frontend wiring). This round adds the CV upload flow
 on a new branch, not yet merged — see below.
 
 **Not built yet:**
-- **The Stage 1 weekly-cycle flow — see `docs/STAGE1_PRODUCT_FLOW.md`.
-  This is the primary next piece of work**, and it reframes or absorbs
-  several of the smaller items below (task source ties into task bank
-  content; end-of-week HR evaluation reframes HR cadence).
+- **Weekly-cycle orchestration — see `docs/STAGE1_PRODUCT_FLOW.md`. This is
+  the primary next piece of work.** The schema (`Project`, `Week`, `Task`
+  deadline fields, `Review.kind`/`week_id`) landed this round; what's still
+  missing is the code that actually creates/advances them: starting a week
+  (Manager plans the big task + 5-subtask `subtasks_plan_json`), releasing
+  the next subtask when the prior one is approved (`Week.next_subtask_index`),
+  and the end-of-week cascade (Manager's `week_progress` review → HR's
+  `behavioral` review). New endpoints needed, roughly: start/advance a
+  week, and trigger the cascade. Two open product questions block the
+  behavioral half specifically — see `STAGE1_PRODUCT_FLOW.md`'s "Open
+  questions" section (attendance definition; Phase 3 vs. Stage 3 naming).
 - Concrete task bank content, finalized Mentor rubric (current one is a
   first pass, not team-agreed) — still open, see
-  `backend/app/agents/README.md`'s "Still open" section
-- HR rollup cadence (currently manual/on-demand only, via the "Ask HR for
-  a review" button) — likely superseded by the end-of-week cadence in
-  the new flow doc rather than solved independently
+  `backend/app/agents/README.md`'s "Still open" section. Now ties directly
+  into `Week.subtasks_plan_json` above once the task bank exists.
 - CV file upload (PDF/docx) — currently paste-only; no file parsing
   exists anywhere in the stack
 - Alembic migrations — schema currently created via `create_all` on
-  startup; worth doing once the Stage 1 flow's new tables land, not
-  before (no point migrating twice)
+  startup; worth doing once the weekly-cycle orchestration's endpoints
+  land too, not before (no point migrating twice)
 
 ## Repo map
 
@@ -170,12 +187,17 @@ on a new branch, not yet merged — see below.
 
 ## Handoff notes for whatever's next (starting in a new chat)
 
-**Start with `docs/STAGE1_PRODUCT_FLOW.md`** — that's the actual next
-piece, specced by Meshari (weekly cycles, big-task decomposition,
-deadlines, the Mentor → Manager → HR end-of-week evaluation cascade). It
-has its own "open questions worth settling" list; work through those
-with Meshari before writing schema code, since they change the shape of
-the new tables (Project, Week, deadline handling, iterative review).
+**Start with `docs/STAGE1_PRODUCT_FLOW.md`** — the schema section is now
+built (`Project`, `Week`, `Task` deadline/lateness fields,
+`Review.kind`/`week_id`, iterative Mentor review). The next piece is the
+orchestration on top of it: a function/endpoint to start a week (Manager
+plans the big task + `subtasks_plan_json`), one to release the next
+subtask on approval, and the end-of-week cascade (`week_progress` then
+`behavioral` reviews). The doc's "Open questions" section flags which
+schema defaults were assumed rather than confirmed with Meshari (task
+source, self-paced weeks) — those are working defaults, not blockers, but
+the attendance definition genuinely is a blocker for the `behavioral`
+half specifically and needs an answer before that part can be built.
 
 If that's blocked or deprioritized, the smaller standalone items are
 still open:

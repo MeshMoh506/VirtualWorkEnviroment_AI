@@ -1,9 +1,11 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import AgentType, Review, SenderType, Task, TaskMessage, User
+from app.models import AgentType, Review, SenderType, Task, TaskMessage, TaskStatus, User
 from app.schemas import (
     ReviewOut,
     TaskCreate,
@@ -67,6 +69,11 @@ def update_task_status(
 ):
     task = _get_owned_task(task_id, current_user, db)
     task.status = payload.status
+    if payload.status == TaskStatus.SUBMITTED:
+        # Stamped fresh on every submission (including resubmits after
+        # needs_changes) — completed_at (set by the Mentor) is what lateness
+        # is actually judged against, see Task.is_late.
+        task.submitted_at = datetime.utcnow()
     if payload.github_link is not None:
         task.github_link = payload.github_link
     db.commit()

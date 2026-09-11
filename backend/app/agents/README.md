@@ -13,11 +13,16 @@ like CrewAI — three agents sharing one Employee File didn't need one.
 - **Mentor** (`mentor.py`) — reads a submitted task's `github_link` via
   `github_client.py` (real GitHub API, unauthenticated, public repos only —
   matches Project-Summary.md's Stage 1 scope), writes a structured `Review`
-  (`agent_type="mentor"`, `metrics_json` = verdict + rubric categories +
-  inline comments — see `tools.py`'s `SUBMIT_REVIEW_TOOL`), posts a summary
-  message, and moves the task to `reviewed`.
+  (`agent_type="mentor"`, `kind="task_review"`, `metrics_json` = verdict +
+  rubric categories + inline comments — see `tools.py`'s
+  `SUBMIT_REVIEW_TOOL`), posts a summary message, and moves the task to
+  `reviewed` on an `approved` verdict or back to `in_progress` on
+  `needs_changes` (iterative review — see `STAGE1_PRODUCT_FLOW.md`), so the
+  graduate can revise and resubmit rather than dead-ending either way. On
+  approval it also stamps `Task.completed_at`, which `Task.is_late` compares
+  against `Task.deadline`.
 - **HR** (`hr.py`) — reads a graduate's Mentor review history and writes a
-  rollup `Review` (`agent_type="hr"`, `task_id=None`), and refreshes
+  rollup `Review` (`agent_type="hr"`, `kind="skills_rollup"`, `task_id=None`), and refreshes
   `EmployeeFile.skills_json` / `strengths_json` / `growth_areas_json` /
   `summary_text` (each holds `{"items": [...]}` once HR has run — see the
   storage note at the top of `hr.py`).
@@ -41,9 +46,10 @@ Triggered via `POST /agents/manager/assign-task`, `POST
 /tasks/{task_id}/review`, `GET /users/me/employee-file`, `GET
 /users/me/reviews`.
 
-Test with `python smoke_test_agents.py` — mocks the three LLM calls (no
-API key needed to run it) but hits the real GitHub API for Mentor's repo
-fetch.
+Test with `python smoke_test_agents.py` (mocks the three LLM calls, no API
+key needed, hits the real GitHub API for Mentor's repo fetch) and
+`python smoke_test_weekly_cycle.py` (the Project/Week schema + the
+needs_changes bounce-back).
 
 ## Still open
 
@@ -53,8 +59,15 @@ fetch.
 - **Rubric categories are a first pass**, not a finalized contract — see
   `tools.py`'s comment above `SUBMIT_REVIEW_TOOL`.
 - **HR cadence** — currently "run it once, on demand" via the endpoint;
-  whether it should trigger automatically after every N reviews or on a
-  schedule is still open.
+  likely superseded by the weekly cascade below rather than solved
+  independently.
 - **CV parsing** — Manager reads `cv_raw_text` as raw text in the prompt;
   no structured extraction into `EmployeeFile.skills_json` happens before
   HR's first rollup.
+- **Weekly-cycle orchestration** (`Project`/`Week` now exist in
+  `models.py`, per `STAGE1_PRODUCT_FLOW.md`, but nothing creates or
+  advances them yet): starting a week (Manager plans the big task +
+  `Week.subtasks_plan_json`), releasing the next subtask when the prior
+  one is approved, and the end-of-week cascade (Manager's `week_progress`
+  review → HR's `behavioral` review) are all still unbuilt. This is the
+  next piece of work.
