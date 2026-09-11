@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.llm_client import call_with_tool
 from app.agents.tools import UPDATE_EMPLOYEE_FILE_TOOL
-from app.models import AgentType, Review, User
+from app.models import AgentType, Review, ReviewKind, User
 
 SYSTEM_PROMPT = (
     "You are HR at Venv. You maintain one graduate's Employee File based "
@@ -74,6 +74,7 @@ def run_rollup(db: Session, user: User) -> Review:
         user_id=user.id,
         task_id=None,
         agent_type=AgentType.HR,
+        kind=ReviewKind.SKILLS_ROLLUP,
         content=data["summary"],
         metrics_json={
             "reviewed_task_count": len(mentor_reviews),
