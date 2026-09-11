@@ -1,61 +1,90 @@
 # Project Status — Venv
 
-_Last updated: Sep 2026 — the weekly-cycle **schema** from
-`docs/STAGE1_PRODUCT_FLOW.md` is now built (`Project`, `Week`, `Task`
-deadline/lateness fields, `Review.kind`/`week_id`), plus a fix to make
-Mentor review iterative (`needs_changes` now bounces a task back to
-`in_progress` instead of dead-ending in `reviewed`). What's **not** built
-yet is the orchestration that actually creates/advances a `Project`/`Week`
-— see "Not built yet" below. Read `docs/STAGE1_PRODUCT_FLOW.md` for the
-full spec and which open questions still need a sanity check with Meshari
-before that orchestration lands._
+_Last updated: Sep 2026 — the weekly-cycle flow from
+`docs/STAGE1_PRODUCT_FLOW.md` is now fully built, schema AND orchestration:
+`Project`, `Week`, `Task` deadline/lateness fields, `Review.kind`/`week_id`,
+iterative Mentor review, and `backend/app/agents/weekly_cycle.py`'s state
+machine that actually bootstraps a Project/Week, releases subtasks one at a
+time, and runs the end-of-week cascade (Manager's progress review, then
+HR's behavioral review) before rolling into the next week. All of it hangs
+off the existing `POST /agents/manager/assign-task` — no new endpoint
+needed for the core loop. Read `docs/STAGE1_PRODUCT_FLOW.md` for the full
+picture; every open question there is now resolved, confirmed with Meshari
+directly (not just a working default)._
 
 ## Where things stand right now
 
-**Backend: built, tested, running — now with agent logic + weekly-cycle schema.**
+**Backend: built, tested, running — schema + orchestration + agent logic all in.**
 - Schema live: `Organization`, `User`, `EmployeeFile`, `Task`, `TaskMessage`,
   `Review`, `Project`, `Week` (`organization_id` nullable everywhere, so
   Stage 3 multi-tenancy is additive later)
 - `Task` gained `week_id`, `deadline`, `submitted_at`, `completed_at`, and a
   computed `is_late` property. `Review` gained `kind` (`task_review` /
-  `week_progress` / `behavioral` / `skills_rollup`) and `week_id`. None of
-  this is exposed by new endpoints yet — `TaskOut`/`ReviewOut` surface the
-  new fields, but nothing creates a `Project` or `Week` through the API.
+  `week_progress` / `behavioral` / `skills_rollup`) and `week_id`.
+  `TaskOut`/`ReviewOut` surface all of it, and `Project`/`Week` are now
+  created and advanced for real — see the orchestration bullet below and
+  `GET /projects/me`.
 - JWT auth, task board CRUD with status transitions, per-task threaded messages,
   CV intake endpoint
 - `EmployeeFile` auto-created per user at registration — the shared context
   object all three agents read/write
-- Verified with `smoke_test.py` (19 checks), `smoke_test_agents.py` (17
-  checks), and the new `smoke_test_weekly_cycle.py` (18 checks, covers the
-  new schema fields + the needs_changes bounce-back) — all three pass
-  against sqlite; `smoke_test.py` was originally verified against real
-  Postgres too
+- Verified with `smoke_test.py` (20 checks), `smoke_test_agents.py` (19
+  checks), `smoke_test_weekly_cycle.py` (17 checks, the Project/Week/Task
+  schema + the needs_changes bounce-back, exercised directly via the ORM),
+  and the new `smoke_test_orchestration.py` (45 checks, the real thing
+  end to end through the API — bootstrap, idempotency, all 5 subtasks,
+  the full end-of-week cascade, landing correctly on week 2). All four
+  pass together against sqlite; `smoke_test.py` was originally verified
+  against real Postgres too.
 - Local dev database: `docker compose up -d` from repo root
 - Confirmed running locally via `uvicorn app.main:app --reload` →
   `http://localhost:8000/docs`
 
-**Agent logic (`backend/app/agents/`) — new this round.**
+**Agent logic (`backend/app/agents/`) — weekly-cycle orchestration new this round.**
 - LLM: Anthropic Claude (`ANTHROPIC_API_KEY` + `LLM_MODEL` in `.env`,
-  default `claude-sonnet-5`). Orchestration is a plain custom router, not a
-  framework (CrewAI was considered — not worth the dependency at 3-agent scale).
-- **Manager** — assigns tasks calibrated to CV/skills (`assign_task`),
-  replies in the task thread (`respond_in_thread`). New `Task` rows are
-  only ever created via the former; the latter only posts messages.
+  default `claude-sonnet-5`). Orchestration is a plain custom router
+  (`orchestrator.py`) plus a small state machine (`weekly_cycle.py`), not a
+  framework (CrewAI was considered — not worth the dependency at this scale).
+- **Manager** — introduces the graduate's main `Project` once
+  (`create_project`), plans each `Week` as a big task + exactly 5 subtasks
+  with deadlines decided upfront against the Saudi Sun-Thu workweek
+  (`plan_week`, `app/scheduling.py`), hands out one subtask at a time
+  (`release_next_subtask` — no LLM call, the plan's already decided),
+  replies in the task thread (`respond_in_thread`), and writes the
+  end-of-week progress review (`submit_week_progress`).
 - **Mentor** — reads a submitted task's real public `github_link` (via a
   new unauthenticated `github_client.py`), writes a structured `Review`
   (verdict + 4-category rubric + inline comments, matching the frontend's
-  proposed shape in `reviews.ts`), and moves the task to `reviewed`.
-- **HR** — rolls up Mentor review history into `EmployeeFile` (skills,
-  strengths, growth areas, summary) plus a standalone rollup `Review`.
-- New endpoints: `POST /agents/manager/assign-task`, `POST
-  /agents/manager/reply/{task_id}`, `POST /agents/mentor/review/{task_id}`,
-  `POST /agents/hr/rollup`; reads via `GET /tasks/{id}/review`, `GET
-  /users/me/employee-file`, `GET /users/me/reviews`.
-- Tested with `smoke_test_agents.py` (17 checks) — mocks the three LLM
-  calls (no API key needed to run it) but hits the real GitHub API for
-  Mentor's repo fetch. Both smoke tests pass together, no regressions.
-- Full detail and what's still open (task bank, rubric finalization, HR
-  cadence, CV parsing) in `backend/app/agents/README.md`.
+  proposed shape in `reviews.ts`), and moves the task to `reviewed` only on
+  `approved` — `needs_changes` sends it back to `in_progress` for
+  resubmission (iterative review).
+- **HR** — `run_rollup` rolls up Mentor review history into `EmployeeFile`
+  (skills, strengths, growth areas, summary) plus a standalone
+  `skills_rollup` `Review`. `run_behavioral_review` (new) writes the
+  end-of-week behavioral evaluation — attendance/absence/lateness are
+  computed in code from existing timestamps ("meaningful progress": a
+  status change, submission, or resubmission counts as a day present,
+  confirmed with Meshari), and the LLM only writes the narrative + a
+  consistency rating on top of those numbers.
+- **`weekly_cycle.get_next_task`** — the state machine tying it together.
+  Bootstraps a Project + Week 1 on the graduate's very first
+  `assign-task` call; returns the same in-flight subtask if one's still
+  open (idempotent, no duplicates); releases the next one once the
+  current is approved; and once all 5 are approved, runs the cascade
+  (Manager's `submit_week_progress` then HR's `run_behavioral_review`,
+  that order), closes the Week, and rolls straight into the next one —
+  all in the same call, so the graduate always gets a task back.
+- Endpoints: `POST /agents/manager/assign-task` (now does all of the
+  above, not just a flat task), `POST /agents/manager/reply/{task_id}`,
+  `POST /agents/mentor/review/{task_id}`, `POST /agents/hr/rollup`; reads
+  via `GET /projects/me` (new — the Project + all its Weeks), `GET
+  /tasks/{id}/review`, `GET /users/me/employee-file`, `GET /users/me/reviews`.
+- Tested with `smoke_test_agents.py` (basic per-agent sanity) and, more
+  importantly, `smoke_test_orchestration.py` (the full cycle end to end —
+  see above). All four smoke tests pass together, no regressions.
+- Full detail and what's still open (task bank content, rubric
+  finalization, CV parsing, `needs_changes` board visibility, frontend
+  wiring) in `backend/app/agents/README.md`.
 
 **Frontend: all four screens plus CV intake, wired to the real backend — no mock data left.**
 - Next.js (App Router, TypeScript, Tailwind v4), a real design system
@@ -122,27 +151,39 @@ fix + docs update, Mentor's review view, a docs refresh, HR's growth
 view, agent logic, frontend wiring). This round adds the CV upload flow
 on a new branch, not yet merged — see below.
 
+Since then, `main` also picked up the weekly-cycle spec doc and the
+weekly-cycle schema (16 merged PRs as of this update). This round's
+orchestration work (`weekly_cycle.py`, `scheduling.py`, the Manager/HR
+additions, `GET /projects/me`) is on `feature/weekly-cycle-orchestration`,
+not yet merged.
+
 **Not built yet:**
-- **Weekly-cycle orchestration — see `docs/STAGE1_PRODUCT_FLOW.md`. This is
-  the primary next piece of work.** The schema (`Project`, `Week`, `Task`
-  deadline fields, `Review.kind`/`week_id`) landed this round; what's still
-  missing is the code that actually creates/advances them: starting a week
-  (Manager plans the big task + 5-subtask `subtasks_plan_json`), releasing
-  the next subtask when the prior one is approved (`Week.next_subtask_index`),
-  and the end-of-week cascade (Manager's `week_progress` review → HR's
-  `behavioral` review). New endpoints needed, roughly: start/advance a
-  week, and trigger the cascade. Two open product questions block the
-  behavioral half specifically — see `STAGE1_PRODUCT_FLOW.md`'s "Open
-  questions" section (attendance definition; Phase 3 vs. Stage 3 naming).
+- **Frontend isn't wired to the weekly-cycle flow yet.** `GET /projects/me`
+  exists and returns the Project + all its Weeks, but nothing in
+  `frontend/` calls it — the home board's node UI still shows the old flat
+  model. The core task-board loop (`POST /agents/manager/assign-task` etc.)
+  still works unchanged from the frontend's point of view — it just does
+  more behind the scenes now — but there's no UI yet for "which week am I
+  on" / "what's this week's big task" / the end-of-week reviews.
 - Concrete task bank content, finalized Mentor rubric (current one is a
   first pass, not team-agreed) — still open, see
-  `backend/app/agents/README.md`'s "Still open" section. Now ties directly
-  into `Week.subtasks_plan_json` above once the task bank exists.
+  `backend/app/agents/README.md`'s "Still open" section. Confirmed this
+  round: for now, subtasks stay LLM-improvised (not sourced from a bank) —
+  company-uploaded tasks and Phase 3's user-uploaded-project flow are
+  separate, later, out-of-scope paths.
+- **Whether `needs_changes` needs its own visible board state** — right
+  now it just sends the task back to `in_progress`, indistinguishable from
+  a task that was never reviewed. Product call, not made yet.
 - CV file upload (PDF/docx) — currently paste-only; no file parsing
   exists anywhere in the stack
 - Alembic migrations — schema currently created via `create_all` on
-  startup; worth doing once the weekly-cycle orchestration's endpoints
-  land too, not before (no point migrating twice)
+  startup; the schema has changed shape twice now (weekly-cycle schema,
+  then nothing new needed for orchestration itself) without a migration
+  tool, worth doing before it changes again
+- **Attendance computation is only tested at the "everything happens in
+  the same second" level** — `smoke_test_orchestration.py` proves the
+  formula is right, but hasn't (and can't, as a smoke test) exercise a
+  week that actually spans multiple real days.
 
 ## Repo map
 
@@ -150,10 +191,14 @@ on a new branch, not yet merged — see below.
 .
 ├── docker-compose.yml   one-command local Postgres
 ├── backend/             FastAPI — done, tested, running
-│   └── app/agents/       Manager/Mentor/HR — implemented, see its README
+│   └── app/agents/       Manager/Mentor/HR + weekly_cycle.py's state
+│                         machine — implemented, see its README
+│                         (app/scheduling.py, alongside, is the Saudi
+│                         workweek date math it depends on)
 ├── frontend/             Next.js + React Flow — all 4 screens (home
 │                         board, task board, review, growth) plus CV
-│                         intake, all wired to the real backend
+│                         intake, wired to the flat task-board API (not
+│                         yet to the weekly-cycle Project/Week endpoints)
 └── .vscode/              shared editor config
 ```
 
@@ -187,27 +232,30 @@ on a new branch, not yet merged — see below.
 
 ## Handoff notes for whatever's next (starting in a new chat)
 
-**Start with `docs/STAGE1_PRODUCT_FLOW.md`** — the schema section is now
-built (`Project`, `Week`, `Task` deadline/lateness fields,
-`Review.kind`/`week_id`, iterative Mentor review). The next piece is the
-orchestration on top of it: a function/endpoint to start a week (Manager
-plans the big task + `subtasks_plan_json`), one to release the next
-subtask on approval, and the end-of-week cascade (`week_progress` then
-`behavioral` reviews). The doc's "Open questions" section flags which
-schema defaults were assumed rather than confirmed with Meshari (task
-source, self-paced weeks) — those are working defaults, not blockers, but
-the attendance definition genuinely is a blocker for the `behavioral`
-half specifically and needs an answer before that part can be built.
+**The weekly-cycle flow is fully built now** — schema and orchestration
+both. `docs/STAGE1_PRODUCT_FLOW.md` has the full picture; every open
+question in it is resolved, confirmed with Meshari (not a working
+default). The natural next piece is **wiring the frontend to it**: the
+home board doesn't show Project/Week context at all yet (`GET
+/projects/me` is ready and waiting), and there's no UI distinguishing
+"this week's big task" from the flat task list, or surfacing the
+end-of-week `week_progress`/`behavioral` reviews anywhere. The core
+task-board loop itself needs no frontend changes — it already calls
+`POST /agents/manager/assign-task` and gets a real subtask back, same
+shape as before.
 
 If that's blocked or deprioritized, the smaller standalone items are
 still open:
 
-- **Task bank + rubric**: the Manager currently improvises tasks from
-  scratch each time (no curated bank), and the Mentor's 4-category rubric
+- **Task bank + rubric**: the Manager currently improvises subtasks from
+  scratch each time (confirmed as the intended behavior for now — see
+  `STAGE1_PRODUCT_FLOW.md`), and the Mentor's 4-category rubric
   (`correctness`, `code_quality`, `testing`, `documentation` — see
   `backend/app/agents/tools.py`'s `SUBMIT_REVIEW_TOOL`) is a first pass,
   not team-agreed. This is mostly a content/product decision, not code —
   good for a session with the whole team weighing in, not just backend.
+- **`needs_changes` board visibility** — currently silent (task just goes
+  back to `in_progress`). Decide whether it needs its own visible state.
 - **CV file upload**: right now `/onboarding/cv` is paste-only text. Real
   file upload (PDF/docx) would need client-side text extraction (no
   parsing exists on the backend — `POST /users/me/cv` just stores
@@ -228,9 +276,14 @@ still open:
   calls this; real tasks come from the Manager agent), `GET /tasks/{id}`,
   `PATCH /tasks/{id}/status`, `POST /tasks/{id}/messages`,
   `GET /tasks/{id}/review`.
-- Agents: `POST /agents/manager/assign-task`, `POST
+- Agents: `POST /agents/manager/assign-task` (bootstraps/advances the
+  weekly cycle — see `docs/STAGE1_PRODUCT_FLOW.md`), `POST
   /agents/manager/reply/{task_id}`, `POST /agents/mentor/review/{task_id}`,
   `POST /agents/hr/rollup`.
+- Projects: `GET /projects/me` (new — the graduate's active `Project` with
+  all its `Week`s nested).
 - `GET /users/me/employee-file`, `GET /users/me/reviews`.
-- All of this is already wired into `frontend/src/lib/api.ts`,
-  `auth-context.tsx`, `tasks.ts`, `reviews.ts`, and `employee-file.ts`.
+- All of this except `GET /projects/me` is already wired into
+  `frontend/src/lib/api.ts`, `auth-context.tsx`, `tasks.ts`, `reviews.ts`,
+  and `employee-file.ts` — `/projects/me` is new this round and not yet
+  called from anywhere in the frontend.

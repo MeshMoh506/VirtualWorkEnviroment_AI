@@ -1,15 +1,17 @@
 # Stage 1 Product Flow — Weekly Cycles
 
-_Added Sep 2026. **Update:** the schema section below is now built —
-`Project`, `Week`, `Task.deadline`/`submitted_at`/`completed_at`/`is_late`,
-and `Review.kind`/`week_id` all exist in `backend/app/models.py`, and the
-Mentor's review is now iterative (`needs_changes` bounces a task back to
-`in_progress` instead of dead-ending in `reviewed`). What's still missing
-is the orchestration that actually populates the new tables: starting a
-week, releasing subtasks one at a time, and running the end-of-week
-cascade. See `docs/PROJECT_STATUS.md` for the current state and the open
-questions below (now resolved with working defaults, flagged as such) that
-whoever picks up the orchestration should sanity-check with Meshari._
+_Added Sep 2026. **Update:** fully built now, both schema and
+orchestration. `Project`, `Week`, `Task.deadline`/`submitted_at`/
+`completed_at`/`is_late`, and `Review.kind`/`week_id` exist in
+`backend/app/models.py`; `backend/app/agents/weekly_cycle.py`'s
+`get_next_task` is the state machine that actually drives the whole
+Project -> Week -> subtask -> end-of-week cascade -> next Week lifecycle,
+called from the existing `POST /agents/manager/assign-task` (no new
+endpoint needed). Every open question below is resolved — confirmed with
+Meshari directly, not just a working default. See `docs/PROJECT_STATUS.md`
+for the fuller picture and `backend/app/agents/README.md`'s "Still open"
+for what's left (task bank content, frontend wiring, multi-day attendance
+testing)._
 
 ## The flow, end to end
 
@@ -29,16 +31,15 @@ Work runs in cycles of 5 workdays. Each week:
 - The Manager first defines a "big task" (the week's overarching goal),
   then breaks it into 5 subtasks.
 - The user receives subtasks **one at a time per topic** — gradual
-  progression, not all 5 dropped on the board at once. (Today's
-  `assign_task` does one task total, with no concept of a week or a
-  parent "big task" it belongs to.)
+  progression, not all 5 dropped on the board at once. Built:
+  `Week.next_subtask_index` releases them one at a time as each prior
+  one is approved — see `weekly_cycle.get_next_task`.
 - Each task has a specific deadline. Completing it after that deadline
   marks it **late**. Example given: due October 1st, completed October
   2nd → late.
 - Every task is reviewed until fully completed — the Mentor reviews each
-  submitted subtask. (Today's Mentor review is single-shot: one review,
-  task moves to `reviewed` regardless of verdict. This flow implies
-  resubmission + re-review is possible before a task counts as done.)
+  submitted subtask, and only moves it to `reviewed` on an `approved`
+  verdict; `needs_changes` sends it back for resubmission and re-review.
 - The Mentor is meant to work with the user throughout the week, not
   only through the task breakdown that the Manager does.
 
@@ -77,51 +78,66 @@ elsewhere, or a distinct sub-phase within Stage 1's task-sourcing model.*
 - **`Week`** — one 5-workday cycle within a `Project`: `week_number`,
   `status`, `big_task_title`/`big_task_description`, `started_at`/
   `target_end_at`/`ended_at`. The 5 subtasks the Manager plans up front
-  live in `subtasks_plan_json` (not yet real `Task` rows) and get turned
-  into one at a time via `next_subtask_index` as each prior one is
-  approved — that's how "one at a time per topic" is enforced without a
-  new hidden-task status.
-- **`Task.deadline` / `submitted_at` / `completed_at` / `is_late`** — all
-  added. `is_late` is a computed property (`completed_at > deadline`),
-  `None` until both exist. Judged against `completed_at`, not
-  `submitted_at`, per the Oct 1 / Oct 2 example, since a submission can now
-  bounce back and get resubmitted before it's actually done.
-- **Iterative review — done.** `Mentor.review_task` now sets `Task.status`
-  to `reviewed` (+ stamps `completed_at`) only on `approved`; `needs_changes`
+  live in `subtasks_plan_json` (each entry also carries its own
+  `deadline`, decided at planning time — see `scheduling.py`) and get
+  turned into real `Task` rows one at a time via `next_subtask_index` as
+  each prior one is approved.
+- **`Task.deadline` / `submitted_at` / `completed_at` / `is_late`** —
+  `is_late` is a computed property (`completed_at > deadline`), `None`
+  until both exist. Judged against `completed_at`, not `submitted_at`, per
+  the Oct 1 / Oct 2 example, since a submission can bounce back and get
+  resubmitted before it's actually done.
+- **Iterative review.** `Mentor.review_task` sets `Task.status` to
+  `reviewed` (+ stamps `completed_at`) only on `approved`; `needs_changes`
   sends it back to `in_progress` so the graduate can revise and resubmit.
 - **`Review.kind`** (`task_review` / `week_progress` / `behavioral` /
-  `skills_rollup`) and **`Review.week_id`** — added so the Manager's
-  end-of-week progress review and HR's behavioral evaluation can share the
-  `reviews` table with the existing Mentor/rollup reviews instead of
-  needing new tables. `week_progress` and `behavioral` aren't written by
-  anything yet — no orchestration calls them into being.
-- **HR behavioral evaluation** — schema-ready via `Review(kind="behavioral",
-  week_id=...)`, but attendance/consistency/absence aren't computed
-  anywhere yet — see open question 2 below, still unresolved.
+  `skills_rollup`) and **`Review.week_id`** — the Manager's end-of-week
+  progress review and HR's behavioral evaluation share the `reviews` table
+  with the existing Mentor/rollup reviews.
+- **HR behavioral evaluation** — attendance/absence/lateness are computed
+  in code from existing Task/TaskMessage timestamps (a day counts if it
+  had a status change, submission, or resubmission — see `hr.py`'s
+  `_active_days`), and HR's LLM call only writes the narrative + a
+  consistency rating on top of those numbers.
 
-**Not yet built:** anything that actually creates or advances a `Project`/
-`Week` — starting one, releasing the next subtask, running the end-of-week
-cascade. That's the next piece of work; see `PROJECT_STATUS.md`.
+## What this means for orchestration — built
 
-## Open questions — working defaults chosen, worth a quick sanity check
+`backend/app/agents/weekly_cycle.py`'s `get_next_task(db, user)` is the
+state machine, called from the existing `POST /agents/manager/assign-task`:
 
-These were "settle before writing schema code" per the original note below;
-the schema went ahead with the defaults marked ✅ so this round's work
-wasn't blocked, but they weren't explicitly re-confirmed with Meshari and
-should be before the orchestration is built on top of them:
+1. No active `Project` yet -> `manager.create_project`, then plan Week 1.
+2. Active `Week`, current subtask still open (not yet approved) -> return
+   it as-is. Idempotent — asking again doesn't create a duplicate or call
+   the LLM again.
+3. Current subtask approved, more planned this week -> hand out the next
+   one (`manager.release_next_subtask` — no LLM call, the plan was already
+   decided).
+4. All 5 approved -> the end-of-week cascade: `manager.submit_week_progress`,
+   then `hr.run_behavioral_review` (that order, per the confirmed cascade),
+   close the `Week`, plan and start the next one, and hand out its first
+   subtask — all in the same call, so the graduate always gets a task back.
 
-1. **Is the big task LLM-generated by the Manager on the fly, or sourced
-   from the company task bank?** ✅ Default: LLM-generated for now (the
-   task bank doesn't exist yet), via `Week.subtasks_plan_json` — shaped so
-   a populated task bank can feed it later without a schema change.
-2. **What does "attendance" mean with no fixed login hours?** ❓ Still
-   open — not assumed. Needs answering before the HR behavioral eval can
-   actually compute anything (days active? tasks touched per day?
-   something else?).
-3. **Is a "week" a real calendar week, or 5 units of work at the user's own
-   pace?** ✅ Default: self-paced — `Week.started_at`/`target_end_at` are
-   set relative to when the week starts for that user, not a fixed
-   calendar week, consistent with CV intake already being self-paced.
-4. **Phase 3 (user uploads own project) vs. Stage 3 (companies build their
-   own) naming** — ❓ still unreconciled, doesn't block schema or the next
-   round of orchestration work.
+Tested end to end (not just at the schema level) by
+`backend/smoke_test_orchestration.py` — bootstrap, idempotency, five
+subtasks through to a full cascade into week 2, all through the real API.
+
+## Confirmed decisions (previously open questions)
+
+All settled directly with Meshari:
+
+1. **Task source**: for this project, LLM-generated by the Manager — not
+   sourced from a task bank. Companies uploading tasks and Phase 3's
+   user-uploaded-project flow are confirmed as separate, later paths, not
+   this bootcamp's scope. `subtasks_plan_json`'s shape doesn't care where
+   the subtasks came from, so a populated task bank can feed it later
+   without a schema change.
+2. **Attendance** = "meaningful progress" — a status change, a submission,
+   or a resubmission counts as a day present; just opening the app doesn't.
+   Fully derivable from existing timestamps, no new tracking needed.
+3. **A "week" is calendar-based**, not self-paced — reversing the earlier
+   working default. Attendance/absence only make sense against a real
+   calendar. Saudi workweek is Sunday-Thursday (`scheduling.py`), not
+   Monday-Friday.
+4. **Phase 3 vs. Stage 3 naming** — still not explicitly reconciled, but
+   no longer blocks anything: both are confirmed as later, out-of-scope
+   paths regardless of what they're eventually called.

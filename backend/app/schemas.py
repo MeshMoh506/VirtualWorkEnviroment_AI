@@ -134,6 +134,10 @@ class WeekOut(BaseModel):
     ended_at: datetime | None
 
 
+class ProjectDetailOut(ProjectOut):
+    weeks: list[WeekOut] = []
+
+
 # ---- Review & Employee File (agent logic output — see app/agents/) ----
 
 class ReviewOut(BaseModel):
