@@ -13,3 +13,4 @@ alembic==1.13.3
 python-dotenv==1.0.1
 httpx==0.27.2  # smoke_test.py (fastapi.testclient) + agents/github_client.py
 anthropic==1.4.0  # agent logic — see app/agents/llm_client.py
+anthropic>=0.25
