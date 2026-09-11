@@ -56,19 +56,40 @@ r = client.post(
 )
 check("submit cv", r.status_code == 200)
 
-# --- Manager assigns the first task (mocked LLM, forced tool) ---
-fake_task_input = {
-    "title": "Add a login form",
-    "description": "Build an email/password login form against the existing auth endpoints.",
+# --- Manager assigns the first task: this now bootstraps a Project + Week
+# 1 behind the scenes (2 LLM calls — create_project, then plan_week — see
+# app/agents/weekly_cycle.py), not a single flat create_task call anymore. ---
+fake_project_input = {
+    "title": "Venv Internal Dashboard",
+    "description": "A small internal dashboard the graduate will build out incrementally.",
+}
+fake_week_input = {
+    "big_task_title": "Ship the login flow",
+    "big_task_description": "Get a working, tested login flow into the dashboard.",
+    "subtasks": [
+        {"title": "Add a login form", "description": "Build an email/password login form against the existing auth endpoints."},
+        {"title": "Add form validation", "description": "Client-side validation with clear error states."},
+        {"title": "Wire up the auth API", "description": "Connect the form to POST /auth/login."},
+        {"title": "Handle auth errors", "description": "Show a clear message on invalid credentials."},
+        {"title": "Add a logout button", "description": "Simple logout that clears the session."},
+    ],
 }
 with patch(
     "app.agents.manager.call_with_tool",
-    return_value={"tool_name": "create_task", "input": fake_task_input},
+    side_effect=[
+        {"tool_name": "create_project", "input": fake_project_input},
+        {"tool_name": "plan_week", "input": fake_week_input},
+    ],
 ):
     r = client.post("/agents/manager/assign-task", headers=headers)
-check("manager assigns task", r.status_code == 201 and r.json()["title"] == fake_task_input["title"])
+check(
+    "manager assigns first subtask",
+    r.status_code == 201 and r.json()["title"] == fake_week_input["subtasks"][0]["title"],
+)
 task = r.json()
 check("task created_by_agent is manager", task["created_by_agent"] == "manager")
+check("task carries a week_id", task["week_id"] is not None)
+check("task has a deadline", task["deadline"] is not None)
 
 r = client.get(f"/tasks/{task['id']}", headers=headers)
 check("manager posted intro message", r.status_code == 200 and len(r.json()["messages"]) == 1)

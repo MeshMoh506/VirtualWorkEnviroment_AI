@@ -1,15 +1,16 @@
 """
-Smoke test for the weekly-cycle schema additions (Project, Week, Task
+Smoke test for the weekly-cycle schema (Project, Week, Task
 deadline/submitted_at/completed_at/is_late, Review kind/week_id) and the
 Mentor's iterative-review fix (needs_changes now bounces the task back to
 in_progress instead of dead-ending in 'reviewed'). Same mocked-LLM style as
 smoke_test_agents.py — no Anthropic API key needed.
 
-Project/Week aren't reachable through the API yet (no orchestration
-endpoint creates them — see STAGE1_PRODUCT_FLOW.md's "not yet built" note
-in models.py). This writes them directly via the ORM to confirm the schema
-itself — FKs, relationships, defaults — is sound end to end, and that
-Task/Review correctly carry week_id once attached to one.
+Project/Week/Task are all written directly via the ORM here rather than
+through the API, to isolate what this test actually cares about (the
+fields, and Mentor's approve/needs_changes behavior) from the orchestration
+that normally creates them. That orchestration — Manager actually bootstrapping
+a Project/Week and releasing subtasks one at a time — is covered end to end,
+through the real API, by smoke_test_orchestration.py.
 
 Run: python smoke_test_weekly_cycle.py
 """
@@ -73,21 +74,22 @@ check("project.weeks relationship", project.weeks[0].id == week.id)
 week_id = week.id
 db.close()
 
-# --- Manager assigns a task; attach it to the week + a deadline ---
-fake_task_input = {"title": "Build the hero section", "description": "Hero section per the design spec."}
-with patch(
-    "app.agents.manager.call_with_tool",
-    return_value={"tool_name": "create_task", "input": fake_task_input},
-):
-    r = client.post("/agents/manager/assign-task", headers=headers)
-check("manager assigns task", r.status_code == 201)
-task_id = r.json()["id"]
-
+# --- Task, written directly too (orchestration itself — Manager actually
+# creating this via the weekly-cycle state machine — is covered end to end
+# by smoke_test_orchestration.py; this test only needs a Task with a
+# week_id + deadline in place to exercise the fields/Mentor behavior below) ---
 db = SessionLocal()
-db_task = db.get(Task, task_id)
-db_task.week_id = week_id
-db_task.deadline = datetime.utcnow() + timedelta(days=1)
+task = Task(
+    title="Build the hero section",
+    description="Hero section per the design spec.",
+    user_id=user_id,
+    week_id=week_id,
+    deadline=datetime.utcnow() + timedelta(days=1),
+)
+db.add(task)
 db.commit()
+db.refresh(task)
+task_id = task.id
 db.close()
 
 # --- submit, Mentor says needs_changes -> bounces back to in_progress ---
