@@ -174,6 +174,17 @@ export interface EmployeeFileApiOut {
   updated_at: string;
 }
 
+export interface DashboardApiOut {
+  tasks_completed: number;
+  tasks_total: number;
+  on_time_rate: number | null;
+  average_score: number | null;
+  reviews_count: number;
+  weeks_completed: number;
+  weeks_total: number;
+  has_active_project: boolean;
+}
+
 // ---- Project & Week (weekly-cycle flow) ----
 
 export type ApiProjectStatus = "active" | "completed";
@@ -268,6 +279,7 @@ export const api = {
 
   employeeFile: () => request<EmployeeFileApiOut>("/users/me/employee-file"),
   reviews: () => request<ReviewApiOut[]>("/users/me/reviews"),
+  dashboard: () => request<DashboardApiOut>("/users/me/dashboard"),
 
   projects: {
     /** The graduate's active Project + all its Weeks. 404s until they've
