@@ -102,7 +102,9 @@ export function DetailPanel({
                       {meta.name}
                     </h2>
                   </div>
-                  <p className="mt-1 text-sm text-text-secondary">{meta.role}</p>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    {meta.role}
+                  </p>
                   <p className="mt-5 text-sm leading-relaxed text-text-secondary">
                     {meta.description}
                   </p>
@@ -141,8 +143,8 @@ export function DetailPanel({
                   )}
                   {!week ? (
                     <p className="mt-5 text-sm leading-relaxed text-text-secondary">
-                      No active week yet — ask the manager for your first
-                      task and one will start.
+                      No active week yet — ask the manager for your first task
+                      and one will start.
                     </p>
                   ) : (
                     <>
@@ -204,11 +206,10 @@ export function DetailPanel({
                     The one record all three agents read from and write to.
                   </p>
                   <p className="mt-5 text-sm leading-relaxed text-text-secondary">
-                    Your CV, skills, task history, and every review live
-                    here. When the mentor reviews your code, HR sees it.
-                    When HR notes a growth area, the manager&apos;s next
-                    task can account for it — no agent works from a stale
-                    or partial picture of you.
+                    Your CV, skills, task history, and every review live here.
+                    When the mentor reviews your code, HR sees it. When HR notes
+                    a growth area, the manager&apos;s next task can account for
+                    it — no agent works from a stale or partial picture of you.
                   </p>
                   <div className="mt-8 rounded border border-border bg-bg-surface px-4 py-3">
                     <p className="font-mono text-xs text-text-muted">
