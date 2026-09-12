@@ -80,7 +80,7 @@ export function WeekStrip({ week, projectTitle }: WeekStripProps) {
           {week.subtasksReleased}/{week.subtasksPlan.length} handed out
         </span>
         <Link
-          href="/tasks"
+          href="/workspace"
           className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
         >
           Open task board

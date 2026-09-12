@@ -19,16 +19,23 @@ Open http://localhost:3000. The backend runs separately — see
 - `/login` — sign in / register (toggle). `/onboarding/cv` — one-time
   CV paste step after registration, skippable, reachable again later
   from the board's Employee File panel.
-- `/board` — home board: a You node connects to Manager / Mentor / HR,
-  all feeding a shared Employee File node; clicking a node opens a
-  detail panel.
-- `/tasks` — kanban board (To do / In progress / Submitted / Reviewed).
-  "Ask manager for a task" triggers the Manager; submitting auto-triggers
-  the Mentor's review; posting a thread message auto-triggers the
-  Manager's reply.
+- `/` — landing page: scroll-snapping sections (hero, the three agents,
+  the weekly loop, CTA).
+- `/board` — home dashboard, two columns: left is your current focus,
+  stat row, week-progress strip, and live agent cards; right is the
+  interactive agents graph (You -> Manager / Mentor / HR -> shared
+  Employee File), clicking a node opens a detail drawer.
+- `/workspace` — the Jira-style workspace: task list rail (grouped by
+  status) · task detail (submit / review actions) · a per-task agents
+  discussion panel. "Ask manager" triggers the Manager; submitting a
+  GitHub link auto-triggers the Mentor's review; a thread message
+  auto-triggers the Manager's reply. `/tasks` redirects here.
+- `/meeting` — direct chat room with each agent (Manager / Mentor / HR),
+  not tied to any task; one persisted conversation per agent.
 - `/tasks/[id]/review` — Mentor's structured review for one task.
 - `/growth` — HR's view: Employee File + review timeline, "Ask HR for a
   review" button.
+- `/logout` — sign-off confirmation screen.
 
 ## Talking to the backend
 

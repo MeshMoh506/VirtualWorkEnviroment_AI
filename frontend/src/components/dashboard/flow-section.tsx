@@ -4,11 +4,11 @@ import { useMemo } from "react";
 import ReactFlow, {
   Background,
   BackgroundVariant,
+  Controls,
   type Edge,
   type Node,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { motion } from "framer-motion";
 import { AGENT_ORDER, type AgentId } from "@/lib/agents";
 import { AgentNode, EmployeeFileNode, UserNode } from "@/components/board/nodes";
 import type { BoardSelection } from "@/components/board/detail-panel";
@@ -30,10 +30,10 @@ interface FlowSectionProps {
 }
 
 /**
- * The node graph, kept as the signature "how the pieces connect" visual —
- * but now one bounded section on the dashboard rather than the entire
- * page. Fixed height, non-interactive pan/zoom (it's an illustration, not
- * a workspace here), nodes still clickable to open the detail drawer.
+ * The agents graph — now the board's whole right column. Interactive
+ * again: the graph pans and zooms (Meshari asked for that back), with
+ * Controls for zoom/fit and nodes still clickable to open the detail
+ * drawer. Fills its parent, so the parent must be a sized/relative box.
  */
 export function FlowSection({ onSelect }: FlowSectionProps) {
   const nodes: Node[] = useMemo(
@@ -75,46 +75,24 @@ export function FlowSection({ onSelect }: FlowSectionProps) {
   );
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" }}
-      className="rounded border border-border bg-bg-surface"
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      nodeTypes={nodeTypes}
+      fitView
+      fitViewOptions={{ padding: 0.3 }}
+      proOptions={{ hideAttribution: true }}
+      nodesConnectable={false}
+      nodesDraggable={false}
+      minZoom={0.4}
+      maxZoom={1.5}
+      className="bg-bg-base"
     >
-      <div className="border-b border-border px-6 py-4">
-        <p className="font-mono text-[11px] text-text-muted">how_it_works</p>
-        <h3 className="mt-1 text-lg font-medium text-text-primary">
-          Three agents, one shared file
-        </h3>
-        <p className="mt-1 text-sm text-text-secondary">
-          You work with all three. They don&apos;t keep separate notes —
-          everything flows into one employee file. Tap any node to see more.
-        </p>
-      </div>
-      <div className="h-[420px] w-full">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.25 }}
-          proOptions={{ hideAttribution: true }}
-          nodesConnectable={false}
-          nodesDraggable={false}
-          panOnDrag={false}
-          zoomOnScroll={false}
-          zoomOnPinch={false}
-          zoomOnDoubleClick={false}
-          preventScrolling={false}
-          className="bg-bg-base"
-        >
-          <Background
-            variant={BackgroundVariant.Lines}
-            gap={32}
-            color="var(--line-grid)"
-          />
-        </ReactFlow>
-      </div>
-    </motion.section>
+      <Background variant={BackgroundVariant.Lines} gap={32} color="var(--line-grid)" />
+      <Controls
+        showInteractive={false}
+        className="!border-border !bg-bg-surface [&_button]:!border-border [&_button]:!bg-bg-surface [&_button:hover]:!bg-bg-surface-raised [&_button_svg]:!fill-text-secondary"
+      />
+    </ReactFlow>
   );
 }

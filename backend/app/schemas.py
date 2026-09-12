@@ -198,3 +198,19 @@ class DashboardOut(BaseModel):
     weeks_completed: int
     weeks_total: int
     has_active_project: bool
+
+
+# ---- Meeting Room (direct agent chat — see app/agents/meeting.py) ----
+
+class ChatMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    agent_type: AgentType
+    sender_type: SenderType
+    content: str
+    created_at: datetime
+
+
+class ChatSend(BaseModel):
+    content: str

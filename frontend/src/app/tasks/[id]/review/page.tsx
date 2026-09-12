@@ -50,10 +50,10 @@ export default function ReviewPage({ params }: ReviewPageProps) {
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <div>
           <Link
-            href="/tasks"
+            href="/workspace"
             className="font-mono text-xs text-text-muted hover:text-text-secondary"
           >
-            venv / tasks
+            venv / workspace
           </Link>
           <h1 className="mt-1 text-lg font-medium text-text-primary">
             Mentor&apos;s review
@@ -144,7 +144,7 @@ export default function ReviewPage({ params }: ReviewPageProps) {
         )}
 
         <Link
-          href="/tasks"
+          href="/workspace"
           className="mt-10 inline-block text-xs text-text-muted hover:text-text-secondary"
         >
           Back to task board
