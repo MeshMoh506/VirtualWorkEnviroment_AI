@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import ReactFlow, {
   Background,
@@ -11,6 +11,7 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { AGENT_ORDER, type AgentId } from "@/lib/agents";
 import { useRequireAuth } from "@/lib/auth-context";
+import { fetchTasks } from "@/lib/tasks";
 import { AgentNode, EmployeeFileNode, UserNode } from "@/components/board/nodes";
 import { DetailPanel, type BoardSelection } from "@/components/board/detail-panel";
 
@@ -29,6 +30,20 @@ const AGENT_POSITIONS: Record<AgentId, { x: number; y: number }> = {
 export default function BoardPage() {
   const { user, loading, logout } = useRequireAuth();
   const [selection, setSelection] = useState<BoardSelection>(null);
+  // Powers the mentor card's "See a review example" link — there's no
+  // guaranteed demo task once real data replaces mocks, so this points at
+  // the graduate's own most recent reviewed task if they have one yet.
+  const [reviewedTaskId, setReviewedTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchTasks()
+      .then((tasks) => {
+        const reviewed = tasks.find((t) => t.status === "reviewed");
+        setReviewedTaskId(reviewed?.id ?? null);
+      })
+      .catch(() => setReviewedTaskId(null));
+  }, [user]);
 
   const nodes: Node[] = useMemo(
     () => [
@@ -132,6 +147,7 @@ export default function BoardPage() {
         <DetailPanel
           selection={selection}
           hasCv={user.hasCv}
+          reviewedTaskId={reviewedTaskId}
           onClose={() => setSelection(null)}
         />
       </div>
