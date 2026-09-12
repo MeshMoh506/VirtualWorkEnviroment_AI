@@ -189,7 +189,7 @@ export function DetailPanel({
                         })}
                       </ul>
                       <Link
-                        href="/tasks"
+                        href="/workspace"
                         className="mt-6 inline-block rounded border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong"
                       >
                         Open task board

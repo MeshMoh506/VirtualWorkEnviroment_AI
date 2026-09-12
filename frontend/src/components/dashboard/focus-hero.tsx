@@ -49,7 +49,7 @@ export function FocusHero({ task, week, hasProject }: FocusHeroProps) {
             piece of it — one focused task at a time.
           </p>
           <Link
-            href="/tasks"
+            href="/workspace"
             className="mt-5 inline-block rounded border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
           >
             Ask the manager for a task
@@ -66,7 +66,7 @@ export function FocusHero({ task, week, hasProject }: FocusHeroProps) {
             appear here as soon as the manager hands it out.
           </p>
           <Link
-            href="/tasks"
+            href="/workspace"
             className="mt-5 inline-block rounded border border-border px-5 py-2.5 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
             Open the task board
@@ -93,7 +93,7 @@ export function FocusHero({ task, week, hasProject }: FocusHeroProps) {
 
           <div className="mt-5 flex flex-wrap items-center gap-4">
             <Link
-              href="/tasks"
+              href="/workspace"
               className="rounded border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
             >
               {task.status === "todo" ? "Start this task" : "Open on the board"}
