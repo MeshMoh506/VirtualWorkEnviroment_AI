@@ -19,6 +19,14 @@ export interface Task {
   status: TaskStatus;
   githubLink: string | null;
   createdByAgent: AgentId;
+  // null for tasks outside the weekly-cycle flow (e.g. any manually
+  // created via the admin POST /tasks, which the app itself never calls).
+  weekId: string | null;
+  deadline: string | null;
+  submittedAt: string | null;
+  completedAt: string | null;
+  // null until both deadline and completedAt exist.
+  isLate: boolean | null;
   createdAt: string;
   updatedAt: string;
   messages: TaskMessage[];
@@ -56,6 +64,11 @@ function toTask(t: TaskApiOut, messages: TaskMessage[] = []): Task {
     status: t.status,
     githubLink: t.github_link,
     createdByAgent: t.created_by_agent,
+    weekId: t.week_id,
+    deadline: t.deadline,
+    submittedAt: t.submitted_at,
+    completedAt: t.completed_at,
+    isLate: t.is_late,
     createdAt: t.created_at,
     updatedAt: t.updated_at,
     messages,

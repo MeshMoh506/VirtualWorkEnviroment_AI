@@ -18,8 +18,10 @@ export interface ReviewComment {
 export interface Review {
   id: string;
   taskId: string | null;
+  weekId: string | null;
   agentType: AgentId;
-  verdict: ReviewVerdict | null; // null for HR rollups, which have no verdict
+  kind: "task_review" | "week_progress" | "behavioral" | "skills_rollup";
+  verdict: ReviewVerdict | null; // null for anything that isn't a Mentor task review
   content: string;
   categories: RubricCategory[];
   comments: ReviewComment[];
@@ -37,7 +39,9 @@ function toReview(r: ReviewApiOut): Review {
   return {
     id: r.id,
     taskId: r.task_id,
+    weekId: r.week_id,
     agentType: r.agent_type,
+    kind: r.kind,
     verdict: metrics?.verdict ?? null,
     content: r.content,
     categories: metrics?.categories ?? [],

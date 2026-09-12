@@ -177,6 +177,18 @@ try:
     r = client.get("/projects/me", headers=headers)
     weeks = r.json()["weeks"]
     check("project now has 2 weeks", len(weeks) == 2)
+    check("week 1's subtasks_plan_json has 5 full entries", len(weeks[0]["subtasks_plan_json"]) == 5)
+    check(
+        "each subtask plan entry has title/description/deadline",
+        all(
+            set(s.keys()) == {"title", "description", "deadline"}
+            for s in weeks[0]["subtasks_plan_json"]
+        ),
+    )
+    check(
+        "week 1's plan titles match what the mocked Manager planned",
+        [s["title"] for s in weeks[0]["subtasks_plan_json"]] == [s["title"] for s in subtasks("Login flow")],
+    )
     check("week 1 is completed", weeks[0]["status"] == "completed" and weeks[0]["ended_at"] is not None)
     check("week 2 is active", weeks[1]["status"] == "active" and weeks[1]["next_subtask_index"] == 1)
 

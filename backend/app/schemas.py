@@ -119,6 +119,17 @@ class ProjectOut(BaseModel):
     updated_at: datetime
 
 
+class SubtaskPlanOut(BaseModel):
+    """One entry from Week.subtasks_plan_json — the Manager's upfront plan
+    for a subtask, before it becomes a real Task row. Field names match
+    the JSON exactly (title/description/deadline) so this maps onto it
+    automatically via from_attributes; see models.py's Week docstring."""
+
+    title: str
+    description: str
+    deadline: datetime
+
+
 class WeekOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -129,6 +140,10 @@ class WeekOut(BaseModel):
     big_task_title: str
     big_task_description: str
     next_subtask_index: int
+    # Named to match the ORM column exactly (Week.subtasks_plan_json) so
+    # Pydantic's from_attributes picks it up with no extra mapping code —
+    # the frontend renames it to something friendlier on its side.
+    subtasks_plan_json: list[SubtaskPlanOut]
     started_at: datetime
     target_end_at: datetime
     ended_at: datetime | None
