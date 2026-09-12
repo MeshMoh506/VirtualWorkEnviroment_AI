@@ -33,16 +33,23 @@ python smoke_test.py
 
 | File | Purpose |
 |---|---|
-| `app/models.py` | SQLAlchemy schema: Organization, User, EmployeeFile, Task, TaskMessage, Review |
+| `app/models.py` | SQLAlchemy schema: Organization, User, EmployeeFile, Project, Week, Task, TaskMessage, Review, ChatMessage |
 | `app/schemas.py` | Pydantic request/response shapes |
 | `app/auth.py` | Password hashing + JWT issue/verify + `get_current_user` dependency |
-| `app/agents/` | Manager, Mentor, HR — prompts, tools, orchestrator (see its own README) |
+| `app/scheduling.py` | Saudi (Sun–Thu) workweek date math for week/subtask deadlines |
+| `app/dashboard.py` | Aggregates the home-dashboard stats (`GET /users/me/dashboard`) |
+| `app/agents/` | Manager, Mentor, HR + the weekly-cycle state machine (see its own README) |
 | `app/routers/auth.py` | `POST /auth/register`, `POST /auth/login` |
-| `app/routers/users.py` | `GET /users/me`, `POST /users/me/cv`, `GET /users/me/employee-file`, `GET /users/me/reviews` |
+| `app/routers/users.py` | `GET /users/me`, `POST /users/me/cv`, `GET /users/me/employee-file`, `GET /users/me/reviews`, `GET /users/me/dashboard` |
 | `app/routers/tasks.py` | Task board CRUD, threaded messages, `GET /tasks/{id}/review` |
+| `app/routers/projects.py` | `GET /projects/me` — active project + all its weeks |
 | `app/routers/agents.py` | Endpoints that trigger the three agents |
-| `smoke_test.py` | End-to-end check of auth/task/thread/CV flow against sqlite |
-| `smoke_test_agents.py` | End-to-end check of the three agents (LLM calls mocked, real GitHub fetch) |
+| `app/routers/meeting.py` | `GET`/`POST /meeting/{agent}` — direct task-free agent chat |
+| `smoke_test.py` | End-to-end check of auth/task/thread/CV flow against sqlite (20 checks) |
+| `smoke_test_agents.py` | The three agents' basics (LLM mocked, real GitHub fetch) (19) |
+| `smoke_test_weekly_cycle.py` | Project/Week schema + iterative Mentor review (17) |
+| `smoke_test_orchestration.py` | The full weekly cycle end-to-end through the API (56) |
+| `smoke_test_meeting.py` | Direct agent chat / meeting room (15) |
 
 ## Schema notes for the rest of the team
 
