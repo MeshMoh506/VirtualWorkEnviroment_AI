@@ -205,6 +205,20 @@ try:
         m["attended_days"] + m["absent_days"] == 5 and m["late_task_count"] == 0 and m["total_subtasks"] == 5,
     )
 
+    # --- dashboard aggregation (GET /users/me/dashboard) ---
+    r = client.get("/users/me/dashboard", headers=headers)
+    check("dashboard: 200", r.status_code == 200)
+    d = r.json()
+    # Week 1's 5 subtasks were all submitted+approved; week 2's first is
+    # released but not reviewed, so 5 completed of 6 total.
+    check("dashboard: 5 tasks completed", d["tasks_completed"] == 5)
+    check("dashboard: 6 tasks total (5 done + week 2's first)", d["tasks_total"] == 6)
+    check("dashboard: average_score is the mocked 3.75", abs(d["average_score"] - 3.75) < 0.01)
+    check("dashboard: 5 task reviews counted", d["reviews_count"] == 5)
+    check("dashboard: on_time_rate is 1.0 (nothing late)", d["on_time_rate"] == 1.0)
+    check("dashboard: 1 week completed of 2", d["weeks_completed"] == 1 and d["weeks_total"] == 2)
+    check("dashboard: has_active_project true", d["has_active_project"] is True)
+
     print("\nAll orchestration checks passed.")
 finally:
     mock_manager.stop()

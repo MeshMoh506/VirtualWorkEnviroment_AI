@@ -182,3 +182,19 @@ class EmployeeFileOut(BaseModel):
     growth_areas_json: dict
     summary_text: str | None
     updated_at: datetime
+
+
+class DashboardOut(BaseModel):
+    """At-a-glance stats for the logged-in home dashboard — assembled
+    server-side by app/dashboard.py so the frontend makes one call, not
+    five. Rates/averages are None (not 0) when there's nothing to judge
+    yet, so the UI can show '—' instead of a misleading 0%."""
+
+    tasks_completed: int
+    tasks_total: int
+    on_time_rate: float | None
+    average_score: float | None
+    reviews_count: int
+    weeks_completed: int
+    weeks_total: int
+    has_active_project: bool
