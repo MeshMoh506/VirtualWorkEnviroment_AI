@@ -12,8 +12,10 @@ import "reactflow/dist/style.css";
 import { AGENT_ORDER, type AgentId } from "@/lib/agents";
 import { useRequireAuth } from "@/lib/auth-context";
 import { fetchTasks } from "@/lib/tasks";
+import { fetchMyProject, currentWeek, type Project } from "@/lib/projects";
 import { AgentNode, EmployeeFileNode, UserNode } from "@/components/board/nodes";
 import { DetailPanel, type BoardSelection } from "@/components/board/detail-panel";
+import { WeekStatusPanel } from "@/components/board/week-panel";
 
 const nodeTypes = {
   agent: AgentNode,
@@ -34,6 +36,11 @@ export default function BoardPage() {
   // guaranteed demo task once real data replaces mocks, so this points at
   // the graduate's own most recent reviewed task if they have one yet.
   const [reviewedTaskId, setReviewedTaskId] = useState<string | null>(null);
+  // The weekly-cycle status panel's data — a separate loading flag from
+  // the page-level `loading` above (that one's just auth), so the panel
+  // can show its own "loading..." state independently.
+  const [project, setProject] = useState<Project | null>(null);
+  const [projectLoading, setProjectLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
@@ -43,7 +50,14 @@ export default function BoardPage() {
         setReviewedTaskId(reviewed?.id ?? null);
       })
       .catch(() => setReviewedTaskId(null));
+
+    fetchMyProject()
+      .then(setProject)
+      .catch(() => setProject(null))
+      .finally(() => setProjectLoading(false));
   }, [user]);
+
+  const week = project ? currentWeek(project) : null;
 
   const nodes: Node[] = useMemo(
     () => [
@@ -127,6 +141,10 @@ export default function BoardPage() {
           </button>
         </div>
       </header>
+      {/* min-h-0 is load-bearing here: without it this flex/grid child
+          won't shrink below its content's natural height, and ReactFlow
+          (which needs a bounded parent) would push the page into
+          scrolling instead of staying fixed to the viewport. */}
       <div className="relative min-h-0">
         <ReactFlow
           nodes={nodes}
@@ -143,15 +161,22 @@ export default function BoardPage() {
             gap={32}
             color="var(--line-grid)"
           />
+          <WeekStatusPanel
+            loading={projectLoading}
+            project={project}
+            week={week}
+            onSelect={() => setSelection("week")}
+          />
         </ReactFlow>
         <DetailPanel
           selection={selection}
           hasCv={user.hasCv}
           reviewedTaskId={reviewedTaskId}
+          week={week}
+          projectTitle={project?.title ?? null}
           onClose={() => setSelection(null)}
         />
       </div>
     </main>
   );
 }
-
