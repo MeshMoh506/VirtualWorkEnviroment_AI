@@ -23,6 +23,9 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => void;
+  /** Clears the session in place, without redirecting — for the /logout
+   * page, which renders its own sign-off. Prefer logout() elsewhere. */
+  clearSession: () => void;
   /** Re-fetches /users/me — call after anything that changes the user
    * server-side but isn't part of login/register (e.g. submitting a CV). */
   refreshUser: () => Promise<void>;
@@ -72,10 +75,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await login(email, password);
   }
 
-  function logout() {
+  /** Clears the session without navigating — the caller decides where to
+   * go. Used by the /logout page, which shows its own sign-off screen
+   * after. */
+  function clearSession() {
     clearToken();
     setUser(null);
-    router.push("/login");
+  }
+
+  /** Sends the user to the /logout confirmation page. Does NOT clear the
+   * session itself — the page does that on confirm — so a page guarded by
+   * useRequireAuth doesn't race a redirect to /login the moment user goes
+   * null. Prefer linking to /logout directly; this exists for programmatic
+   * callers. */
+  function logout() {
+    router.push("/logout");
   }
 
   async function refreshUser() {
@@ -84,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, clearSession, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

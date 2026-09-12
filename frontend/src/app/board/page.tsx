@@ -26,7 +26,7 @@ function focusTask(tasks: Task[]): Task | null {
 }
 
 export default function BoardPage() {
-  const { user, loading, logout } = useRequireAuth();
+  const { user, loading } = useRequireAuth();
   const [selection, setSelection] = useState<BoardSelection>(null);
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -88,13 +88,12 @@ export default function BoardPage() {
           <span className="hidden font-mono text-xs text-text-muted lg:inline">
             {user.email}
           </span>
-          <button
-            type="button"
-            onClick={logout}
+          <Link
+            href="/logout"
             className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
             Log out
-          </button>
+          </Link>
         </div>
       </header>
 

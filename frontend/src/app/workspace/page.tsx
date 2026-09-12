@@ -20,7 +20,7 @@ import { TaskWorkspace } from "@/components/workspace/task-workspace";
 import { AgentsMeeting } from "@/components/workspace/agents-meeting";
 
 export default function WorkspacePage() {
-  const { user, loading: authLoading, logout } = useRequireAuth();
+  const { user, loading: authLoading } = useRequireAuth();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,13 +166,12 @@ export default function WorkspacePage() {
           <span className="hidden font-mono text-xs text-text-muted lg:inline">
             {user.email}
           </span>
-          <button
-            type="button"
-            onClick={logout}
+          <Link
+            href="/logout"
             className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
             Log out
-          </button>
+          </Link>
         </div>
       </header>
 
