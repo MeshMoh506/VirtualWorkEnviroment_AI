@@ -37,9 +37,6 @@ export default function BoardPage() {
 
   useEffect(() => {
     if (!user) return;
-    // One place pulls everything the dashboard needs. Individual failures
-    // fall back to empty rather than blanking the whole page — a missing
-    // project (404 before the first task) is a normal state, not an error.
     Promise.allSettled([
       fetchTasks(),
       fetchMyProject(),
@@ -68,9 +65,6 @@ export default function BoardPage() {
   }
 
   return (
-    // Controlled scroll: the page scrolls through deliberate sections
-    // (h-dvh + overflow-y-auto), it isn't an infinite canvas or an
-    // endless feed. Header stays put; content below it scrolls.
     <main className="grid h-dvh grid-rows-[auto_1fr]">
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <div>
@@ -85,7 +79,13 @@ export default function BoardPage() {
           </h1>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden font-mono text-xs text-text-muted sm:inline">
+          <Link
+            href="/workspace"
+            className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
+          >
+            Open workspace
+          </Link>
+          <span className="hidden font-mono text-xs text-text-muted lg:inline">
             {user.email}
           </span>
           <button
@@ -98,52 +98,59 @@ export default function BoardPage() {
         </div>
       </header>
 
-      <div className="thin-scrollbar overflow-y-auto">
-        <div className="mx-auto flex max-w-4xl flex-col gap-6 px-6 py-8">
-          <div>
-            <p className="text-sm text-text-secondary">Welcome back,</p>
-            <h2 className="text-2xl font-medium text-text-primary">
-              {firstName}
-            </h2>
-          </div>
-
-          {dataLoading ? (
-            <div className="rounded border border-border bg-bg-surface p-8 text-center">
-              <p className="text-sm text-text-muted">Loading your workspace...</p>
+      {/* Two columns: left scrolls through dashboard sections, right is the
+          interactive agents graph filling its full half. On narrow screens
+          they stack (graph gets a fixed height so it never collapses to
+          nothing), and the whole thing scrolls as one column. */}
+      <div className="grid min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="thin-scrollbar min-h-0 overflow-y-auto border-b border-border lg:border-b-0 lg:border-r">
+          <div className="flex flex-col gap-6 px-6 py-8">
+            <div>
+              <p className="text-sm text-text-secondary">Welcome back,</p>
+              <h2 className="text-2xl font-medium text-text-primary">
+                {firstName}
+              </h2>
             </div>
-          ) : (
-            <>
-              <FocusHero
-                task={focus}
-                week={week}
-                hasProject={dashboard?.hasActiveProject ?? project !== null}
-              />
 
-              {dashboard && <StatRow dashboard={dashboard} />}
+            {dataLoading ? (
+              <div className="rounded border border-border bg-bg-surface p-8 text-center">
+                <p className="text-sm text-text-muted">
+                  Loading your workspace...
+                </p>
+              </div>
+            ) : (
+              <>
+                <FocusHero
+                  task={focus}
+                  week={week}
+                  hasProject={dashboard?.hasActiveProject ?? project !== null}
+                />
+                {dashboard && <StatRow dashboard={dashboard} />}
+                <WeekStrip week={week} projectTitle={project?.title ?? null} />
+                {dashboard && (
+                  <div>
+                    <p className="mb-3 font-mono text-[11px] text-text-muted">
+                      your_team
+                    </p>
+                    <AgentCards dashboard={dashboard} reviews={reviews} />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
 
-              <WeekStrip week={week} projectTitle={project?.title ?? null} />
-
-              {dashboard && (
-                <div>
-                  <p className="mb-3 font-mono text-[11px] text-text-muted">
-                    your_team
-                  </p>
-                  <AgentCards dashboard={dashboard} reviews={reviews} />
-                </div>
-              )}
-
-              <FlowSection onSelect={setSelection} />
-            </>
-          )}
+        {/* Right column: the interactive graph. Fixed height when stacked
+            on mobile; fills the full column height on desktop. */}
+        <div className="relative h-[60vh] min-h-0 lg:h-auto">
+          <FlowSection onSelect={setSelection} />
         </div>
       </div>
 
       <DetailPanel
         selection={selection}
         hasCv={user.hasCv}
-        reviewedTaskId={
-          tasks.find((t) => t.status === "reviewed")?.id ?? null
-        }
+        reviewedTaskId={tasks.find((t) => t.status === "reviewed")?.id ?? null}
         week={week}
         projectTitle={project?.title ?? null}
         onClose={() => setSelection(null)}
