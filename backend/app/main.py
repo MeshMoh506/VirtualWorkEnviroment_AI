@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
-from app.routers import agents, auth, projects, tasks, users
+from app.routers import agents, auth, meeting, projects, tasks, users
 
 app = FastAPI(title="Venv API", version="0.1.0")
 
@@ -19,6 +19,7 @@ app.include_router(users.router)
 app.include_router(tasks.router)
 app.include_router(agents.router)
 app.include_router(projects.router)
+app.include_router(meeting.router)
 
 
 @app.on_event("startup")

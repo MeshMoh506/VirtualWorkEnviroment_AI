@@ -121,6 +121,9 @@ class User(Base):
     reviews: Mapped[list["Review"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     projects: Mapped[list["Project"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     weeks: Mapped[list["Week"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    chat_messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class EmployeeFile(Base):
@@ -302,6 +305,31 @@ class TaskMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     task: Mapped["Task"] = relationship(back_populates="messages")
+
+
+class ChatMessage(Base):
+    """A message in the standalone Meeting Room (/meeting) — a direct chat
+    with one agent, not tied to any task (unlike TaskMessage). One running
+    conversation per (user, agent_type): the user talks to the Manager,
+    Mentor, or HR about anything, and it persists across visits. sender_type
+    says who spoke; agent_type is which agent the whole thread is with (set
+    on both the user's and the agent's rows, so a single indexed filter
+    pulls one agent's conversation)."""
+
+    __tablename__ = "chat_messages"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    # Which agent this conversation is with — set on every row in the
+    # thread, user and agent alike, so "give me my chat with the Mentor" is
+    # one filter (user_id + agent_type) with no join.
+    agent_type: Mapped[AgentType] = mapped_column(Enum(AgentType), nullable=False)
+    sender_type: Mapped[SenderType] = mapped_column(Enum(SenderType), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="chat_messages")
 
 
 class Review(Base):
