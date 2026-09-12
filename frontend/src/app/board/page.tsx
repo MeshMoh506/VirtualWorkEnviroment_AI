@@ -1,110 +1,63 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import ReactFlow, {
-  Background,
-  BackgroundVariant,
-  type Edge,
-  type Node,
-} from "reactflow";
-import "reactflow/dist/style.css";
-import { AGENT_ORDER, type AgentId } from "@/lib/agents";
 import { useRequireAuth } from "@/lib/auth-context";
-import { fetchTasks } from "@/lib/tasks";
+import { fetchTasks, type Task } from "@/lib/tasks";
 import { fetchMyProject, currentWeek, type Project } from "@/lib/projects";
-import { AgentNode, EmployeeFileNode, UserNode } from "@/components/board/nodes";
+import { fetchDashboard, type Dashboard } from "@/lib/dashboard";
+import { fetchMyReviews, type Review } from "@/lib/reviews";
 import { DetailPanel, type BoardSelection } from "@/components/board/detail-panel";
-import { WeekStatusPanel } from "@/components/board/week-panel";
+import { FocusHero } from "@/components/dashboard/focus-hero";
+import { WeekStrip } from "@/components/dashboard/week-strip";
+import { StatRow } from "@/components/dashboard/stat-row";
+import { AgentCards } from "@/components/dashboard/agent-cards";
+import { FlowSection } from "@/components/dashboard/flow-section";
 
-const nodeTypes = {
-  agent: AgentNode,
-  user: UserNode,
-  employeeFile: EmployeeFileNode,
-};
-
-const AGENT_POSITIONS: Record<AgentId, { x: number; y: number }> = {
-  manager: { x: 40, y: 220 },
-  mentor: { x: 300, y: 220 },
-  hr: { x: 560, y: 220 },
-};
+// The one task the graduate should act on now: the most recent
+// non-reviewed task (todo/in_progress/submitted). Mirrors the backend's
+// "one subtask at a time" rule — there's normally at most one open.
+function focusTask(tasks: Task[]): Task | null {
+  const open = tasks.filter((t) => t.status !== "reviewed");
+  if (open.length === 0) return null;
+  return open.reduce((latest, t) =>
+    new Date(t.createdAt) > new Date(latest.createdAt) ? t : latest
+  );
+}
 
 export default function BoardPage() {
   const { user, loading, logout } = useRequireAuth();
   const [selection, setSelection] = useState<BoardSelection>(null);
-  // Powers the mentor card's "See a review example" link — there's no
-  // guaranteed demo task once real data replaces mocks, so this points at
-  // the graduate's own most recent reviewed task if they have one yet.
-  const [reviewedTaskId, setReviewedTaskId] = useState<string | null>(null);
-  // The weekly-cycle status panel's data — a separate loading flag from
-  // the page-level `loading` above (that one's just auth), so the panel
-  // can show its own "loading..." state independently.
+
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [project, setProject] = useState<Project | null>(null);
-  const [projectLoading, setProjectLoading] = useState(true);
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    fetchTasks()
-      .then((tasks) => {
-        const reviewed = tasks.find((t) => t.status === "reviewed");
-        setReviewedTaskId(reviewed?.id ?? null);
+    // One place pulls everything the dashboard needs. Individual failures
+    // fall back to empty rather than blanking the whole page — a missing
+    // project (404 before the first task) is a normal state, not an error.
+    Promise.allSettled([
+      fetchTasks(),
+      fetchMyProject(),
+      fetchDashboard(),
+      fetchMyReviews(),
+    ])
+      .then(([t, p, d, r]) => {
+        if (t.status === "fulfilled") setTasks(t.value);
+        if (p.status === "fulfilled") setProject(p.value);
+        if (d.status === "fulfilled") setDashboard(d.value);
+        if (r.status === "fulfilled") setReviews(r.value);
       })
-      .catch(() => setReviewedTaskId(null));
-
-    fetchMyProject()
-      .then(setProject)
-      .catch(() => setProject(null))
-      .finally(() => setProjectLoading(false));
+      .finally(() => setDataLoading(false));
   }, [user]);
 
   const week = project ? currentWeek(project) : null;
-
-  const nodes: Node[] = useMemo(
-    () => [
-      {
-        id: "user",
-        type: "user",
-        position: { x: 260, y: 20 },
-        data: { index: 0 },
-      },
-      ...AGENT_ORDER.map((agentId, i) => ({
-        id: agentId,
-        type: "agent",
-        position: AGENT_POSITIONS[agentId],
-        data: { agentId, index: i + 1, onSelect: setSelection },
-      })),
-      {
-        id: "employee-file",
-        type: "employeeFile",
-        position: { x: 240, y: 440 },
-        data: { index: 4, onSelect: () => setSelection("employee-file") },
-      },
-    ],
-    []
-  );
-
-  const edges: Edge[] = useMemo(
-    () => [
-      ...AGENT_ORDER.map((agentId) => ({
-        id: `user-${agentId}`,
-        source: "user",
-        target: agentId,
-        style: { stroke: "var(--border-strong)", strokeWidth: 1 },
-      })),
-      ...AGENT_ORDER.map((agentId) => ({
-        id: `${agentId}-file`,
-        source: agentId,
-        target: "employee-file",
-        animated: true,
-        style: {
-          stroke: "var(--accent)",
-          strokeWidth: 1,
-          strokeDasharray: "4 3",
-        },
-      })),
-    ],
-    []
-  );
+  const focus = focusTask(tasks);
+  const firstName = user?.fullName?.split(" ")[0] ?? "there";
 
   if (loading || !user) {
     return (
@@ -115,6 +68,9 @@ export default function BoardPage() {
   }
 
   return (
+    // Controlled scroll: the page scrolls through deliberate sections
+    // (h-dvh + overflow-y-auto), it isn't an infinite canvas or an
+    // endless feed. Header stays put; content below it scrolls.
     <main className="grid h-dvh grid-rows-[auto_1fr]">
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <div>
@@ -129,7 +85,7 @@ export default function BoardPage() {
           </h1>
         </div>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-text-muted">
+          <span className="hidden font-mono text-xs text-text-muted sm:inline">
             {user.email}
           </span>
           <button
@@ -141,42 +97,57 @@ export default function BoardPage() {
           </button>
         </div>
       </header>
-      {/* min-h-0 is load-bearing here: without it this flex/grid child
-          won't shrink below its content's natural height, and ReactFlow
-          (which needs a bounded parent) would push the page into
-          scrolling instead of staying fixed to the viewport. */}
-      <div className="relative min-h-0">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.3 }}
-          proOptions={{ hideAttribution: true }}
-          nodesConnectable={false}
-          className="bg-bg-base"
-        >
-          <Background
-            variant={BackgroundVariant.Lines}
-            gap={32}
-            color="var(--line-grid)"
-          />
-          <WeekStatusPanel
-            loading={projectLoading}
-            project={project}
-            week={week}
-            onSelect={() => setSelection("week")}
-          />
-        </ReactFlow>
-        <DetailPanel
-          selection={selection}
-          hasCv={user.hasCv}
-          reviewedTaskId={reviewedTaskId}
-          week={week}
-          projectTitle={project?.title ?? null}
-          onClose={() => setSelection(null)}
-        />
+
+      <div className="thin-scrollbar overflow-y-auto">
+        <div className="mx-auto flex max-w-4xl flex-col gap-6 px-6 py-8">
+          <div>
+            <p className="text-sm text-text-secondary">Welcome back,</p>
+            <h2 className="text-2xl font-medium text-text-primary">
+              {firstName}
+            </h2>
+          </div>
+
+          {dataLoading ? (
+            <div className="rounded border border-border bg-bg-surface p-8 text-center">
+              <p className="text-sm text-text-muted">Loading your workspace...</p>
+            </div>
+          ) : (
+            <>
+              <FocusHero
+                task={focus}
+                week={week}
+                hasProject={dashboard?.hasActiveProject ?? project !== null}
+              />
+
+              {dashboard && <StatRow dashboard={dashboard} />}
+
+              <WeekStrip week={week} projectTitle={project?.title ?? null} />
+
+              {dashboard && (
+                <div>
+                  <p className="mb-3 font-mono text-[11px] text-text-muted">
+                    your_team
+                  </p>
+                  <AgentCards dashboard={dashboard} reviews={reviews} />
+                </div>
+              )}
+
+              <FlowSection onSelect={setSelection} />
+            </>
+          )}
+        </div>
       </div>
+
+      <DetailPanel
+        selection={selection}
+        hasCv={user.hasCv}
+        reviewedTaskId={
+          tasks.find((t) => t.status === "reviewed")?.id ?? null
+        }
+        week={week}
+        projectTitle={project?.title ?? null}
+        onClose={() => setSelection(null)}
+      />
     </main>
   );
 }

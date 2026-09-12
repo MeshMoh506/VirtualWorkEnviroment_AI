@@ -3,8 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.dashboard import build_dashboard
 from app.models import Review, User
-from app.schemas import CVIntake, EmployeeFileOut, ReviewOut, UserOut
+from app.schemas import CVIntake, DashboardOut, EmployeeFileOut, ReviewOut, UserOut
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -12,6 +13,16 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/me", response_model=UserOut)
 def read_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/me/dashboard", response_model=DashboardOut)
+def read_dashboard(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """At-a-glance stats for the logged-in home dashboard — one call
+    instead of the frontend fetching tasks + reviews + project and doing
+    the aggregation itself. See app/dashboard.py."""
+    return build_dashboard(db, current_user)
 
 
 @router.get("/me/employee-file", response_model=EmployeeFileOut)
