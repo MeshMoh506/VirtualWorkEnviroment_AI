@@ -1,5 +1,29 @@
 # Project Status — Venv
 
+> **Stage 1 — final state (submission).** Everything below the spec note is
+> historical build log; this block is the current summary.
+>
+> **Backend** (FastAPI + SQLAlchemy, Postgres or sqlite): auth, CV intake,
+> the full weekly-cycle flow (Manager plans a project → one big task/week →
+> 5 subtasks released one at a time → Mentor reviews each, iteratively →
+> end-of-week Manager progress + HR behavioral evaluation → next week),
+> plus a home-dashboard aggregation endpoint and a task-free meeting-room
+> chat with each agent. Models: Organization, User, EmployeeFile, Project,
+> Week, Task, TaskMessage, Review, ChatMessage. Verified by **5 smoke suites,
+> 127 checks total**, all passing (`smoke_test.py` 20, `_agents` 19,
+> `_weekly_cycle` 17, `_orchestration` 56, `_meeting` 15).
+>
+> **Frontend** (Next.js + React Flow): landing page, `/board` home dashboard
+> (focus, stats, week progress, interactive agents graph), `/workspace`
+> (Jira-style task rail + detail + per-task agents discussion), `/meeting`
+> (direct agent chat), `/growth` (HR view), `/onboarding/cv`, `/logout`. All
+> wired to the real backend — no mock data. Clean production build + lint.
+>
+> **Known open items** (documented, intentionally out of Stage 1 scope):
+> curated task bank vs. LLM-improvised subtasks, finalized Mentor rubric,
+> CV file upload (currently paste), Alembic migrations, and whether
+> `needs_changes` needs its own board column. See "Not built yet" below.
+
 _Last updated: Sep 2026 — the weekly-cycle flow from
 `docs/STAGE1_PRODUCT_FLOW.md` is now fully built, schema AND orchestration:
 `Project`, `Week`, `Task` deadline/lateness fields, `Review.kind`/`week_id`,
@@ -31,7 +55,7 @@ directly (not just a working default)._
 - Verified with `smoke_test.py` (20 checks), `smoke_test_agents.py` (19
   checks), `smoke_test_weekly_cycle.py` (17 checks, the Project/Week/Task
   schema + the needs_changes bounce-back, exercised directly via the ORM),
-  and the new `smoke_test_orchestration.py` (45 checks, the real thing
+  and `smoke_test_orchestration.py` (56 checks, the real thing
   end to end through the API — bootstrap, idempotency, all 5 subtasks,
   the full end-of-week cascade, landing correctly on week 2). All four
   pass together against sqlite; `smoke_test.py` was originally verified
