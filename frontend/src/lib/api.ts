@@ -96,6 +96,13 @@ export interface TaskApiOut {
   status: ApiTaskStatus;
   github_link: string | null;
   created_by_agent: ApiAgentType;
+  // week_id/deadline are null for tasks outside the weekly-cycle flow.
+  week_id: string | null;
+  deadline: string | null;
+  submitted_at: string | null;
+  completed_at: string | null;
+  // null until both deadline and completed_at exist.
+  is_late: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -103,6 +110,8 @@ export interface TaskApiOut {
 export interface TaskDetailApiOut extends TaskApiOut {
   messages: TaskMessageApiOut[];
 }
+
+export type ApiReviewKind = "task_review" | "week_progress" | "behavioral" | "skills_rollup";
 
 export interface RubricCategoryApi {
   key: string;
@@ -126,12 +135,34 @@ export interface HrMetricsApi {
   average_score: number | null;
 }
 
+export interface WeekProgressMetricsApi {
+  subtasks_completed: number;
+  subtasks_needed_changes: number;
+}
+
+export interface BehavioralMetricsApi {
+  attended_days: number;
+  absent_days: number;
+  late_task_count: number;
+  total_subtasks: number;
+  consistency_rating: "strong" | "adequate" | "needs_improvement";
+}
+
 export interface ReviewApiOut {
   id: string;
   task_id: string | null;
+  // null for task_review (tied to task_id instead) and skills_rollup
+  // (periodic, tied to neither).
+  week_id: string | null;
   agent_type: ApiAgentType;
+  kind: ApiReviewKind;
   content: string;
-  metrics_json: MentorMetricsApi | HrMetricsApi | null;
+  metrics_json:
+    | MentorMetricsApi
+    | HrMetricsApi
+    | WeekProgressMetricsApi
+    | BehavioralMetricsApi
+    | null;
   created_at: string;
 }
 
@@ -141,6 +172,41 @@ export interface EmployeeFileApiOut {
   growth_areas_json: { items?: string[] };
   summary_text: string | null;
   updated_at: string;
+}
+
+// ---- Project & Week (weekly-cycle flow) ----
+
+export type ApiProjectStatus = "active" | "completed";
+export type ApiWeekStatus = "active" | "completed";
+
+export interface SubtaskPlanApi {
+  title: string;
+  description: string;
+  deadline: string;
+}
+
+export interface WeekApiOut {
+  id: string;
+  project_id: string;
+  week_number: number;
+  status: ApiWeekStatus;
+  big_task_title: string;
+  big_task_description: string;
+  next_subtask_index: number;
+  subtasks_plan_json: SubtaskPlanApi[];
+  started_at: string;
+  target_end_at: string;
+  ended_at: string | null;
+}
+
+export interface ProjectApiOut {
+  id: string;
+  title: string;
+  description: string;
+  status: ApiProjectStatus;
+  created_at: string;
+  updated_at: string;
+  weeks: WeekApiOut[];
 }
 
 // ---- API surface ----
@@ -202,4 +268,11 @@ export const api = {
 
   employeeFile: () => request<EmployeeFileApiOut>("/users/me/employee-file"),
   reviews: () => request<ReviewApiOut[]>("/users/me/reviews"),
+
+  projects: {
+    /** The graduate's active Project + all its Weeks. 404s until they've
+     * gotten their first task — see lib/projects.ts's fetchMyProject,
+     * which treats that as "nothing yet", not an error. */
+    me: () => request<ProjectApiOut>("/projects/me"),
+  },
 };
