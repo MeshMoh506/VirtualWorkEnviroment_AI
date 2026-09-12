@@ -85,6 +85,12 @@ export default function BoardPage() {
           >
             Open workspace
           </Link>
+          <Link
+            href="/meeting"
+            className="rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+          >
+            Meeting room
+          </Link>
           <span className="hidden font-mono text-xs text-text-muted lg:inline">
             {user.email}
           </span>
@@ -102,7 +108,7 @@ export default function BoardPage() {
           they stack (graph gets a fixed height so it never collapses to
           nothing), and the whole thing scrolls as one column. */}
       <div className="grid min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="thin-scrollbar min-h-0 overflow-y-auto border-b border-border lg:border-b-0 lg:border-r">
+        <div className="overlay-scrollbar min-h-0 overflow-y-auto border-b border-dashed border-border lg:border-b-0 lg:border-r">
           <div className="flex flex-col gap-6 px-6 py-8">
             <div>
               <p className="text-sm text-text-secondary">Welcome back,</p>
