@@ -185,6 +185,14 @@ export interface DashboardApiOut {
   has_active_project: boolean;
 }
 
+export interface ChatMessageApiOut {
+  id: string;
+  agent_type: ApiAgentType;
+  sender_type: "user" | "agent";
+  content: string;
+  created_at: string;
+}
+
 // ---- Project & Week (weekly-cycle flow) ----
 
 export type ApiProjectStatus = "active" | "completed";
@@ -286,5 +294,15 @@ export const api = {
      * gotten their first task — see lib/projects.ts's fetchMyProject,
      * which treats that as "nothing yet", not an error. */
     me: () => request<ProjectApiOut>("/projects/me"),
+  },
+
+  meeting: {
+    history: (agent: ApiAgentType) =>
+      request<ChatMessageApiOut[]>(`/meeting/${agent}`),
+    send: (agent: ApiAgentType, content: string) =>
+      request<ChatMessageApiOut>(`/meeting/${agent}`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+      }),
   },
 };

@@ -55,9 +55,9 @@ function agentStatus(
 }
 
 const AGENT_HREF: Record<AgentId, string> = {
-  manager: "/tasks",
-  mentor: "/tasks",
-  hr: "/growth",
+  manager: "/meeting",
+  mentor: "/meeting",
+  hr: "/meeting",
 };
 
 export function AgentCards({ dashboard, reviews }: AgentCardsProps) {
