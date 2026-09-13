@@ -9,9 +9,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.agents.graph.catalog import seed_agent_catalog
 from app.agents.llm_client import LLMConfigError
-from app.database import Base, engine
-from app.routers import agents, auth, meeting, projects, tasks, users
+from app.database import Base, SessionLocal, engine
+from app.routers import agents, auth, meeting, onboarding, projects, tasks, users
 
 app = FastAPI(title="Venv API", version="0.1.0")
 
@@ -92,6 +93,7 @@ app.include_router(tasks.router)
 app.include_router(agents.router)
 app.include_router(projects.router)
 app.include_router(meeting.router)
+app.include_router(onboarding.router)
 
 
 @app.on_event("startup")
@@ -100,6 +102,14 @@ def on_startup():
     # stabilizes, switch to `alembic upgrade head` in the startup/deploy
     # script instead and drop this.
     Base.metadata.create_all(bind=engine)
+
+    # Stage 2 — the optional-agent catalog (app/agents/graph/catalog.py).
+    # Idempotent: safe to run on every restart.
+    db = SessionLocal()
+    try:
+        seed_agent_catalog(db)
+    finally:
+        db.close()
 
 
 @app.get("/health")
