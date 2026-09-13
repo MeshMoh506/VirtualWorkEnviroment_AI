@@ -75,6 +75,11 @@ with patch(
 ):
     headers = register_and_login("stage2-router-test@example.com")
 
+    r = client.get("/onboarding/catalog")
+    check("catalog -> 200, no auth required", r.status_code == 200)
+    check("catalog has all 4 seeded agents", len(r.json()) == 4)
+    check("catalog entries have id/name/description", all(set(a) == {"id", "name", "description"} for a in r.json()))
+
     # --- step 1: upload a CV file (plain text — extract_cv_text falls
     # back to plain text for anything that isn't .pdf/.docx) ---
     cv_bytes = b"Built a Flask app with basic auth, some pen-testing coursework."
