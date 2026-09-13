@@ -38,7 +38,11 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
-  if (!(options.body instanceof URLSearchParams) && options.body) {
+  if (
+    !(options.body instanceof URLSearchParams) &&
+    !(options.body instanceof FormData) &&
+    options.body
+  ) {
     headers.set("Content-Type", "application/json");
   }
   const token = getToken();
@@ -228,6 +232,50 @@ export interface ProjectApiOut {
   weeks: WeekApiOut[];
 }
 
+// ---- Stage 2 onboarding (docs/STAGE2_ONBOARDING_FLOW.md) ----
+
+export type ApiTrack =
+  | "junior_dev"
+  | "software_engineering"
+  | "data_science_ai"
+  | "cybersecurity"
+  | "networks_infrastructure"
+  | "information_systems"
+  | "cloud_devops";
+
+export interface AgentCatalogApiOut {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface OnboardingQuestionsApiOut {
+  questions: string[];
+}
+
+export interface OnboardingTrackApiOut {
+  suggested_track: ApiTrack;
+  reasoning: string;
+}
+
+export interface OnboardingAgentsApiOut {
+  suggested_agents: AgentCatalogApiOut[];
+}
+
+export interface OnboardingCompleteApiOut {
+  track: ApiTrack;
+  agents: AgentCatalogApiOut[];
+}
+
+export type ApiOnboardingStage = "cv" | "qa" | "track" | "agents" | "complete";
+
+export interface OnboardingStateApiOut {
+  onboarding_stage: ApiOnboardingStage;
+  track: ApiTrack;
+  track_confirmed: boolean;
+  suggested_track: ApiTrack | null;
+}
+
 // ---- API surface ----
 
 export const api = {
@@ -251,6 +299,38 @@ export const api = {
       request<UserApiOut>("/users/me/cv", {
         method: "POST",
         body: JSON.stringify({ cv_raw_text: cvRawText }),
+      }),
+  },
+
+  onboarding: {
+    /** Full optional-agent catalog, not just the ones suggested for the
+     * graduate's track — the roster step needs the whole list so the
+     * graduate can add ones the agent didn't suggest. No auth required. */
+    catalog: () => request<AgentCatalogApiOut[]>("/onboarding/catalog"),
+    state: () => request<OnboardingStateApiOut>("/onboarding/state"),
+    uploadCv: (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return request<OnboardingQuestionsApiOut>("/onboarding/cv", {
+        method: "POST",
+        body: form,
+      });
+    },
+    submitQa: (answers: Record<string, string>, introText: string) =>
+      request<OnboardingTrackApiOut>("/onboarding/qa", {
+        method: "POST",
+        body: JSON.stringify({ answers, intro_text: introText || null }),
+      }),
+    /** track: null approves the suggestion as-is; pass a track to override it. */
+    approveTrack: (track: ApiTrack | null) =>
+      request<OnboardingAgentsApiOut>("/onboarding/track", {
+        method: "POST",
+        body: JSON.stringify({ track }),
+      }),
+    approveAgents: (agentIds: string[]) =>
+      request<OnboardingCompleteApiOut>("/onboarding/agents", {
+        method: "POST",
+        body: JSON.stringify({ agent_ids: agentIds }),
       }),
   },
 

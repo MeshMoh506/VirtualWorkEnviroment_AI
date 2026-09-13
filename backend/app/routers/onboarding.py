@@ -27,6 +27,7 @@ from app.auth import get_current_user
 from app.database import get_db
 from app.models import AgentCatalog, OnboardingStage, TrackEnum, User, UserAgent
 from app.schemas import (
+    AgentCatalogOut,
     OnboardingAgentsApprove,
     OnboardingAgentsOut,
     OnboardingCompleteOut,
@@ -51,6 +52,16 @@ def _interrupt_payload(result: dict) -> dict:
     if not interrupts:
         raise HTTPException(500, "Onboarding graph didn't pause where expected.")
     return interrupts[0].value
+
+
+@router.get("/catalog", response_model=list[AgentCatalogOut])
+def read_catalog(db: Session = Depends(get_db)):
+    """The full optional-agent catalog — lets the frontend show every
+    pickable agent, not just the ones suggested for the graduate's track,
+    so the roster-approval step can be a real edit, not just a checkbox
+    on the suggestion. No auth required: this is catalog metadata, not
+    anything user-specific."""
+    return db.query(AgentCatalog).all()
 
 
 @router.post("/cv", response_model=OnboardingQuestionsOut)
