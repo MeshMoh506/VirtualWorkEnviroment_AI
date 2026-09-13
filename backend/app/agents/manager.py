@@ -29,6 +29,7 @@ from app.agents.tools import (
 from app.models import (
     AgentType,
     Project,
+    ProjectSource,
     Review,
     ReviewKind,
     SenderType,
@@ -64,7 +65,10 @@ def _cv_context(user: User) -> str:
 
 def create_project(db: Session, user: User) -> Project:
     """Called once per graduate, the first time weekly_cycle.get_next_task
-    finds no active Project yet."""
+    finds no active Project yet. Stage 2: a graduate can bring their own
+    project instead — POST /projects/own, called before this ever runs —
+    in which case this function never runs at all for them; see
+    docs/STAGE2_OWN_PROJECT.md."""
     prompt = (
         f"{_cv_context(user)}\n\n"
         "Introduce this graduate to the main project they'll be working on "
@@ -78,7 +82,12 @@ def create_project(db: Session, user: User) -> Project:
     )
     data = result["input"]
 
-    project = Project(user_id=user.id, title=data["title"], description=data["description"])
+    project = Project(
+        user_id=user.id,
+        title=data["title"],
+        description=data["description"],
+        source=ProjectSource.MANAGER,
+    )
     db.add(project)
     db.commit()
     db.refresh(project)
