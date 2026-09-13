@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from app.agents.graph.catalog import seed_agent_catalog
 from app.agents.llm_client import LLMConfigError
 from app.database import Base, SessionLocal, engine
-from app.routers import agents, auth, meeting, projects, tasks, users
+from app.routers import agents, auth, meeting, onboarding, projects, tasks, users
 
 app = FastAPI(title="Venv API", version="0.1.0")
 
@@ -93,6 +93,7 @@ app.include_router(tasks.router)
 app.include_router(agents.router)
 app.include_router(projects.router)
 app.include_router(meeting.router)
+app.include_router(onboarding.router)
 
 
 @app.on_event("startup")

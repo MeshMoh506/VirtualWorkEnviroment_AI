@@ -1,10 +1,12 @@
 # Stage 2 — Onboarding Flow
 
 _Added Sep 2026. First slice of Stage 2: the onboarding graph (CV file ->
-agent-generated Q&A -> track approval -> agent-roster approval) is built
-and smoke-tested (`backend/smoke_test_stage2_onboarding.py`, 27 checks,
-mocked LLM). Not yet wired to any endpoint or the frontend — that's the
-next branch. See `docs/PROJECT_STATUS.md` for the overall project state._
+agent-generated Q&A -> track approval -> agent-roster approval) is built,
+smoke-tested (`backend/smoke_test_stage2_onboarding.py`, 27 checks,
+mocked LLM), and now wired to real endpoints
+(`backend/smoke_test_stage2_onboarding_router.py`, 24 checks through the
+real API). Not yet wired to the frontend — that's the next branch. See
+`docs/PROJECT_STATUS.md` for the overall project state._
 
 ## The flow, end to end
 
@@ -130,14 +132,20 @@ the suggestion").
   paths (override vs. approve-as-suggested), and writing the graph's
   output back onto the `User` row. All 6 existing smoke suites still pass
   unchanged (no regressions).
+- **The router** (`app/routers/onboarding.py`) — `POST /onboarding/cv`
+  (file upload, starts the graph), `POST /onboarding/qa`, `POST
+  /onboarding/track`, `POST /onboarding/agents` (each resumes the graph
+  one step), `GET /onboarding/state` (so the frontend can figure out
+  where to resume without replaying the graph). The compiled graph is a
+  module-level singleton, reused across requests — its checkpointer is
+  still in-memory/process-local (same caveat as above).
+  `smoke_test_stage2_onboarding_router.py` — 24 checks through the real
+  HTTP API (register, login, file upload, all 4 steps, both an
+  approve-as-suggested and an override/reject path). All 8 smoke suites
+  now pass together (187 checks total).
 
 ## Not built yet
 
-- **The router.** No new endpoints exist yet — nothing in `frontend/`
-  or `app/routers/` calls this graph. Next branch: endpoints to start the
-  graph from a CV file upload, submit Q&A answers, approve/override the
-  track, and approve/edit the agent roster — each one resuming the graph
-  from its checkpoint. Mind the empty-dict gotcha above when wiring these.
 - **Frontend for any of this** — `/onboarding/cv` is still Stage 1's
   paste-only page.
 - **The weekly-cycle graph port.** `weekly_cycle.py` still runs as the
