@@ -17,11 +17,26 @@ from anthropic import Anthropic
 
 from app.config import settings
 
+
+class LLMConfigError(RuntimeError):
+    """Raised when the LLM client can't be used because it isn't configured
+    (no API key). Caught by main.py's exception handler and turned into a
+    clean 503 with a helpful message, instead of a raw 500 stack trace —
+    this is the failure you hit when ANTHROPIC_API_KEY is empty or wrong in
+    .env."""
+
+
 _client: Anthropic | None = None
 
 
 def get_client() -> Anthropic:
     global _client
+    if not settings.anthropic_api_key:
+        raise LLMConfigError(
+            "No ANTHROPIC_API_KEY is set. Add one to backend/.env (get a key "
+            "at console.anthropic.com — the API is billed separately from a "
+            "Claude Pro subscription) and restart the server."
+        )
     if _client is None:
         _client = Anthropic(api_key=settings.anthropic_api_key)
     return _client
