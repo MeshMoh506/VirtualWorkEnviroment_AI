@@ -26,13 +26,38 @@ def gen_uuid() -> str:
 # ---------------------------------------------------------------------------
 
 class TrackEnum(str, enum.Enum):
-    JUNIOR_DEV = "junior_dev"  # only track that exists in Stage 1
+    JUNIOR_DEV = "junior_dev"  # Stage 1's only track — kept for existing users
+    # Stage 2 — all majors within IT fields (STAGE2_ONBOARDING_FLOW.md).
+    # CV-suggested, user-approved; see User.suggested_track/track_confirmed.
+    SOFTWARE_ENGINEERING = "software_engineering"
+    DATA_SCIENCE_AI = "data_science_ai"
+    CYBERSECURITY = "cybersecurity"
+    NETWORKS_INFRASTRUCTURE = "networks_infrastructure"
+    INFORMATION_SYSTEMS = "information_systems"
+    CLOUD_DEVOPS = "cloud_devops"
 
 
 class AgentType(str, enum.Enum):
     MANAGER = "manager"
     MENTOR = "mentor"
     HR = "hr"
+    # Stage 2 — optional agents a graduate can add to their roster
+    # alongside the default three. See AgentCatalog / UserAgent below.
+    SECURITY_REVIEWER = "security_reviewer"
+    DATA_REVIEWER = "data_reviewer"
+    CAREER_COACH = "career_coach"
+    DEVOPS = "devops"
+
+
+class OnboardingStage(str, enum.Enum):
+    """Where a graduate is in the Stage 2 onboarding graph
+    (app/agents/graph/onboarding_graph.py) — lets a resumed session pick
+    up where it left off instead of restarting the whole flow."""
+    CV = "cv"
+    QA = "qa"
+    TRACK = "track"
+    AGENTS = "agents"
+    COMPLETE = "complete"
 
 
 class TaskStatus(str, enum.Enum):
@@ -101,6 +126,21 @@ class User(Base):
     # AI/Agents team and can populate employee_file.skills_json downstream.
     cv_raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # --- Stage 2 onboarding (docs/STAGE2_ONBOARDING_FLOW.md) ---
+    onboarding_stage: Mapped[OnboardingStage] = mapped_column(
+        Enum(OnboardingStage), default=OnboardingStage.CV, nullable=False
+    )
+    # The graph's CV-inferred suggestion, pending approval. `track` above
+    # only changes once the graduate confirms or overrides it (track_confirmed
+    # flips to True at that point) — until then it stays at its default.
+    suggested_track: Mapped[TrackEnum | None] = mapped_column(Enum(TrackEnum), nullable=True)
+    track_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Free text the graduate adds themselves, on top of the parsed CV.
+    intro_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # One entry per agent-generated follow-up question:
+    # [{"question": ..., "answer": ... | None}] — answer stays None if skipped.
+    onboarding_qa_json: Mapped[list] = mapped_column(JSON, default=list)
+
     @property
     def has_cv(self) -> bool:
         """Whether cv_raw_text has been set — exposed via UserOut so the
@@ -122,6 +162,9 @@ class User(Base):
     projects: Mapped[list["Project"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     weeks: Mapped[list["Week"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     chat_messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    selected_agents: Mapped[list["UserAgent"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -154,6 +197,39 @@ class EmployeeFile(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="employee_file")
+
+
+# ---------------------------------------------------------------------------
+# Stage 2 — selectable agent roster (docs/STAGE2_ONBOARDING_FLOW.md). The
+# default three (Manager/Mentor/HR) are always included and aren't stored
+# here; this catalog is only the optional extras a graduate can add, so it
+# can grow over time without touching the schema again.
+# ---------------------------------------------------------------------------
+
+class AgentCatalog(Base):
+    __tablename__ = "agent_catalog"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)  # slug, e.g. "security_reviewer"
+    agent_type: Mapped[AgentType] = mapped_column(Enum(AgentType), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    # TrackEnum values this agent is suggested for during onboarding — the
+    # graduate can still add/remove any catalog agent regardless of track.
+    suggested_for_tracks_json: Mapped[list] = mapped_column(JSON, default=list)
+
+
+class UserAgent(Base):
+    """One optional agent a graduate has added to their roster."""
+
+    __tablename__ = "user_agents"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    agent_catalog_id: Mapped[str] = mapped_column(ForeignKey("agent_catalog.id"), nullable=False)
+    added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="selected_agents")
+    agent: Mapped["AgentCatalog"] = relationship()
 
 
 # ---------------------------------------------------------------------------
