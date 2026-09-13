@@ -4,6 +4,7 @@ from pydantic import BaseModel, EmailStr, ConfigDict
 
 from app.models import (
     AgentType,
+    OnboardingStage,
     ProjectStatus,
     ReviewKind,
     SenderType,
@@ -47,6 +48,59 @@ class UserOut(BaseModel):
 
 class CVIntake(BaseModel):
     cv_raw_text: str
+
+
+# ---- Stage 2 onboarding (docs/STAGE2_ONBOARDING_FLOW.md) ----
+
+class OnboardingQuestionsOut(BaseModel):
+    questions: list[str]
+
+
+class OnboardingQASubmit(BaseModel):
+    # "0" -> answer text, keyed by question index as a string. Omit an
+    # index (or send "") to skip that question.
+    answers: dict[str, str] = {}
+    intro_text: str | None = None
+
+
+class OnboardingTrackOut(BaseModel):
+    suggested_track: TrackEnum
+    reasoning: str
+
+
+class OnboardingTrackApprove(BaseModel):
+    # None (or omitted) = approve the suggestion as-is. Set to override.
+    track: TrackEnum | None = None
+
+
+class AgentCatalogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    description: str
+
+
+class OnboardingAgentsOut(BaseModel):
+    suggested_agents: list[AgentCatalogOut]
+
+
+class OnboardingAgentsApprove(BaseModel):
+    agent_ids: list[str] = []
+
+
+class OnboardingCompleteOut(BaseModel):
+    track: TrackEnum
+    agents: list[AgentCatalogOut]
+
+
+class OnboardingStateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    onboarding_stage: OnboardingStage
+    track: TrackEnum
+    track_confirmed: bool
+    suggested_track: TrackEnum | None = None
 
 
 # ---- Task ----
