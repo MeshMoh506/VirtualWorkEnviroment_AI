@@ -121,20 +121,33 @@ def _active_days(week: Week) -> set:
     return days
 
 
-def run_behavioral_review(db: Session, user: User, week: Week) -> Review:
+def run_behavioral_review(db: Session, user: User, week: Week, mentor_consult: str | None = None) -> Review:
     """The second step of the end-of-week cascade (after the Manager's
-    week_progress review) — see weekly_cycle.py."""
+    week_progress review) — see weekly_cycle.py.
+
+    mentor_consult (Stage 2, docs/STAGE2_WEEKLY_CYCLE_FLOW.md): the
+    Mentor's direct answer when actually asked about consistency/
+    engagement this week (app/agents/graph/collaboration.py's
+    ask_mentor), on top of the raw attendance numbers below. Optional,
+    defaults to None — Stage 1 behavior unchanged if omitted."""
     workdays = {d.date() for d in n_workdays_from(week.started_at, 5)}
     active = _active_days(week) & workdays
     attended_days = len(active)
     absent_days = max(0, 5 - attended_days)
     late_count = sum(1 for t in week.tasks if t.is_late)
 
+    consult_text = (
+        f"\n\nWhen asked directly about consistency/engagement this week, "
+        f"the Mentor said:\n{mentor_consult}"
+        if mentor_consult
+        else ""
+    )
     prompt = (
         f"Week {week.week_number} ({week.big_task_title}):\n"
         f"  {attended_days}/5 workdays had meaningful progress\n"
         f"  {absent_days}/5 workdays had none\n"
-        f"  {late_count} of {len(week.tasks)} subtasks completed late\n\n"
+        f"  {late_count} of {len(week.tasks)} subtasks completed late"
+        f"{consult_text}\n\n"
         "Write the behavioral evaluation now via the submit_behavioral_review tool."
     )
     result = call_with_tool(

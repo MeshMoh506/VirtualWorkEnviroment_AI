@@ -71,7 +71,9 @@ headers = {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 # --- mocks active for the whole run: 4 manager LLM calls expected total
 # (create_project, plan_week x2, submit_week_progress), 5 mentor calls (one
-# per subtask), 1 hr call (the behavioral review — no skills rollup here) ---
+# per subtask), 1 hr call (the behavioral review — no skills rollup here),
+# and 2 collaboration calls (Stage 2 — the Manager and HR each consult the
+# Mentor once during the cascade; see mock_collab below) ---
 manager_side_effects = [
     {
         "tool_name": "create_project",
@@ -120,6 +122,21 @@ mock_hr = patch(
     ],
 )
 mock_hr_obj = mock_hr.start()
+
+# Stage 2 (docs/STAGE2_WEEKLY_CYCLE_FLOW.md): the cascade now has the
+# Manager and HR each consult the Mentor directly before writing their
+# own review — 2 calls total, routed through a separate patch target
+# (app/agents/graph/collaboration.py) so they don't interfere with
+# mentor_side_effect's 5-item list above (that's still just the 5
+# per-subtask reviews).
+mock_collab = patch(
+    "app.agents.graph.collaboration.call_with_tool",
+    side_effect=[
+        {"tool_name": "reply_to_colleague", "input": {"reply": "Strong week — clean commits, picked things up fast."}},
+        {"tool_name": "reply_to_colleague", "input": {"reply": "No concerns — submitted every subtask well ahead of deadline."}},
+    ],
+)
+mock_collab_obj = mock_collab.start()
 
 try:
     # --- first call bootstraps Project + Week 1 + subtask 1 (2 manager LLM calls) ---
@@ -173,6 +190,7 @@ try:
     check("after cascade: now on week 2's first subtask", current["title"] == subtasks("Profile settings")[0]["title"])
     check("all 4 manager LLM calls used (project, plan_week x2, week_progress)", mock_manager_obj.call_count == 4)
     check("hr behavioral review was called once", mock_hr_obj.call_count == 1)
+    check("mentor consulted twice during the cascade (manager + hr)", mock_collab_obj.call_count == 2)
 
     r = client.get("/projects/me", headers=headers)
     weeks = r.json()["weeks"]
@@ -224,3 +242,4 @@ finally:
     mock_manager.stop()
     mock_mentor.stop()
     mock_hr.stop()
+    mock_collab.stop()

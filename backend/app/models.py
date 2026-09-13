@@ -77,6 +77,15 @@ class ProjectStatus(str, enum.Enum):
     COMPLETED = "completed"
 
 
+class ProjectSource(str, enum.Enum):
+    """Stage 2 (docs/STAGE2_OWN_PROJECT.md): whether the Manager
+    improvised this project or the graduate brought their own. Doesn't
+    change how plan_week works — it already only reads title/description,
+    which read the same regardless of who wrote them."""
+    MANAGER = "manager"
+    OWN = "own"
+
+
 class WeekStatus(str, enum.Enum):
     ACTIVE = "active"
     COMPLETED = "completed"
@@ -257,6 +266,11 @@ class Project(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[ProjectStatus] = mapped_column(
         Enum(ProjectStatus), default=ProjectStatus.ACTIVE, nullable=False
+    )
+    # Stage 2 — who this project came from. Doesn't affect plan_week,
+    # which only ever reads title/description either way.
+    source: Mapped[ProjectSource] = mapped_column(
+        Enum(ProjectSource), default=ProjectSource.MANAGER, nullable=False
     )
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
