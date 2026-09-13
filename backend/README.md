@@ -50,6 +50,7 @@ python smoke_test.py
 | `smoke_test_weekly_cycle.py` | Project/Week schema + iterative Mentor review (17) |
 | `smoke_test_orchestration.py` | The full weekly cycle end-to-end through the API (56) |
 | `smoke_test_meeting.py` | Direct agent chat / meeting room (15) |
+| `smoke_test_llm_errors.py` | Graceful LLM-failure handling — clean errors, not 500s (8) |
 
 ## Schema notes for the rest of the team
 

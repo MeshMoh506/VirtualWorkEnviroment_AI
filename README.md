@@ -74,7 +74,13 @@ python smoke_test_agents.py        # Manager / Mentor / HR basics (19 checks)
 python smoke_test_weekly_cycle.py  # Project/Week schema + iterative review (17)
 python smoke_test_orchestration.py # the full weekly cycle, end to end (56)
 python smoke_test_meeting.py       # direct agent chat / meeting room (15)
+python smoke_test_llm_errors.py    # graceful LLM-failure handling (8)
 ```
+
+If the LLM key is missing, wrong, or out of credit, the agent endpoints
+return a clean, actionable error (503/429/502 with a helpful message the UI
+displays) rather than a 500 stack trace — so a missing key never looks like
+a crash.
 
 On Windows, delete the leftover sqlite files between runs with
 `Remove-Item *.db`. **Agent features that actually call the LLM** (assigning
