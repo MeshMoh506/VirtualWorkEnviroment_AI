@@ -6,6 +6,7 @@ from app.models import (
     AgentType,
     OnboardingStage,
     ProjectStatus,
+    ProjectSource,
     ReviewKind,
     SenderType,
     TaskStatus,
@@ -169,8 +170,14 @@ class ProjectOut(BaseModel):
     title: str
     description: str
     status: ProjectStatus
+    source: ProjectSource
     created_at: datetime
     updated_at: datetime
+
+
+class OwnProjectCreate(BaseModel):
+    title: str
+    description: str
 
 
 class SubtaskPlanOut(BaseModel):
