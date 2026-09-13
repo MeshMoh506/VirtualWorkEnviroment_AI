@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     llm_model: str = "claude-sonnet-5"
 
+    # Stage 2 — the LangGraph agents (app/agents/graph/) route cheap,
+    # mechanical steps (CV gap-detection, Q&A generation, track/agent
+    # suggestion) to this smaller model instead of always using llm_model.
+    # See app/agents/graph/models.py.
+    small_llm_model: str = "claude-haiku-4-5-20251001"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
