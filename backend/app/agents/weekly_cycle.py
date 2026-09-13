@@ -15,7 +15,8 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from app.agents import hr, manager
+from app.agents import manager
+from app.agents.graph.weekly_cycle_graph import run_end_of_week_cascade
 from app.models import Project, ProjectStatus, Task, TaskStatus, User, Week, WeekStatus
 
 
@@ -63,12 +64,13 @@ def get_next_task(db: Session, user: User) -> Task:
     if week.next_subtask_index < len(week.subtasks_plan_json):
         return manager.release_next_subtask(db, week)
 
-    # All 5 subtasks approved this week -> end-of-week cascade (Manager's
-    # progress review, then HR's behavioral review reading it alongside —
-    # confirmed order), close out the week, and roll straight into the
-    # next one so this call always returns a real task to work on.
-    manager.submit_week_progress(db, user, week)
-    hr.run_behavioral_review(db, user, week)
+    # All 5 subtasks approved this week -> end-of-week cascade. Stage 2
+    # (docs/STAGE2_WEEKLY_CYCLE_FLOW.md): this now runs as a small
+    # LangGraph StateGraph where the Manager and HR each consult the
+    # Mentor directly before writing their own review, instead of only
+    # reading its stored review text — same two Review rows created,
+    # same order, just genuinely collaborative now.
+    run_end_of_week_cascade(db, user, week)
     week.status = WeekStatus.COMPLETED
     week.ended_at = datetime.utcnow()
     db.add(week)

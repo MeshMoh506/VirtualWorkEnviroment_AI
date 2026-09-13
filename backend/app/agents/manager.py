@@ -175,19 +175,32 @@ def release_next_subtask(db: Session, week: Week) -> Task:
     return task
 
 
-def submit_week_progress(db: Session, user: User, week: Week) -> Review:
+def submit_week_progress(db: Session, user: User, week: Week, mentor_consult: str | None = None) -> Review:
     """The Manager's end-of-week review, based on the Mentor's per-subtask
     reviews — the first step of the end-of-week cascade, before HR's
-    behavioral review reads it alongside."""
+    behavioral review reads it alongside.
+
+    mentor_consult (Stage 2, docs/STAGE2_WEEKLY_CYCLE_FLOW.md): the
+    Mentor's direct answer when actually asked how the week went
+    (app/agents/graph/collaboration.py's ask_mentor), on top of the
+    stored per-subtask review text below. Optional and defaults to None
+    so this function's Stage 1 behavior is unchanged for any caller that
+    doesn't pass it."""
     mentor_reviews = [r for r in week.reviews if r.kind == ReviewKind.TASK_REVIEW]
     history_text = "\n\n".join(
         f"Subtask {i + 1} (verdict: {(r.metrics_json or {}).get('verdict', '?')}): {r.content}"
         for i, r in enumerate(mentor_reviews)
     ) or "No Mentor reviews recorded this week."
+    consult_text = (
+        f"\n\nWhen asked directly how the week went, the Mentor said:\n{mentor_consult}"
+        if mentor_consult
+        else ""
+    )
     prompt = (
         f"Week {week.week_number} big task: {week.big_task_title}\n"
         f"{week.big_task_description}\n\n"
-        f"Mentor's reviews of this week's subtasks:\n{history_text}\n\n"
+        f"Mentor's reviews of this week's subtasks:\n{history_text}"
+        f"{consult_text}\n\n"
         "Submit the week's progress review now via the submit_week_progress tool."
     )
     result = call_with_tool(
