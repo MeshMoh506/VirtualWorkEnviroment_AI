@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api";
 import { fetchTaskDetail, type Task } from "@/lib/tasks";
 import { fetchTaskReview, type Review } from "@/lib/reviews";
 import { RubricBar } from "@/components/rubric-bar";
+import { AttachmentList } from "@/components/workspace/attachment-list";
 
 interface ReviewPageProps {
   params: Promise<{ id: string }>;
@@ -80,6 +81,12 @@ export default function ReviewPage({ params }: ReviewPageProps) {
                   {task.githubLink}
                 </p>
               )}
+              {task.submissionText && (
+                <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-text-secondary">
+                  {task.submissionText}
+                </p>
+              )}
+              <AttachmentList taskId={task.id} attachments={task.attachments} />
             </div>
 
             {!review ? (

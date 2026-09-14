@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # See app/agents/graph/models.py.
     small_llm_model: str = "claude-haiku-4-5-20251001"
 
+    # Stage 2 — where task submission attachments (images/files) land on
+    # disk. See app/storage.py. Dev-scope: local disk, not cloud storage.
+    upload_dir: str = "uploads"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

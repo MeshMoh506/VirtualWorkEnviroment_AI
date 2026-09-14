@@ -19,6 +19,10 @@ export interface Review {
   id: string;
   taskId: string | null;
   weekId: string | null;
+  // Always one of the three default agents today — task_review,
+  // week_progress, behavioral, and skills_rollup reviews are all written
+  // by Manager/Mentor/HR; the optional agents from onboarding don't
+  // write reviews (yet). See toReview's cast below.
   agentType: AgentId;
   kind: "task_review" | "week_progress" | "behavioral" | "skills_rollup";
   verdict: ReviewVerdict | null; // null for anything that isn't a Mentor task review
@@ -40,7 +44,7 @@ function toReview(r: ReviewApiOut): Review {
     id: r.id,
     taskId: r.task_id,
     weekId: r.week_id,
-    agentType: r.agent_type,
+    agentType: r.agent_type as AgentId,
     kind: r.kind,
     verdict: metrics?.verdict ?? null,
     content: r.content,

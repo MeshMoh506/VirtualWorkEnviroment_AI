@@ -7,9 +7,21 @@ export type SenderType = "user" | "agent";
 export interface TaskMessage {
   id: string;
   senderType: SenderType;
-  agentType: AgentId | null;
+  // The Manager posts thread replies; Stage 2's co-reviewers (Security
+  // Reviewer/Data Reviewer/DevOps) post here too after the Mentor's
+  // review, if they're on the graduate's roster — so this is any agent
+  // id, not just the fixed default three. See lib/agent-display.ts.
+  agentType: string | null;
   content: string;
   createdAt: string;
+}
+
+export interface TaskAttachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string;
 }
 
 export interface Task {
@@ -18,6 +30,8 @@ export interface Task {
   description: string;
   status: TaskStatus;
   githubLink: string | null;
+  submissionText: string | null;
+  attachments: TaskAttachment[];
   createdByAgent: AgentId;
   // null for tasks outside the weekly-cycle flow (e.g. any manually
   // created via the admin POST /tasks, which the app itself never calls).
@@ -63,7 +77,17 @@ function toTask(t: TaskApiOut, messages: TaskMessage[] = []): Task {
     description: t.description,
     status: t.status,
     githubLink: t.github_link,
-    createdByAgent: t.created_by_agent,
+    submissionText: t.submission_text,
+    attachments: t.attachments.map((a) => ({
+      id: a.id,
+      filename: a.filename,
+      contentType: a.content_type,
+      sizeBytes: a.size_bytes,
+      uploadedAt: a.uploaded_at,
+    })),
+    // Only the Manager assigns tasks today — same reasoning as
+    // toTaskMessage's cast above.
+    createdByAgent: t.created_by_agent as AgentId,
     weekId: t.week_id,
     deadline: t.deadline,
     submittedAt: t.submitted_at,
@@ -92,8 +116,15 @@ export async function startTask(id: string): Promise<Task> {
   return toTask(raw);
 }
 
-export async function submitTask(id: string, githubLink: string): Promise<Task> {
-  const raw = await api.tasks.updateStatus(id, "submitted", githubLink);
+/** Stage 2: a submission is a GitHub link, free text, and/or file/image
+ * attachments — at least one, not github_link specifically. The older
+ * PATCH-based path (github_link only) still exists on the backend for
+ * anything else calling it, but the app itself always submits this way now. */
+export async function submitTask(
+  id: string,
+  payload: { githubLink?: string; submissionText?: string; files?: File[] }
+): Promise<Task> {
+  const raw = await api.tasks.submit(id, payload);
   return toTask(raw);
 }
 

@@ -69,9 +69,36 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** Same auth/error handling as request(), but for binary responses
+ * (attachment downloads) — a plain <img src> or <a href> can't attach the
+ * Bearer token, so callers fetch the blob here and hand it an object URL. */
+async function requestBlob(path: string): Promise<Blob> {
+  const headers = new Headers();
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { headers });
+  } catch {
+    throw new ApiError(0, "Can't reach the server — is the backend running?");
+  }
+  if (!res.ok) {
+    throw new ApiError(res.status, res.statusText || `Request failed (${res.status})`);
+  }
+  return res.blob();
+}
+
 // ---- Wire types — mirror backend/app/schemas.py field-for-field ----
 
-export type ApiAgentType = "manager" | "mentor" | "hr";
+export type ApiAgentType =
+  | "manager"
+  | "mentor"
+  | "hr"
+  | "security_reviewer"
+  | "data_reviewer"
+  | "career_coach"
+  | "devops";
 export type ApiTaskStatus = "todo" | "in_progress" | "submitted" | "reviewed";
 export type ApiSenderType = "user" | "agent";
 
@@ -93,12 +120,22 @@ export interface TaskMessageApiOut {
   created_at: string;
 }
 
+export interface TaskAttachmentApiOut {
+  id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  uploaded_at: string;
+}
+
 export interface TaskApiOut {
   id: string;
   title: string;
   description: string;
   status: ApiTaskStatus;
   github_link: string | null;
+  submission_text: string | null;
+  attachments: TaskAttachmentApiOut[];
   created_by_agent: ApiAgentType;
   // week_id/deadline are null for tasks outside the weekly-cycle flow.
   week_id: string | null;
@@ -276,6 +313,16 @@ export interface OnboardingStateApiOut {
   suggested_track: ApiTrack | null;
 }
 
+export interface ProjectOwnApiOut {
+  id: string;
+  title: string;
+  description: string;
+  status: ApiProjectStatus;
+  source: "manager" | "own";
+  created_at: string;
+  updated_at: string;
+}
+
 // ---- API surface ----
 
 export const api = {
@@ -307,6 +354,10 @@ export const api = {
      * graduate's track — the roster step needs the whole list so the
      * graduate can add ones the agent didn't suggest. No auth required. */
     catalog: () => request<AgentCatalogApiOut[]>("/onboarding/catalog"),
+    /** The graduate's selected optional agents only — Manager/Mentor/HR
+     * are always on the team and aren't in this list. Powers the board
+     * graph and orientation screen. */
+    myAgents: () => request<AgentCatalogApiOut[]>("/users/me/agents"),
     state: () => request<OnboardingStateApiOut>("/onboarding/state"),
     uploadCv: (file: File) => {
       const form = new FormData();
@@ -342,6 +393,20 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify({ status, github_link: githubLink ?? null }),
       }),
+    /** Stage 2: a submission is a GitHub link, free text, and/or file/
+     * image attachments — at least one, not github_link specifically. */
+    submit: (
+      id: string,
+      payload: { githubLink?: string; submissionText?: string; files?: File[] }
+    ) => {
+      const form = new FormData();
+      if (payload.githubLink) form.append("github_link", payload.githubLink);
+      if (payload.submissionText) form.append("submission_text", payload.submissionText);
+      for (const file of payload.files ?? []) form.append("files", file);
+      return request<TaskApiOut>(`/tasks/${id}/submit`, { method: "POST", body: form });
+    },
+    attachmentBlob: (taskId: string, attachmentId: string) =>
+      requestBlob(`/tasks/${taskId}/attachments/${attachmentId}`),
     postMessage: (id: string, content: string) =>
       request<TaskMessageApiOut>(`/tasks/${id}/messages`, {
         method: "POST",
@@ -374,12 +439,20 @@ export const api = {
      * gotten their first task — see lib/projects.ts's fetchMyProject,
      * which treats that as "nothing yet", not an error. */
     me: () => request<ProjectApiOut>("/projects/me"),
+    /** Stage 2: bring your own project instead of the Manager improvising
+     * one. Only works before the first assign-task call — 400s if the
+     * graduate already has an active project. */
+    createOwn: (title: string, description: string) =>
+      request<ProjectOwnApiOut>("/projects/own", {
+        method: "POST",
+        body: JSON.stringify({ title, description }),
+      }),
   },
 
   meeting: {
-    history: (agent: ApiAgentType) =>
+    history: (agent: string) =>
       request<ChatMessageApiOut[]>(`/meeting/${agent}`),
-    send: (agent: ApiAgentType, content: string) =>
+    send: (agent: string, content: string) =>
       request<ChatMessageApiOut>(`/meeting/${agent}`, {
         method: "POST",
         body: JSON.stringify({ content }),

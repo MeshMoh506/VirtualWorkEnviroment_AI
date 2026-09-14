@@ -3,10 +3,15 @@
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { AGENTS, type AgentId } from "@/lib/agents";
+import type { ExtraAgent } from "@/lib/team";
 import type { Week } from "@/lib/projects";
 import { timeUntil } from "@/lib/format";
 
-export type BoardSelection = AgentId | "employee-file" | "week" | null;
+// Reserved sentinels are "employee-file" and "week"; anything else is
+// either one of the three default agent ids or an extra agent's catalog
+// id (looked up against extraAgents below — there's no separate literal
+// type for those since the catalog can grow).
+export type BoardSelection = string | null;
 
 interface DetailPanelProps {
   selection: BoardSelection;
@@ -18,6 +23,9 @@ interface DetailPanelProps {
    * loading or before the graduate has one yet. */
   week: Week | null;
   projectTitle: string | null;
+  /** Optional agents the graduate added during onboarding — looked up
+   * here when the selection isn't one of the three default agent ids. */
+  extraAgents: ExtraAgent[];
   onClose: () => void;
 }
 
@@ -43,11 +51,16 @@ export function DetailPanel({
   reviewedTaskId,
   week,
   projectTitle,
+  extraAgents,
   onClose,
 }: DetailPanelProps) {
-  const isAgent =
-    selection !== null && selection !== "employee-file" && selection !== "week";
-  const meta = isAgent ? AGENTS[selection as AgentId] : null;
+  const isReserved = selection === "employee-file" || selection === "week";
+  const isDefaultAgent = !isReserved && selection !== null && selection in AGENTS;
+  const meta = isDefaultAgent ? AGENTS[selection as AgentId] : null;
+  const customAgent =
+    !isReserved && !isDefaultAgent && selection
+      ? (extraAgents.find((a) => a.id === selection) ?? null)
+      : null;
   // Mentor is the one card whose link depends on real data: point at the
   // graduate's own reviewed task once they have one, otherwise fall back
   // to the task board rather than link to a demo task that doesn't exist.
@@ -123,6 +136,28 @@ export function DetailPanel({
                         {agentLink.label}
                       </Link>
                     )}
+                  </div>
+                </>
+              ) : customAgent ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-text-muted" />
+                    <h2 className="text-lg font-medium text-text-primary">
+                      {customAgent.name}
+                    </h2>
+                  </div>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    Added to your team during onboarding
+                  </p>
+                  <p className="mt-5 text-sm leading-relaxed text-text-secondary">
+                    {customAgent.description}
+                  </p>
+                  <div className="mt-8 rounded border border-dashed border-border bg-bg-surface px-4 py-3">
+                    <p className="font-mono text-xs text-text-muted">status</p>
+                    <p className="mt-1 text-sm text-text-secondary">
+                      Not wired into the task flow yet — Manager, Mentor, and HR do the
+                      actual reviewing for now.
+                    </p>
                   </div>
                 </>
               ) : selection === "week" ? (

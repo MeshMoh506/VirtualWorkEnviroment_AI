@@ -1,9 +1,8 @@
 import { api, type ChatMessageApiOut } from "./api";
-import type { AgentId } from "./agents";
 
 export interface ChatMessage {
   id: string;
-  agentType: AgentId;
+  agentType: string;
   sender: "user" | "agent";
   content: string;
   createdAt: string;
@@ -19,7 +18,7 @@ function toChatMessage(m: ChatMessageApiOut): ChatMessage {
   };
 }
 
-export async function fetchConversation(agent: AgentId): Promise<ChatMessage[]> {
+export async function fetchConversation(agent: string): Promise<ChatMessage[]> {
   const raw = await api.meeting.history(agent);
   return raw.map(toChatMessage);
 }
@@ -28,7 +27,7 @@ export async function fetchConversation(agent: AgentId): Promise<ChatMessage[]> 
  * is persisted server-side before the reply is generated, so callers append
  * their message optimistically and only append the returned reply. */
 export async function sendChatMessage(
-  agent: AgentId,
+  agent: string,
   content: string
 ): Promise<ChatMessage> {
   return toChatMessage(await api.meeting.send(agent, content));

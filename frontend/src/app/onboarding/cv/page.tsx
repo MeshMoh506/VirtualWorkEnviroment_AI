@@ -7,8 +7,9 @@ import { Upload } from "lucide-react";
 import { ApiError, useRequireAuth } from "@/lib/auth-context";
 import { api, type AgentCatalogApiOut, type ApiTrack } from "@/lib/api";
 import { SELECTABLE_TRACKS, TRACKS } from "@/lib/tracks";
+import { createOwnProject } from "@/lib/projects";
 
-type Step = "loading" | "cv" | "qa" | "track" | "agents" | "done" | "already-done";
+type Step = "loading" | "cv" | "qa" | "track" | "agents" | "project" | "already-done";
 
 const STEP_NUMBER: Record<Step, number> = {
   loading: 0,
@@ -16,9 +17,11 @@ const STEP_NUMBER: Record<Step, number> = {
   qa: 2,
   track: 3,
   agents: 4,
-  done: 4,
+  project: 5,
   "already-done": 0,
 };
+
+const TOTAL_STEPS = 5;
 
 export default function OnboardingPage() {
   const { user, loading: authLoading, refreshUser } = useRequireAuth();
@@ -45,9 +48,10 @@ export default function OnboardingPage() {
   const [catalog, setCatalog] = useState<AgentCatalogApiOut[]>([]);
   const [selectedAgentIds, setSelectedAgentIds] = useState<Set<string>>(new Set());
 
-  // done
-  const [finalTrack, setFinalTrack] = useState<ApiTrack | null>(null);
-  const [finalAgents, setFinalAgents] = useState<AgentCatalogApiOut[]>([]);
+  // project — Stage 2's optional own-project path (docs/STAGE2_OWN_PROJECT.md)
+  const [projectChoice, setProjectChoice] = useState<"manager" | "own" | null>(null);
+  const [ownTitle, setOwnTitle] = useState("");
+  const [ownDescription, setOwnDescription] = useState("");
 
   // On load, check whether onboarding's already done so we don't make a
   // graduate redo it. Mid-flow resume (picking back up exactly on the qa/
@@ -124,14 +128,34 @@ export default function OnboardingPage() {
     setError(null);
     setBusy(true);
     try {
-      const result = await api.onboarding.approveAgents(Array.from(selectedAgentIds));
-      setFinalTrack(result.track);
-      setFinalAgents(result.agents);
+      await api.onboarding.approveAgents(Array.from(selectedAgentIds));
       await refreshUser();
-      setStep("done");
+      setStep("project");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't save your team.");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleFinishProject() {
+    setError(null);
+    setBusy(true);
+    try {
+      if (projectChoice === "own") {
+        if (!ownTitle.trim() || !ownDescription.trim()) {
+          setError("Give your project a title and a short description.");
+          setBusy(false);
+          return;
+        }
+        await createOwnProject(ownTitle.trim(), ownDescription.trim());
+      }
+      // "manager" (or no explicit choice) needs nothing here — orientation
+      // itself triggers the Manager's assign-task call when it finds no
+      // project yet.
+      router.push("/orientation");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't set up your project.");
       setBusy(false);
     }
   }
@@ -160,8 +184,10 @@ export default function OnboardingPage() {
           <Link href="/" className="font-mono text-xs text-text-muted hover:text-text-secondary">
             venv
           </Link>
-          {step !== "already-done" && step !== "done" && (
-            <p className="mt-3 text-xs text-text-muted">Step {STEP_NUMBER[step]} of 4</p>
+          {step !== "already-done" && (
+            <p className="mt-3 text-xs text-text-muted">
+              Step {STEP_NUMBER[step]} of {TOTAL_STEPS}
+            </p>
           )}
         </div>
 
@@ -326,18 +352,81 @@ export default function OnboardingPage() {
             </div>
           </Panel>
         )}
-
-        {step === "done" && finalTrack && (
+        {step === "project" && (
           <Panel>
-            <h1 className="text-2xl font-medium text-text-primary">You&apos;re ready</h1>
+            <h1 className="text-2xl font-medium text-text-primary">Your first project</h1>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              {TRACKS[finalTrack]}
-              {finalAgents.length > 0 && (
-                <> — with {finalAgents.map((a) => a.name).join(", ")} added to your team.</>
-              )}
+              The Manager can plan something for you, or you can bring your own project to
+              work on instead.
             </p>
-            <div className="mt-5">
-              <PrimaryButton onClick={() => router.push("/board")}>Go to board</PrimaryButton>
+
+            <div className="mt-5 space-y-2">
+              <button
+                type="button"
+                onClick={() => setProjectChoice("manager")}
+                className={`w-full rounded border p-3 text-left transition-colors ${
+                  projectChoice === "manager"
+                    ? "border-accent bg-bg-surface-raised"
+                    : "border-border hover:border-border-strong"
+                }`}
+              >
+                <span className="block text-sm font-medium text-text-primary">
+                  Let the Manager plan it
+                </span>
+                <span className="block text-xs text-text-secondary">
+                  A project picked for your track, broken into weekly tasks.
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProjectChoice("own")}
+                className={`w-full rounded border p-3 text-left transition-colors ${
+                  projectChoice === "own"
+                    ? "border-accent bg-bg-surface-raised"
+                    : "border-border hover:border-border-strong"
+                }`}
+              >
+                <span className="block text-sm font-medium text-text-primary">
+                  I have my own project
+                </span>
+                <span className="block text-xs text-text-secondary">
+                  Bring something you&apos;re already building — the Manager plans your weekly
+                  tasks around it instead.
+                </span>
+              </button>
+            </div>
+
+            {projectChoice === "own" && (
+              <div className="mt-4 flex flex-col gap-3">
+                <div>
+                  <label className="text-sm text-text-secondary">Project title</label>
+                  <input
+                    value={ownTitle}
+                    onChange={(e) => setOwnTitle(e.target.value)}
+                    placeholder="e.g. Personal expense tracker"
+                    className="mt-1.5 w-full rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary">What is it?</label>
+                  <textarea
+                    value={ownDescription}
+                    onChange={(e) => setOwnDescription(e.target.value)}
+                    rows={3}
+                    placeholder="What you're building, and the stack you're using."
+                    className="mt-1.5 w-full resize-none rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+
+            <div className="mt-5 flex justify-end">
+              <PrimaryButton onClick={handleFinishProject} disabled={!projectChoice || busy}>
+                {busy ? "Setting up..." : "Finish"}
+              </PrimaryButton>
             </div>
           </Panel>
         )}

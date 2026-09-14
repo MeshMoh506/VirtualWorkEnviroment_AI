@@ -2,13 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Users } from "lucide-react";
-import { AGENTS } from "@/lib/agents";
+import { agentDisplay } from "@/lib/agent-display";
+import type { ExtraAgent } from "@/lib/team";
 import type { Task } from "@/lib/tasks";
 import { timeAgo } from "@/lib/format";
 
 interface AgentsMeetingProps {
   task: Task;
   busy: "review" | "reply" | null;
+  extraAgents: ExtraAgent[];
   onSendMessage: (content: string) => void;
 }
 
@@ -16,11 +18,13 @@ interface AgentsMeetingProps {
  * The "agents meeting" — the running conversation with agents about the
  * current task. It's task-scoped on purpose (a meeting is always about
  * something), so it lives beside the task rather than on a separate page:
- * one screen shows the work and the discussion of it at once. Right now the
- * Manager answers in-thread; as more agents join the conversation this same
- * panel renders them all, colored by who spoke.
+ * one screen shows the work and the discussion of it at once. The Manager
+ * answers in-thread, and Stage 2's co-reviewers (Security Reviewer/Data
+ * Reviewer/DevOps) post here too after the Mentor's review, if they're on
+ * the graduate's team — this same panel renders them all, colored by who
+ * spoke.
  */
-export function AgentsMeeting({ task, busy, onSendMessage }: AgentsMeetingProps) {
+export function AgentsMeeting({ task, busy, extraAgents, onSendMessage }: AgentsMeetingProps) {
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -54,8 +58,8 @@ export function AgentsMeeting({ task, busy, onSendMessage }: AgentsMeetingProps)
         ) : (
           <div className="flex flex-col gap-3">
             {task.messages.map((m) => {
-              const agentMeta = m.agentType ? AGENTS[m.agentType] : null;
-              const isUser = !agentMeta;
+              const meta = m.agentType ? agentDisplay(m.agentType, extraAgents) : null;
+              const isUser = !meta;
               return (
                 <div
                   key={m.id}
@@ -66,14 +70,14 @@ export function AgentsMeeting({ task, busy, onSendMessage }: AgentsMeetingProps)
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
-                    {agentMeta && (
+                    {meta && (
                       <span
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ backgroundColor: `var(${agentMeta.colorVar})` }}
+                        className={`h-1.5 w-1.5 rounded-full ${meta.colorVar ? "" : "bg-text-muted"}`}
+                        style={meta.colorVar ? { backgroundColor: `var(${meta.colorVar})` } : undefined}
                       />
                     )}
                     <span className="font-mono text-[10px] text-text-muted">
-                      {agentMeta ? agentMeta.name : "You"} · {timeAgo(m.createdAt)}
+                      {meta ? meta.name : "You"} · {timeAgo(m.createdAt)}
                     </span>
                   </div>
                   <p className="mt-1 whitespace-pre-line text-sm text-text-primary">

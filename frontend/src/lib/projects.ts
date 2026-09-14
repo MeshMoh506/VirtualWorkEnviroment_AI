@@ -81,3 +81,9 @@ export function currentWeek(project: Project): Week | null {
   if (active) return active;
   return project.weeks[project.weeks.length - 1] ?? null;
 }
+
+/** Stage 2: bring your own project instead of the Manager improvising
+ * one. Only works before the first task — see api.projects.createOwn. */
+export async function createOwnProject(title: string, description: string): Promise<void> {
+  await api.projects.createOwn(title, description);
+}

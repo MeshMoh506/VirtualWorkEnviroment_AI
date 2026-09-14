@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { AGENTS, AGENT_ORDER, type AgentId } from "@/lib/agents";
+import { agentDisplay } from "@/lib/agent-display";
+import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 import { useRequireAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import {
@@ -19,9 +21,18 @@ const OPENERS: Record<AgentId, string> = {
   hr: "Ask about your growth, strengths, or where to focus next.",
 };
 
+function Dot({ colorVar, className = "h-2 w-2" }: { colorVar: string | null; className?: string }) {
+  return colorVar ? (
+    <span className={`${className} rounded-full`} style={{ backgroundColor: `var(${colorVar})` }} />
+  ) : (
+    <span className={`${className} rounded-full bg-text-muted`} />
+  );
+}
+
 export default function MeetingPage() {
   const { user, loading: authLoading } = useRequireAuth();
-  const [agent, setAgent] = useState<AgentId>("manager");
+  const [extraAgents, setExtraAgents] = useState<ExtraAgent[]>([]);
+  const [agent, setAgent] = useState<string>("manager");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingThread, setLoadingThread] = useState(true);
   const [draft, setDraft] = useState("");
@@ -29,7 +40,11 @@ export default function MeetingPage() {
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const loadThread = useCallback(async (a: AgentId) => {
+  useEffect(() => {
+    if (user) fetchMyExtraAgents().then(setExtraAgents).catch(() => {});
+  }, [user]);
+
+  const loadThread = useCallback(async (a: string) => {
     setLoadingThread(true);
     try {
       setMessages(await fetchConversation(a));
@@ -88,7 +103,9 @@ export default function MeetingPage() {
     );
   }
 
-  const meta = AGENTS[agent];
+  const meta = agentDisplay(agent, extraAgents);
+  const opener = agent in AGENTS ? OPENERS[agent as AgentId] : meta.role;
+  const allAgentIds = [...AGENT_ORDER, ...extraAgents.map((a) => a.id)];
 
   return (
     <main className="grid h-dvh grid-rows-[auto_1fr]">
@@ -130,8 +147,8 @@ export default function MeetingPage() {
           horizontal strip up top. */}
       <div className="grid min-h-0 grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)]">
         <div className="flex gap-2 overflow-x-auto border-b border-border p-3 md:flex-col md:overflow-visible md:border-b-0 md:border-r">
-          {AGENT_ORDER.map((id) => {
-            const m = AGENTS[id];
+          {allAgentIds.map((id) => {
+            const m = agentDisplay(id, extraAgents);
             const active = id === agent;
             return (
               <button
@@ -145,10 +162,7 @@ export default function MeetingPage() {
                 }`}
               >
                 <span className="flex items-center gap-2">
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: `var(${m.colorVar})` }}
-                  />
+                  <Dot colorVar={m.colorVar} />
                   <span className="text-sm font-medium text-text-primary">
                     {m.name}
                   </span>
@@ -172,19 +186,18 @@ export default function MeetingPage() {
               <div className="mx-auto max-w-md pt-10 text-center">
                 <span
                   className="mx-auto flex h-10 w-10 items-center justify-center rounded-full"
-                  style={{ backgroundColor: `color-mix(in srgb, var(${meta.colorVar}) 20%, transparent)` }}
+                  style={
+                    meta.colorVar
+                      ? { backgroundColor: `color-mix(in srgb, var(${meta.colorVar}) 20%, transparent)` }
+                      : { backgroundColor: "color-mix(in srgb, var(--text-muted) 20%, transparent)" }
+                  }
                 >
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: `var(${meta.colorVar})` }}
-                  />
+                  <Dot colorVar={meta.colorVar} className="h-2.5 w-2.5" />
                 </span>
                 <h2 className="mt-3 text-lg font-medium text-text-primary">
                   Meet with {meta.name}
                 </h2>
-                <p className="mt-1 text-sm text-text-secondary">
-                  {OPENERS[agent]}
-                </p>
+                <p className="mt-1 text-sm text-text-secondary">{opener}</p>
               </div>
             ) : (
               <div className="mx-auto flex max-w-2xl flex-col gap-3">
@@ -203,12 +216,7 @@ export default function MeetingPage() {
                       }`}
                     >
                       <div className="flex items-center gap-1.5">
-                        {!isUser && (
-                          <span
-                            className="h-1.5 w-1.5 rounded-full"
-                            style={{ backgroundColor: `var(${meta.colorVar})` }}
-                          />
-                        )}
+                        {!isUser && <Dot colorVar={meta.colorVar} className="h-1.5 w-1.5" />}
                         <span className="font-mono text-[10px] text-text-muted">
                           {isUser ? "You" : meta.name} · {timeAgo(m.createdAt)}
                         </span>

@@ -16,13 +16,15 @@ import {
   type Task,
 } from "@/lib/tasks";
 import { TaskRail } from "@/components/workspace/task-rail";
-import { TaskWorkspace } from "@/components/workspace/task-workspace";
+import { TaskWorkspace, type SubmitPayload } from "@/components/workspace/task-workspace";
 import { AgentsMeeting } from "@/components/workspace/agents-meeting";
+import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 
 export default function WorkspacePage() {
   const { user, loading: authLoading } = useRequireAuth();
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [extraAgents, setExtraAgents] = useState<ExtraAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -54,6 +56,7 @@ export default function WorkspacePage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user) refresh();
+    if (user) fetchMyExtraAgents().then(setExtraAgents).catch(() => {});
   }, [user, refresh]);
 
   const selected = tasks.find((t) => t.id === selectedId) ?? null;
@@ -84,14 +87,14 @@ export default function WorkspacePage() {
     }
   }
 
-  async function handleAdvance(githubLink?: string) {
+  async function handleAdvance(payload?: SubmitPayload) {
     if (!selected) return;
     try {
       if (selected.status === "todo") {
         const task = await startTask(selected.id);
         setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
-      } else if (selected.status === "in_progress" && githubLink) {
-        const task = await submitTask(selected.id, githubLink);
+      } else if (selected.status === "in_progress" && payload) {
+        const task = await submitTask(selected.id, payload);
         setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
         setBusy({ taskId: task.id, kind: "review" });
         try {
@@ -214,6 +217,7 @@ export default function WorkspacePage() {
                 <AgentsMeeting
                   task={selected}
                   busy={taskBusy}
+                  extraAgents={extraAgents}
                   onSendMessage={handleSendMessage}
                 />
               </div>
