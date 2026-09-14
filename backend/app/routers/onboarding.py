@@ -172,3 +172,25 @@ def read_onboarding_state(current_user: User = Depends(get_current_user)):
     """Lets the frontend figure out where to resume without replaying the
     graph — e.g. show the Q&A screen again if stage is 'qa'."""
     return current_user
+
+
+@router.post("/reset", response_model=OnboardingStateOut)
+def reset_onboarding(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Send the graduate back to the start of onboarding so they can run
+    it again — clears the wizard's own state (stage, the pending track
+    suggestion, the Q&A log, the confirmation flag) but deliberately
+    leaves their CV, their selected agents, and any project/tasks alone:
+    redoing onboarding is for re-answering the intake, not wiping the
+    account. Also the safe fix for pre-Stage-2 users whose stage was
+    never properly initialized and who'd otherwise be stuck on the
+    'already done' screen forever."""
+    current_user.onboarding_stage = OnboardingStage.CV
+    current_user.track_confirmed = False
+    current_user.suggested_track = None
+    current_user.onboarding_qa_json = []
+    db.commit()
+    db.refresh(current_user)
+    return current_user
