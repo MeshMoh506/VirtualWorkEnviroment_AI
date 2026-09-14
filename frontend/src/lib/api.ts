@@ -307,6 +307,10 @@ export const api = {
      * graduate's track — the roster step needs the whole list so the
      * graduate can add ones the agent didn't suggest. No auth required. */
     catalog: () => request<AgentCatalogApiOut[]>("/onboarding/catalog"),
+    /** The graduate's selected optional agents only — Manager/Mentor/HR
+     * are always on the team and aren't in this list. Powers the board
+     * graph and orientation screen. */
+    myAgents: () => request<AgentCatalogApiOut[]>("/users/me/agents"),
     state: () => request<OnboardingStateApiOut>("/onboarding/state"),
     uploadCv: (file: File) => {
       const form = new FormData();

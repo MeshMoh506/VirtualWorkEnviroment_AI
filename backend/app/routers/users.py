@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.database import get_db
 from app.dashboard import build_dashboard
-from app.models import Review, User
-from app.schemas import CVIntake, DashboardOut, EmployeeFileOut, ReviewOut, UserOut
+from app.models import AgentCatalog, Review, User, UserAgent
+from app.schemas import AgentCatalogOut, CVIntake, DashboardOut, EmployeeFileOut, ReviewOut, UserOut
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -13,6 +13,23 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/me", response_model=UserOut)
 def read_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/me/agents", response_model=list[AgentCatalogOut])
+def list_my_agents(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Stage 2 (docs/STAGE2_TEAM_AND_ORIENTATION.md): the graduate's
+    selected *optional* agents only — Manager/Mentor/HR are always on the
+    team and aren't stored per-user, so they're not in this list. Powers
+    the board's agents graph and the orientation screen, both of which
+    otherwise only knew about the fixed default three."""
+    return (
+        db.query(AgentCatalog)
+        .join(UserAgent, UserAgent.agent_catalog_id == AgentCatalog.id)
+        .filter(UserAgent.user_id == current_user.id)
+        .all()
+    )
 
 
 @router.get("/me/dashboard", response_model=DashboardOut)

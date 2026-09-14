@@ -129,6 +129,10 @@ with patch(
     r = client.get("/onboarding/state", headers=headers)
     check("state -> complete", r.json()["onboarding_stage"] == "complete")
 
+    r = client.get("/users/me/agents", headers=headers)
+    check("my agents -> 200", r.status_code == 200)
+    check("my agents reflects the approved roster", [a["id"] for a in r.json()] == ["security_reviewer"])
+
     # re-submitting the same roster should be idempotent, not duplicate
     r = client.post("/onboarding/agents", headers=headers, json={"agent_ids": ["security_reviewer"]})
     check("re-approving agents doesn't error", r.status_code == 200)
