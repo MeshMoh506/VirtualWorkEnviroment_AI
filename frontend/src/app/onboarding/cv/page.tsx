@@ -8,7 +8,7 @@ import { ApiError, useRequireAuth } from "@/lib/auth-context";
 import { api, type AgentCatalogApiOut, type ApiTrack } from "@/lib/api";
 import { SELECTABLE_TRACKS, TRACKS } from "@/lib/tracks";
 
-type Step = "loading" | "cv" | "qa" | "track" | "agents" | "done" | "already-done";
+type Step = "loading" | "cv" | "qa" | "track" | "agents" | "already-done";
 
 const STEP_NUMBER: Record<Step, number> = {
   loading: 0,
@@ -16,7 +16,6 @@ const STEP_NUMBER: Record<Step, number> = {
   qa: 2,
   track: 3,
   agents: 4,
-  done: 4,
   "already-done": 0,
 };
 
@@ -44,10 +43,6 @@ export default function OnboardingPage() {
   // agents
   const [catalog, setCatalog] = useState<AgentCatalogApiOut[]>([]);
   const [selectedAgentIds, setSelectedAgentIds] = useState<Set<string>>(new Set());
-
-  // done
-  const [finalTrack, setFinalTrack] = useState<ApiTrack | null>(null);
-  const [finalAgents, setFinalAgents] = useState<AgentCatalogApiOut[]>([]);
 
   // On load, check whether onboarding's already done so we don't make a
   // graduate redo it. Mid-flow resume (picking back up exactly on the qa/
@@ -124,14 +119,11 @@ export default function OnboardingPage() {
     setError(null);
     setBusy(true);
     try {
-      const result = await api.onboarding.approveAgents(Array.from(selectedAgentIds));
-      setFinalTrack(result.track);
-      setFinalAgents(result.agents);
+      await api.onboarding.approveAgents(Array.from(selectedAgentIds));
       await refreshUser();
-      setStep("done");
+      router.push("/orientation");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't save your team.");
-    } finally {
       setBusy(false);
     }
   }
@@ -160,7 +152,7 @@ export default function OnboardingPage() {
           <Link href="/" className="font-mono text-xs text-text-muted hover:text-text-secondary">
             venv
           </Link>
-          {step !== "already-done" && step !== "done" && (
+          {step !== "already-done" && (
             <p className="mt-3 text-xs text-text-muted">Step {STEP_NUMBER[step]} of 4</p>
           )}
         </div>
@@ -323,21 +315,6 @@ export default function OnboardingPage() {
               <PrimaryButton onClick={handleApproveAgents} disabled={busy}>
                 {busy ? "Saving..." : "Finish"}
               </PrimaryButton>
-            </div>
-          </Panel>
-        )}
-
-        {step === "done" && finalTrack && (
-          <Panel>
-            <h1 className="text-2xl font-medium text-text-primary">You&apos;re ready</h1>
-            <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              {TRACKS[finalTrack]}
-              {finalAgents.length > 0 && (
-                <> — with {finalAgents.map((a) => a.name).join(", ")} added to your team.</>
-              )}
-            </p>
-            <div className="mt-5">
-              <PrimaryButton onClick={() => router.push("/board")}>Go to board</PrimaryButton>
             </div>
           </Panel>
         )}

@@ -7,6 +7,7 @@ import { fetchTasks, type Task } from "@/lib/tasks";
 import { fetchMyProject, currentWeek, type Project } from "@/lib/projects";
 import { fetchDashboard, type Dashboard } from "@/lib/dashboard";
 import { fetchMyReviews, type Review } from "@/lib/reviews";
+import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 import { DetailPanel, type BoardSelection } from "@/components/board/detail-panel";
 import { FocusHero } from "@/components/dashboard/focus-hero";
 import { WeekStrip } from "@/components/dashboard/week-strip";
@@ -33,6 +34,7 @@ export default function BoardPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [extraAgents, setExtraAgents] = useState<ExtraAgent[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -42,12 +44,14 @@ export default function BoardPage() {
       fetchMyProject(),
       fetchDashboard(),
       fetchMyReviews(),
+      fetchMyExtraAgents(),
     ])
-      .then(([t, p, d, r]) => {
+      .then(([t, p, d, r, a]) => {
         if (t.status === "fulfilled") setTasks(t.value);
         if (p.status === "fulfilled") setProject(p.value);
         if (d.status === "fulfilled") setDashboard(d.value);
         if (r.status === "fulfilled") setReviews(r.value);
+        if (a.status === "fulfilled") setExtraAgents(a.value);
       })
       .finally(() => setDataLoading(false));
   }, [user]);
@@ -137,7 +141,7 @@ export default function BoardPage() {
                     <p className="mb-3 font-mono text-[11px] text-text-muted">
                       your_team
                     </p>
-                    <AgentCards dashboard={dashboard} reviews={reviews} />
+                    <AgentCards dashboard={dashboard} reviews={reviews} extraAgents={extraAgents} />
                   </div>
                 )}
               </>
@@ -148,7 +152,7 @@ export default function BoardPage() {
         {/* Right column: the interactive graph. Fixed height when stacked
             on mobile; fills the full column height on desktop. */}
         <div className="relative h-[60vh] min-h-0 lg:h-auto">
-          <FlowSection onSelect={setSelection} />
+          <FlowSection onSelect={setSelection} extraAgents={extraAgents} />
         </div>
       </div>
 
@@ -158,6 +162,7 @@ export default function BoardPage() {
         reviewedTaskId={tasks.find((t) => t.status === "reviewed")?.id ?? null}
         week={week}
         projectTitle={project?.title ?? null}
+        extraAgents={extraAgents}
         onClose={() => setSelection(null)}
       />
     </main>

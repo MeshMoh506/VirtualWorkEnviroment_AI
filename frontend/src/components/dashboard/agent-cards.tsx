@@ -5,11 +5,13 @@ import { motion } from "framer-motion";
 import { AGENTS, AGENT_ORDER, type AgentId } from "@/lib/agents";
 import type { Dashboard } from "@/lib/dashboard";
 import type { Review } from "@/lib/reviews";
+import type { ExtraAgent } from "@/lib/team";
 import { timeAgo } from "@/lib/format";
 
 interface AgentCardsProps {
   dashboard: Dashboard;
   reviews: Review[];
+  extraAgents: ExtraAgent[];
 }
 
 /** A short, live status line per agent, derived from real data — this is
@@ -60,7 +62,7 @@ const AGENT_HREF: Record<AgentId, string> = {
   hr: "/meeting",
 };
 
-export function AgentCards({ dashboard, reviews }: AgentCardsProps) {
+export function AgentCards({ dashboard, reviews, extraAgents }: AgentCardsProps) {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       {AGENT_ORDER.map((id, i) => {
@@ -97,6 +99,28 @@ export function AgentCards({ dashboard, reviews }: AgentCardsProps) {
           </motion.div>
         );
       })}
+      {extraAgents.map((agent, i) => (
+        <motion.div
+          key={agent.id}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            delay: 0.15 + 0.05 * (AGENT_ORDER.length + i),
+            duration: 0.3,
+            ease: "easeOut",
+          }}
+          className="flex h-full flex-col rounded border border-dashed border-border p-4"
+        >
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-text-muted" />
+            <span className="font-medium text-text-primary">{agent.name}</span>
+          </div>
+          <p className="mt-2 text-xs text-text-secondary">Added during onboarding</p>
+          <p className="mt-3 text-sm leading-relaxed text-text-primary">
+            {agent.description}
+          </p>
+        </motion.div>
+      ))}
     </div>
   );
 }

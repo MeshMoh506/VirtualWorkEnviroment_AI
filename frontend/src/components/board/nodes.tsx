@@ -66,6 +66,41 @@ export function AgentNode({ data }: NodeProps<AgentNodeData>) {
   );
 }
 
+export interface CustomAgentNodeData {
+  agentId: string;
+  name: string;
+  description: string;
+  index: number;
+  onSelect: (agentId: string) => void;
+}
+
+/** An extra agent the graduate added during onboarding, on top of the
+ * default three — same shape as AgentNode, but reads its name/description
+ * straight from props (there's no fixed lib/agents.ts entry for these)
+ * and uses a neutral dot instead of one of the three reserved agent
+ * colors, per DESIGN.md. */
+export function CustomAgentNode({ data }: NodeProps<CustomAgentNodeData>) {
+  return (
+    <motion.button
+      type="button"
+      onClick={() => data.onSelect(data.agentId)}
+      {...entrance(data.index)}
+      className="w-[200px] cursor-pointer rounded border border-dashed border-border bg-bg-surface px-4 py-3 text-left transition-colors hover:border-border-strong"
+    >
+      <Handle type="target" position={Position.Top} style={handleStyle} />
+      <div className="flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full bg-text-muted" />
+        <span className="font-medium text-text-primary">{data.name}</span>
+      </div>
+      <p className="mt-1 text-xs text-text-secondary">{data.description}</p>
+      <span className="mt-2 inline-block font-mono text-[11px] text-text-muted">
+        agent_type: {data.agentId}
+      </span>
+      <Handle type="source" position={Position.Bottom} style={handleStyle} />
+    </motion.button>
+  );
+}
+
 export interface EmployeeFileNodeData {
   index: number;
   onSelect: () => void;
