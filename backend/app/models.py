@@ -343,6 +343,10 @@ class Task(Base):
         Enum(TaskStatus), default=TaskStatus.TODO, nullable=False
     )
     github_link: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Stage 2 (docs/STAGE2_MEETING_AND_SUBMISSIONS.md): a submission can be
+    # a GitHub link, free text, file/image attachments, or any mix — at
+    # least one, not github_link specifically. See TaskAttachment below.
+    submission_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by_agent: Mapped[AgentType] = mapped_column(
         Enum(AgentType), default=AgentType.MANAGER, nullable=False
     )
@@ -378,6 +382,29 @@ class Task(Base):
         back_populates="task", cascade="all, delete-orphan", order_by="TaskMessage.created_at"
     )
     reviews: Mapped[list["Review"]] = relationship(back_populates="task")
+    attachments: Mapped[list["TaskAttachment"]] = relationship(
+        back_populates="task", cascade="all, delete-orphan", order_by="TaskAttachment.uploaded_at"
+    )
+
+
+class TaskAttachment(Base):
+    """A file or image attached to a submission (docs/
+    STAGE2_MEETING_AND_SUBMISSIONS.md) — on local disk, not cloud storage;
+    see app/storage.py. content_type starting with "image/" is what the
+    Mentor treats as reviewable images (mentor.py), everything else is
+    just listed by filename."""
+
+    __tablename__ = "task_attachments"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), nullable=False)
+    filename: Mapped[str] = mapped_column(String, nullable=False)
+    content_type: Mapped[str] = mapped_column(String, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    storage_path: Mapped[str] = mapped_column(String, nullable=False)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    task: Mapped["Task"] = relationship(back_populates="attachments")
 
 
 class TaskMessage(Base):

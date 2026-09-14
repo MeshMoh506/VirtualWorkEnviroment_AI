@@ -6,6 +6,7 @@ __pycache__/
 venv/
 *.db
 .pytest_cache/
+backend/uploads/
 
 # --- Node (frontend, once it exists) ---
 node_modules/
