@@ -16,7 +16,7 @@ import {
   type Task,
 } from "@/lib/tasks";
 import { TaskRail } from "@/components/workspace/task-rail";
-import { TaskWorkspace } from "@/components/workspace/task-workspace";
+import { TaskWorkspace, type SubmitPayload } from "@/components/workspace/task-workspace";
 import { AgentsMeeting } from "@/components/workspace/agents-meeting";
 
 export default function WorkspacePage() {
@@ -84,14 +84,14 @@ export default function WorkspacePage() {
     }
   }
 
-  async function handleAdvance(githubLink?: string) {
+  async function handleAdvance(payload?: SubmitPayload) {
     if (!selected) return;
     try {
       if (selected.status === "todo") {
         const task = await startTask(selected.id);
         setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
-      } else if (selected.status === "in_progress" && githubLink) {
-        const task = await submitTask(selected.id, githubLink);
+      } else if (selected.status === "in_progress" && payload) {
+        const task = await submitTask(selected.id, payload);
         setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
         setBusy({ taskId: task.id, kind: "review" });
         try {

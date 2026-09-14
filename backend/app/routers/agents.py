@@ -48,10 +48,12 @@ def mentor_review(
     db: Session = Depends(get_db),
 ):
     """
-    Mentor reviews a submitted task's github_link and moves it to
-    'reviewed'. Only valid once the task is 'submitted' — the frontend's
-    task detail panel already assumes this gate; this is the server-side
-    version of it.
+    Mentor reviews a submitted task and moves it to 'reviewed'. Stage 2:
+    the submission can be a GitHub link, free text, image/file
+    attachments, or any mix (docs/STAGE2_MEETING_AND_SUBMISSIONS.md), not
+    github_link specifically. Only valid once the task is 'submitted' —
+    the frontend's task detail panel already assumes this gate; this is
+    the server-side version of it.
     """
     task = _get_owned_task(task_id, current_user, db)
     if task.status != TaskStatus.SUBMITTED:

@@ -133,6 +133,16 @@ class TaskMessageOut(BaseModel):
     created_at: datetime
 
 
+class TaskAttachmentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    filename: str
+    content_type: str
+    size_bytes: int
+    uploaded_at: datetime
+
+
 class TaskOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -141,6 +151,8 @@ class TaskOut(BaseModel):
     description: str
     status: TaskStatus
     github_link: str | None
+    submission_text: str | None
+    attachments: list[TaskAttachmentOut] = []
     created_by_agent: AgentType
     # week_id/deadline are None for tasks outside the weekly-cycle flow
     # (the original flat model, or ad hoc/admin-created tasks).

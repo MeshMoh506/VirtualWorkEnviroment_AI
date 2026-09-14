@@ -69,9 +69,36 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** Same auth/error handling as request(), but for binary responses
+ * (attachment downloads) — a plain <img src> or <a href> can't attach the
+ * Bearer token, so callers fetch the blob here and hand it an object URL. */
+async function requestBlob(path: string): Promise<Blob> {
+  const headers = new Headers();
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { headers });
+  } catch {
+    throw new ApiError(0, "Can't reach the server — is the backend running?");
+  }
+  if (!res.ok) {
+    throw new ApiError(res.status, res.statusText || `Request failed (${res.status})`);
+  }
+  return res.blob();
+}
+
 // ---- Wire types — mirror backend/app/schemas.py field-for-field ----
 
-export type ApiAgentType = "manager" | "mentor" | "hr";
+export type ApiAgentType =
+  | "manager"
+  | "mentor"
+  | "hr"
+  | "security_reviewer"
+  | "data_reviewer"
+  | "career_coach"
+  | "devops";
 export type ApiTaskStatus = "todo" | "in_progress" | "submitted" | "reviewed";
 export type ApiSenderType = "user" | "agent";
 
@@ -93,12 +120,22 @@ export interface TaskMessageApiOut {
   created_at: string;
 }
 
+export interface TaskAttachmentApiOut {
+  id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  uploaded_at: string;
+}
+
 export interface TaskApiOut {
   id: string;
   title: string;
   description: string;
   status: ApiTaskStatus;
   github_link: string | null;
+  submission_text: string | null;
+  attachments: TaskAttachmentApiOut[];
   created_by_agent: ApiAgentType;
   // week_id/deadline are null for tasks outside the weekly-cycle flow.
   week_id: string | null;
@@ -346,6 +383,20 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify({ status, github_link: githubLink ?? null }),
       }),
+    /** Stage 2: a submission is a GitHub link, free text, and/or file/
+     * image attachments — at least one, not github_link specifically. */
+    submit: (
+      id: string,
+      payload: { githubLink?: string; submissionText?: string; files?: File[] }
+    ) => {
+      const form = new FormData();
+      if (payload.githubLink) form.append("github_link", payload.githubLink);
+      if (payload.submissionText) form.append("submission_text", payload.submissionText);
+      for (const file of payload.files ?? []) form.append("files", file);
+      return request<TaskApiOut>(`/tasks/${id}/submit`, { method: "POST", body: form });
+    },
+    attachmentBlob: (taskId: string, attachmentId: string) =>
+      requestBlob(`/tasks/${taskId}/attachments/${attachmentId}`),
     postMessage: (id: string, content: string) =>
       request<TaskMessageApiOut>(`/tasks/${id}/messages`, {
         method: "POST",
@@ -381,9 +432,9 @@ export const api = {
   },
 
   meeting: {
-    history: (agent: ApiAgentType) =>
+    history: (agent: string) =>
       request<ChatMessageApiOut[]>(`/meeting/${agent}`),
-    send: (agent: ApiAgentType, content: string) =>
+    send: (agent: string, content: string) =>
       request<ChatMessageApiOut>(`/meeting/${agent}`, {
         method: "POST",
         body: JSON.stringify({ content }),
