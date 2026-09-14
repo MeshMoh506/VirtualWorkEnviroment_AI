@@ -2,9 +2,12 @@
 
 _Added Sep 2026. Third slice of Stage 2: a graduate can bring their own
 project instead of the Manager improvising one — confirmed optional, not
-the default. Smoke-tested (`smoke_test_stage2_own_project.py`, 12 checks).
-See `docs/STAGE2_ONBOARDING_FLOW.md` and `STAGE2_WEEKLY_CYCLE_FLOW.md` for
-the other two slices, `docs/PROJECT_STATUS.md` for the overall state._
+the default. Backend smoke-tested (`smoke_test_stage2_own_project.py`,
+12 checks); the onboarding wizard now has a step for it too (added
+later the same day, once it was the last real gap against the original
+Stage 2 asks — see "Frontend" below). See `docs/STAGE2_ONBOARDING_FLOW.md`
+and `STAGE2_WEEKLY_CYCLE_FLOW.md` for the other two backend slices,
+`docs/PROJECT_STATUS.md` for the overall state._
 
 ## The flow
 
@@ -60,15 +63,34 @@ of small additions rather than a refactor.
   graduate's own project.
 - All 10 smoke suites pass together — 209 checks total, no regressions.
 
+## Frontend — built
+
+Added as a new 5th step in the onboarding wizard (`STAGE2_ONBOARDING_FLOW.md`
+/ `STAGE2_ONBOARDING_FRONTEND.md`), between the agent-roster step and the
+redirect into orientation: two options, "Let the Manager plan it" or "I
+have my own project" (title + short description). Picking "own" calls
+`POST /projects/own` right there; picking "Manager" does nothing extra —
+`/orientation` already calls the Manager's `assign-task` itself when it
+finds no project yet, so that path is unchanged.
+
+No changes needed to `/orientation` at all: it already just checks
+whether a project exists and only bootstraps one if it doesn't, so a
+graduate who just created their own project has it picked up
+automatically on the very next screen.
+
+- `frontend/src/lib/api.ts` — `projects.createOwn`, `ProjectOwnApiOut`.
+- `frontend/src/lib/projects.ts` — `createOwnProject` wrapper.
+- `frontend/src/app/onboarding/cv/page.tsx` — new `"project"` step (now
+  5 steps total), `handleFinishProject`.
+- Verified: eslint clean, full `next build` succeeds (13 routes).
+
 ## Not built yet
 
-- **Frontend** — nothing in `frontend/` reflects any of Stage 2 yet
-  (onboarding, the weekly-cycle collaboration, or this).
 - **Switching an in-progress project** — a graduate who started with a
   Manager-improvised project can't later switch to their own mid-stream;
   out of scope for this slice, not clearly needed yet either.
 - **Richer own-project context** — today it's just title + description,
   same as a Manager-invented one. A real repo link / tech-stack field
   would let `plan_week` ground subtasks in an actual existing codebase
-  rather than a description of one — worth a look once this is wired to
-  the frontend and real usage shows whether that's needed.
+  rather than a description of one — worth a look once real usage shows
+  whether that's needed.

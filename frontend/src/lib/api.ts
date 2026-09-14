@@ -313,6 +313,16 @@ export interface OnboardingStateApiOut {
   suggested_track: ApiTrack | null;
 }
 
+export interface ProjectOwnApiOut {
+  id: string;
+  title: string;
+  description: string;
+  status: ApiProjectStatus;
+  source: "manager" | "own";
+  created_at: string;
+  updated_at: string;
+}
+
 // ---- API surface ----
 
 export const api = {
@@ -429,6 +439,14 @@ export const api = {
      * gotten their first task — see lib/projects.ts's fetchMyProject,
      * which treats that as "nothing yet", not an error. */
     me: () => request<ProjectApiOut>("/projects/me"),
+    /** Stage 2: bring your own project instead of the Manager improvising
+     * one. Only works before the first assign-task call — 400s if the
+     * graduate already has an active project. */
+    createOwn: (title: string, description: string) =>
+      request<ProjectOwnApiOut>("/projects/own", {
+        method: "POST",
+        body: JSON.stringify({ title, description }),
+      }),
   },
 
   meeting: {
