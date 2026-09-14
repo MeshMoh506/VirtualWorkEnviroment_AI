@@ -75,11 +75,15 @@ def call_agentic(
     messages: list[dict],
     tools: list[dict],
     max_tokens: int = 1500,
+    model: str | None = None,
 ):
     """Auto tool choice — the model decides whether to call a tool or reply
-    in plain text. Returns the raw response; caller inspects `.content`."""
+    in plain text. Returns the raw response; caller inspects `.content`.
+    model defaults to settings.llm_model; pass settings.small_llm_model
+    explicitly for a lightweight call (see co_reviewers.py) rather than
+    always using the default tier."""
     return get_client().messages.create(
-        model=settings.llm_model,
+        model=model or settings.llm_model,
         max_tokens=max_tokens,
         system=system,
         messages=messages,

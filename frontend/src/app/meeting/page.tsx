@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { AGENTS, AGENT_ORDER, type AgentId } from "@/lib/agents";
+import { agentDisplay } from "@/lib/agent-display";
 import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 import { useRequireAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
@@ -19,21 +20,6 @@ const OPENERS: Record<AgentId, string> = {
   mentor: "Ask for code advice, review feedback, or how to level up.",
   hr: "Ask about your growth, strengths, or where to focus next.",
 };
-
-interface AgentDisplay {
-  name: string;
-  role: string;
-  colorVar: string | null;
-}
-
-function displayFor(id: string, extraAgents: ExtraAgent[]): AgentDisplay {
-  if (id in AGENTS) {
-    const m = AGENTS[id as AgentId];
-    return { name: m.name, role: m.role, colorVar: m.colorVar };
-  }
-  const extra = extraAgents.find((a) => a.id === id);
-  return { name: extra?.name ?? id, role: extra?.description ?? "", colorVar: null };
-}
 
 function Dot({ colorVar, className = "h-2 w-2" }: { colorVar: string | null; className?: string }) {
   return colorVar ? (
@@ -117,7 +103,7 @@ export default function MeetingPage() {
     );
   }
 
-  const meta = displayFor(agent, extraAgents);
+  const meta = agentDisplay(agent, extraAgents);
   const opener = agent in AGENTS ? OPENERS[agent as AgentId] : meta.role;
   const allAgentIds = [...AGENT_ORDER, ...extraAgents.map((a) => a.id)];
 
@@ -162,7 +148,7 @@ export default function MeetingPage() {
       <div className="grid min-h-0 grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)]">
         <div className="flex gap-2 overflow-x-auto border-b border-border p-3 md:flex-col md:overflow-visible md:border-b-0 md:border-r">
           {allAgentIds.map((id) => {
-            const m = displayFor(id, extraAgents);
+            const m = agentDisplay(id, extraAgents);
             const active = id === agent;
             return (
               <button
