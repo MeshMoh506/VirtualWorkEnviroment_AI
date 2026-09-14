@@ -52,8 +52,9 @@ export function AgentsMeeting({ task, busy, extraAgents, onSendMessage }: Agents
       <div ref={scrollRef} className="thin-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
         {task.messages.length === 0 ? (
           <p className="py-6 text-center text-xs text-text-muted">
-            No discussion yet. Ask a question or share where you&apos;re at —
-            your manager will respond here.
+            No discussion yet. Ask a question or share where you&apos;re at — your
+            manager replies here, and once you submit, your team reviews the work
+            together in this thread.
           </p>
         ) : (
           <div className="flex flex-col gap-3">

@@ -169,6 +169,30 @@ export default function OnboardingPage() {
     });
   }
 
+  async function handleRestart() {
+    setError(null);
+    setBusy(true);
+    try {
+      await api.onboarding.reset();
+      // Reset local wizard state too, then drop back to the first step.
+      setFile(null);
+      setQuestions([]);
+      setAnswers({});
+      setIntroText("");
+      setSuggestedTrack(null);
+      setSelectedTrack(null);
+      setSelectedAgentIds(new Set());
+      setProjectChoice(null);
+      setOwnTitle("");
+      setOwnDescription("");
+      setStep("cv");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't restart onboarding.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (authLoading || !user || step === "loading") {
     return (
       <main className="flex flex-1 items-center justify-center">
@@ -196,10 +220,19 @@ export default function OnboardingPage() {
             <h1 className="text-2xl font-medium text-text-primary">You&apos;re all set</h1>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
               You&apos;ve already been through onboarding. Head back to the board to keep
-              working.
+              working — or go through it again to update your track, team, or project.
             </p>
-            <div className="mt-5">
+            {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+            <div className="mt-5 flex items-center gap-3">
               <PrimaryButton onClick={() => router.push("/board")}>Go to board</PrimaryButton>
+              <button
+                type="button"
+                onClick={handleRestart}
+                disabled={busy}
+                className="text-sm text-text-muted transition-colors hover:text-text-secondary disabled:opacity-50"
+              >
+                {busy ? "Resetting..." : "Go through it again"}
+              </button>
             </div>
           </Panel>
         )}

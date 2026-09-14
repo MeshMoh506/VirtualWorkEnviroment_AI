@@ -383,6 +383,8 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ agent_ids: agentIds }),
       }),
+    reset: () =>
+      request<OnboardingStateApiOut>("/onboarding/reset", { method: "POST" }),
   },
 
   tasks: {

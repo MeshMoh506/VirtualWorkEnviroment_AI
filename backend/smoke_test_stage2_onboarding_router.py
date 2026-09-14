@@ -133,6 +133,17 @@ with patch(
     check("my agents -> 200", r.status_code == 200)
     check("my agents reflects the approved roster", [a["id"] for a in r.json()] == ["security_reviewer"])
 
+    # --- reset sends a completed graduate back to the start, without
+    # wiping their CV or selected agents ---
+    r = client.post("/onboarding/reset", headers=headers)
+    check("reset -> 200", r.status_code == 200)
+    check("reset moves stage back to cv", r.json()["onboarding_stage"] == "cv")
+    check("reset clears track_confirmed", r.json()["track_confirmed"] is False)
+    r = client.get("/users/me", headers=headers)
+    check("reset leaves the CV intact", r.json()["has_cv"] is True)
+    r = client.get("/users/me/agents", headers=headers)
+    check("reset leaves selected agents intact", [a["id"] for a in r.json()] == ["security_reviewer"])
+
     # re-submitting the same roster should be idempotent, not duplicate
     r = client.post("/onboarding/agents", headers=headers, json={"agent_ids": ["security_reviewer"]})
     check("re-approving agents doesn't error", r.status_code == 200)

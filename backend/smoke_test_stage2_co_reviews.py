@@ -62,91 +62,92 @@ def add_agent(email, agent_id):
     db.close()
 
 
-def new_submitted_task(headers, title):
-    r = client.post("/tasks", json={"title": title, "description": "d", "user_id": "ignored"}, headers=headers)
-    task_id = r.json()["id"]
-    client.patch(f"/tasks/{task_id}/status", json={"status": "in_progress"}, headers=headers)
-    client.post(f"/tasks/{task_id}/submit", headers=headers, data={"submission_text": "here's my work"})
-    return task_id
+# --- The co_reviewers module is the simpler, parallel fallback (the
+# router now uses the richer roundtable — see roundtable.py and
+# smoke_test_stage2_roundtable.py). This tests co_reviewers.run_co_reviews
+# directly as a unit, since it's no longer on the router's path but still
+# a maintained module. ---
+from app.agents import co_reviewers  # noqa: E402
+from app.models import Task, TaskStatus  # noqa: E402
 
 
-MENTOR_APPROVE = {
-    "tool_name": "submit_review",
-    "input": {
-        "verdict": "approved",
-        "summary": "Looks good.",
-        "categories": {"correctness": 4, "code_quality": 4, "testing": 3, "documentation": 3},
-        "comments": [],
-    },
-}
+def make_submitted_task(email):
+    db = SessionLocal()
+    user = db.query(User).filter(User.email == email).first()
+    task = Task(
+        user_id=user.id,
+        title="unit task",
+        description="d",
+        status=TaskStatus.SUBMITTED,
+        submission_text="my work",
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    tid, uid = task.id, user.id
+    db.close()
+    return tid, uid
 
 
-# --- no extra agents on roster -> no co-review messages ---
-headers = register_and_login("co-review-none@example.com")
-task_id = new_submitted_task(headers, "no extras")
-with patch("app.agents.mentor.call_with_tool", return_value=MENTOR_APPROVE):
-    r = client.post(f"/agents/mentor/review/{task_id}", headers=headers)
-check("mentor review -> 201 (no extras)", r.status_code == 201)
-r = client.get(f"/tasks/{task_id}", headers=headers)
-agent_messages = [m for m in r.json()["messages"] if m["sender_type"] == "agent"]
-check("only the mentor's own message, no co-reviews", len(agent_messages) == 1 and agent_messages[0]["agent_type"] == "mentor")
+def run_co(email, task_id):
+    db = SessionLocal()
+    user = db.query(User).filter(User.email == email).first()
+    task = db.get(Task, task_id)
+    result = co_reviewers.run_co_reviews(db, user, task)
+    types = sorted(m.agent_type.value for m in result)
+    db.close()
+    return types
 
 
-# --- security_reviewer + devops on roster, not data_reviewer ---
-headers = register_and_login("co-review-some@example.com")
-add_agent("co-review-some@example.com", "security_reviewer")
-add_agent("co-review-some@example.com", "devops")
-task_id = new_submitted_task(headers, "two extras")
-with patch("app.agents.mentor.call_with_tool", return_value=MENTOR_APPROVE), patch(
-    "app.agents.co_reviewers.call_agentic"
-) as mock_co:
-    mock_co.return_value = FakeResponse("Nothing security-relevant here, looks fine.")
-    r = client.post(f"/agents/mentor/review/{task_id}", headers=headers)
-check("mentor review -> 201 (two extras)", r.status_code == 201)
-check("co_reviewers.call_agentic called exactly twice", mock_co.call_count == 2)
-called_models = {c.kwargs["model"] for c in mock_co.call_args_list}
-check("co-reviews use the small model", called_models == {"claude-haiku-4-5-20251001"})
+# no extras on roster -> nothing posted
+email = "co-review-none@example.com"
+register_and_login(email)
+tid, _ = make_submitted_task(email)
+check("no extras -> run_co_reviews posts nothing", run_co(email, tid) == [])
 
-r = client.get(f"/tasks/{task_id}", headers=headers)
-agent_types = {m["agent_type"] for m in r.json()["messages"] if m["sender_type"] == "agent"}
-check("thread has mentor + both added extras, not data_reviewer", agent_types == {"mentor", "security_reviewer", "devops"})
+# security + devops on roster (not data) -> exactly those two
+email = "co-review-some@example.com"
+register_and_login(email)
+add_agent(email, "security_reviewer")
+add_agent(email, "devops")
+tid, _ = make_submitted_task(email)
+with patch("app.agents.co_reviewers.call_agentic") as mock_co, patch(
+    "app.agents.co_reviewers.fetch_repo_context", return_value=""
+):
+    mock_co.return_value = FakeResponse("looks fine")
+    types = run_co(email, tid)
+check("run_co_reviews called call_agentic twice", mock_co.call_count == 2)
+check("co-reviews use the small model", {c.kwargs["model"] for c in mock_co.call_args_list} == {"claude-haiku-4-5-20251001"})
+check("exactly security + devops posted, not data", types == ["devops", "security_reviewer"])
 
+# career coach on roster -> never co-reviews
+email = "co-review-coach@example.com"
+register_and_login(email)
+add_agent(email, "career_coach")
+tid, _ = make_submitted_task(email)
+with patch("app.agents.co_reviewers.call_agentic") as mock_co:
+    types = run_co(email, tid)
+check("career coach never triggers a co-review call", mock_co.call_count == 0)
+check("career coach posts nothing", types == [])
 
-# --- career_coach on roster -> never co-reviews, even though it's added ---
-headers = register_and_login("co-review-coach@example.com")
-add_agent("co-review-coach@example.com", "career_coach")
-task_id = new_submitted_task(headers, "career coach only")
-with patch("app.agents.mentor.call_with_tool", return_value=MENTOR_APPROVE), patch(
-    "app.agents.co_reviewers.call_agentic"
-) as mock_co:
-    r = client.post(f"/agents/mentor/review/{task_id}", headers=headers)
-check("mentor review -> 201 (career coach on roster)", r.status_code == 201)
-check("career coach never gets a co-review call", mock_co.call_count == 0)
-r = client.get(f"/tasks/{task_id}", headers=headers)
-agent_types = {m["agent_type"] for m in r.json()["messages"] if m["sender_type"] == "agent"}
-check("only the mentor posted", agent_types == {"mentor"})
-
-
-# --- one co-reviewer errors -> doesn't block the other or the mentor review ---
-headers = register_and_login("co-review-partial-fail@example.com")
-add_agent("co-review-partial-fail@example.com", "security_reviewer")
-add_agent("co-review-partial-fail@example.com", "data_reviewer")
-task_id = new_submitted_task(headers, "partial failure")
+# one errors -> the other still posts
+email = "co-review-partial@example.com"
+register_and_login(email)
+add_agent(email, "security_reviewer")
+add_agent(email, "data_reviewer")
+tid, _ = make_submitted_task(email)
 
 
 def flaky_call(**kwargs):
     if kwargs["system"].startswith("You are the Security Reviewer"):
         raise RuntimeError("simulated rate limit")
-    return FakeResponse("Data quality looks reasonable from the notes.")
+    return FakeResponse("data quality reasonable")
 
 
-with patch("app.agents.mentor.call_with_tool", return_value=MENTOR_APPROVE), patch(
-    "app.agents.co_reviewers.call_agentic", side_effect=flaky_call
+with patch("app.agents.co_reviewers.call_agentic", side_effect=flaky_call), patch(
+    "app.agents.co_reviewers.fetch_repo_context", return_value=""
 ):
-    r = client.post(f"/agents/mentor/review/{task_id}", headers=headers)
-check("mentor review still -> 201 despite a co-reviewer erroring", r.status_code == 201)
-r = client.get(f"/tasks/{task_id}", headers=headers)
-agent_types = {m["agent_type"] for m in r.json()["messages"] if m["sender_type"] == "agent"}
-check("mentor + the co-reviewer that succeeded, not the one that errored", agent_types == {"mentor", "data_reviewer"})
+    types = run_co(email, tid)
+check("a co-reviewer erroring doesn't block the other", types == ["data_reviewer"])
 
-print("\nAll Stage 2 co-review smoke checks passed.")
+print("\nAll Stage 2 co-review (unit) smoke checks passed.")

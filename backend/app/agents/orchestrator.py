@@ -9,7 +9,7 @@ track") live here, not in the router or in an individual agent module.
 """
 from sqlalchemy.orm import Session
 
-from app.agents import co_reviewers, hr, manager, mentor, weekly_cycle
+from app.agents import hr, manager, mentor, roundtable, weekly_cycle
 from app.models import Review, Task, TaskMessage, User
 
 
@@ -30,10 +30,16 @@ def mentor_review(db: Session, task: Task, user: User) -> Review:
 
 
 def run_co_reviews(db: Session, task: Task, user: User) -> list[TaskMessage]:
-    """Stage 2 — Security Reviewer/Data Reviewer/DevOps weighing in after
-    the Mentor's review, if the graduate has any of them on their team.
-    See co_reviewers.run_co_reviews."""
-    return co_reviewers.run_co_reviews(db, user, task)
+    """Stage 2 — the agent roundtable: after the Mentor's review, the
+    specialists on the graduate's team (Security Reviewer/Data Reviewer/
+    DevOps) discuss the submission with each other, then the Manager
+    synthesizes what matters most. See roundtable.run_roundtable.
+
+    (Named run_co_reviews for continuity — the router and its docstring
+    call it that; the roundtable is the richer evolution of the original
+    parallel co-reviews, which still lives in co_reviewers.py as the
+    simpler fallback and for its dedicated tests.)"""
+    return roundtable.run_roundtable(db, user, task)
 
 
 def hr_rollup(db: Session, user: User) -> Review:
