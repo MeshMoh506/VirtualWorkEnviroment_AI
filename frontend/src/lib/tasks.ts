@@ -7,10 +7,11 @@ export type SenderType = "user" | "agent";
 export interface TaskMessage {
   id: string;
   senderType: SenderType;
-  // Always a default agent or null today — only the Manager posts task-
-  // thread replies (manager.respond_in_thread); the optional agents from
-  // onboarding don't post here. See toTaskMessage's cast below.
-  agentType: AgentId | null;
+  // The Manager posts thread replies; Stage 2's co-reviewers (Security
+  // Reviewer/Data Reviewer/DevOps) post here too after the Mentor's
+  // review, if they're on the graduate's roster — so this is any agent
+  // id, not just the fixed default three. See lib/agent-display.ts.
+  agentType: string | null;
   content: string;
   createdAt: string;
 }
@@ -63,10 +64,7 @@ function toTaskMessage(m: TaskDetailApiOut["messages"][number]): TaskMessage {
   return {
     id: m.id,
     senderType: m.sender_type,
-    // Only the Manager posts here today (see the field comment above) —
-    // cast rather than widening the whole domain type for a case that
-    // can't currently happen.
-    agentType: m.agent_type as AgentId | null,
+    agentType: m.agent_type,
     content: m.content,
     createdAt: m.created_at,
   };

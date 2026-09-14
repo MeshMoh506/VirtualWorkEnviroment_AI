@@ -18,11 +18,13 @@ import {
 import { TaskRail } from "@/components/workspace/task-rail";
 import { TaskWorkspace, type SubmitPayload } from "@/components/workspace/task-workspace";
 import { AgentsMeeting } from "@/components/workspace/agents-meeting";
+import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 
 export default function WorkspacePage() {
   const { user, loading: authLoading } = useRequireAuth();
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [extraAgents, setExtraAgents] = useState<ExtraAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -54,6 +56,7 @@ export default function WorkspacePage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user) refresh();
+    if (user) fetchMyExtraAgents().then(setExtraAgents).catch(() => {});
   }, [user, refresh]);
 
   const selected = tasks.find((t) => t.id === selectedId) ?? null;
@@ -214,6 +217,7 @@ export default function WorkspacePage() {
                 <AgentsMeeting
                   task={selected}
                   busy={taskBusy}
+                  extraAgents={extraAgents}
                   onSendMessage={handleSendMessage}
                 />
               </div>

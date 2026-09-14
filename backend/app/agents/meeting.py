@@ -42,7 +42,7 @@ from app.models import (
 # agents don't have task-flow modules of their own yet (they're
 # roster-only — see docs/STAGE2_TEAM_AND_ORIENTATION.md), so their
 # personas are written here directly, conversational-only for now.
-_PERSONA: dict[AgentType, str] = {
+PERSONA: dict[AgentType, str] = {
     AgentType.MANAGER: manager.SYSTEM_PROMPT,
     AgentType.MENTOR: mentor.SYSTEM_PROMPT,
     AgentType.HR: hr.SYSTEM_PROMPT,
@@ -159,7 +159,7 @@ def send_message(
         }
         for m in history
     ]
-    system = _PERSONA[agent] + _MEETING_FRAMING + "\n\n" + _shared_context(db, user)
+    system = PERSONA[agent] + _MEETING_FRAMING + "\n\n" + _shared_context(db, user)
 
     response = get_client().messages.create(
         model=settings.llm_model,

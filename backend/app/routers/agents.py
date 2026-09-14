@@ -62,9 +62,14 @@ def mentor_review(
             detail=f"Task must be 'submitted' to review (currently '{task.status.value}').",
         )
     try:
-        return orchestrator.mentor_review(db, task, current_user)
+        review = orchestrator.mentor_review(db, task, current_user)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    # Stage 2: Security Reviewer/Data Reviewer/DevOps weigh in too, if the
+    # graduate has any of them on their team — best-effort, never blocks
+    # the Mentor's review that already succeeded above.
+    orchestrator.run_co_reviews(db, task, current_user)
+    return review
 
 
 @router.post("/hr/rollup", response_model=ReviewOut, status_code=201)

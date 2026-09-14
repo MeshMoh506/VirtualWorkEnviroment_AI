@@ -9,7 +9,7 @@ track") live here, not in the router or in an individual agent module.
 """
 from sqlalchemy.orm import Session
 
-from app.agents import hr, manager, mentor, weekly_cycle
+from app.agents import co_reviewers, hr, manager, mentor, weekly_cycle
 from app.models import Review, Task, TaskMessage, User
 
 
@@ -27,6 +27,13 @@ def manager_reply(db: Session, task: Task, user: User) -> TaskMessage:
 
 def mentor_review(db: Session, task: Task, user: User) -> Review:
     return mentor.review_task(db, task, user)
+
+
+def run_co_reviews(db: Session, task: Task, user: User) -> list[TaskMessage]:
+    """Stage 2 — Security Reviewer/Data Reviewer/DevOps weighing in after
+    the Mentor's review, if the graduate has any of them on their team.
+    See co_reviewers.run_co_reviews."""
+    return co_reviewers.run_co_reviews(db, user, task)
 
 
 def hr_rollup(db: Session, user: User) -> Review:
