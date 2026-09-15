@@ -51,7 +51,14 @@ const NO_FLASH_SCRIPT = `(function () {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" dir="ltr" className="h-full antialiased">
+    // suppressHydrationWarning is scoped to this one element's own
+    // attributes only (it doesn't suppress anything deeper in the
+    // tree) — needed because NO_FLASH_SCRIPT deliberately sets
+    // data-theme/lang/dir on <html> before React hydrates, so server
+    // and client legitimately disagree on this element for one frame.
+    // Same fix next-themes and similar libraries use for the same
+    // reason.
+    <html lang="en" dir="ltr" className="h-full antialiased" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_SCRIPT }} />
       </head>
