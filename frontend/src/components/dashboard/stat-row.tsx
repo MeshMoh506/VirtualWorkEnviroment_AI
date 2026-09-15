@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { Dashboard } from "@/lib/dashboard";
+import { useLocale } from "@/lib/i18n/locale";
 
 interface StatRowProps {
   dashboard: Dashboard;
@@ -13,34 +14,38 @@ interface Stat {
   sub: string;
 }
 
-function buildStats(d: Dashboard): Stat[] {
+function useStats(d: Dashboard): Stat[] {
+  const { t, tPlural } = useLocale();
   return [
     {
-      label: "tasks_done",
+      label: t("statRow.tasksDone"),
       value: String(d.tasksCompleted),
-      sub: d.tasksTotal > 0 ? `of ${d.tasksTotal} assigned` : "none yet",
+      sub: d.tasksTotal > 0 ? t("statRow.ofAssigned", { n: d.tasksTotal }) : t("statRow.noneYet"),
     },
     {
-      label: "on_time_rate",
+      label: t("statRow.onTimeRate"),
       // null (nothing judged yet) shows a dash, not a misleading 0/100%.
       value: d.onTimeRate === null ? "—" : `${Math.round(d.onTimeRate * 100)}%`,
-      sub: "submitted before deadline",
+      sub: t("statRow.submittedBeforeDeadline"),
     },
     {
-      label: "avg_score",
+      label: t("statRow.avgScore"),
       value: d.averageScore === null ? "—" : d.averageScore.toFixed(1),
-      sub: d.reviewsCount > 0 ? `across ${d.reviewsCount} reviews` : "no reviews yet",
+      sub:
+        d.reviewsCount > 0
+          ? tPlural("statRow.acrossReviews", d.reviewsCount, { n: d.reviewsCount })
+          : t("statRow.noReviewsYet"),
     },
     {
-      label: "weeks_done",
+      label: t("statRow.weeksDone"),
       value: String(d.weeksCompleted),
-      sub: d.weeksTotal > 0 ? `of ${d.weeksTotal} started` : "none yet",
+      sub: d.weeksTotal > 0 ? t("statRow.ofStarted", { n: d.weeksTotal }) : t("statRow.noneYet"),
     },
   ];
 }
 
 export function StatRow({ dashboard }: StatRowProps) {
-  const stats = buildStats(dashboard);
+  const stats = useStats(dashboard);
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {stats.map((stat, i) => (

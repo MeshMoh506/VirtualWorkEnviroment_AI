@@ -6,9 +6,11 @@ import Link from "next/link";
 import { Upload } from "lucide-react";
 import { ApiError, useRequireAuth } from "@/lib/auth-context";
 import { api, type AgentCatalogApiOut, type ApiTrack } from "@/lib/api";
-import { SELECTABLE_TRACKS, TRACKS } from "@/lib/tracks";
+import { SELECTABLE_ONLY_TRACKS } from "@/lib/tracks";
 import { createOwnProject } from "@/lib/projects";
+import { useLocale, useTrackLabels } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleToggle } from "@/components/locale-toggle";
 
 type Step = "loading" | "cv" | "qa" | "track" | "agents" | "project" | "already-done";
 
@@ -27,6 +29,8 @@ const TOTAL_STEPS = 5;
 export default function OnboardingPage() {
   const { user, loading: authLoading, refreshUser } = useRequireAuth();
   const router = useRouter();
+  const { t } = useLocale();
+  const trackLabels = useTrackLabels();
 
   const [step, setStep] = useState<Step>("loading");
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +84,7 @@ export default function OnboardingPage() {
       setCatalog(agentCatalog);
       setStep("qa");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't read that file.");
+      setError(err instanceof ApiError ? err.message : t("onboarding.errors.couldntReadFile"));
     } finally {
       setBusy(false);
     }
@@ -104,7 +108,7 @@ export default function OnboardingPage() {
       setReasoning(result.reasoning);
       setStep("track");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't save your answers.");
+      setError(err instanceof ApiError ? err.message : t("onboarding.errors.couldntSaveAnswers"));
     } finally {
       setBusy(false);
     }
@@ -119,7 +123,7 @@ export default function OnboardingPage() {
       setSelectedAgentIds(new Set(result.suggested_agents.map((a) => a.id)));
       setStep("agents");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't save your track.");
+      setError(err instanceof ApiError ? err.message : t("onboarding.errors.couldntSaveTrack"));
     } finally {
       setBusy(false);
     }
@@ -133,7 +137,7 @@ export default function OnboardingPage() {
       await refreshUser();
       setStep("project");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't save your team.");
+      setError(err instanceof ApiError ? err.message : t("onboarding.errors.couldntSaveTeam"));
     } finally {
       setBusy(false);
     }
@@ -145,7 +149,7 @@ export default function OnboardingPage() {
     try {
       if (projectChoice === "own") {
         if (!ownTitle.trim() || !ownDescription.trim()) {
-          setError("Give your project a title and a short description.");
+          setError(t("onboarding.titleDescRequired"));
           setBusy(false);
           return;
         }
@@ -156,7 +160,7 @@ export default function OnboardingPage() {
       // project yet.
       router.push("/orientation");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't set up your project.");
+      setError(err instanceof ApiError ? err.message : t("onboarding.errors.couldntSetUpProject"));
       setBusy(false);
     }
   }
@@ -188,7 +192,7 @@ export default function OnboardingPage() {
       setOwnDescription("");
       setStep("cv");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't restart onboarding.");
+      setError(err instanceof ApiError ? err.message : t("onboarding.errors.couldntRestart"));
     } finally {
       setBusy(false);
     }
@@ -197,7 +201,7 @@ export default function OnboardingPage() {
   if (authLoading || !user || step === "loading") {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-text-muted">Loading...</p>
+        <p className="text-sm text-text-muted">{t("common.loading")}</p>
       </main>
     );
   }
@@ -208,34 +212,38 @@ export default function OnboardingPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <Link href="/" className="font-mono text-xs text-text-muted hover:text-text-secondary">
-              venv
+              {t("common.venv")}
             </Link>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <LocaleToggle />
+              <ThemeToggle />
+            </div>
           </div>
           {step !== "already-done" && (
             <p className="mt-3 text-center text-xs text-text-muted">
-              Step {STEP_NUMBER[step]} of {TOTAL_STEPS}
+              {t("onboarding.stepOf", { n: STEP_NUMBER[step], total: TOTAL_STEPS })}
             </p>
           )}
         </div>
 
         {step === "already-done" && (
           <Panel>
-            <h1 className="text-2xl font-medium text-text-primary">You&apos;re all set</h1>
+            <h1 className="text-2xl font-medium text-text-primary">{t("onboarding.alreadyDoneTitle")}</h1>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              You&apos;ve already been through onboarding. Head back to the board to keep
-              working — or go through it again to update your track, team, or project.
+              {t("onboarding.alreadyDoneBody")}
             </p>
             {error && <p className="mt-3 text-sm text-danger">{error}</p>}
             <div className="mt-5 flex items-center gap-3">
-              <PrimaryButton onClick={() => router.push("/board")}>Go to board</PrimaryButton>
+              <PrimaryButton onClick={() => router.push("/board")}>
+                {t("onboarding.goToBoard")}
+              </PrimaryButton>
               <button
                 type="button"
                 onClick={handleRestart}
                 disabled={busy}
                 className="text-sm text-text-muted transition-colors hover:text-text-secondary disabled:opacity-50"
               >
-                {busy ? "Resetting..." : "Go through it again"}
+                {busy ? t("onboarding.resetting") : t("onboarding.goThroughAgain")}
               </button>
             </div>
           </Panel>
@@ -243,16 +251,15 @@ export default function OnboardingPage() {
 
         {step === "cv" && (
           <Panel>
-            <h1 className="text-2xl font-medium text-text-primary">Tell us about yourself</h1>
+            <h1 className="text-2xl font-medium text-text-primary">{t("onboarding.cvTitle")}</h1>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              Upload your CV — the Manager uses it to suggest a track and calibrate your first
-              task. A few quick follow-up questions come next; nothing here is required.
+              {t("onboarding.cvBody")}
             </p>
 
             <label className="mt-5 flex cursor-pointer flex-col items-center gap-2 rounded border border-dashed border-border bg-bg-surface-raised px-4 py-8 text-center transition-colors hover:border-border-strong">
               <Upload size={18} className="text-text-muted" />
               <span className="text-sm text-text-secondary">
-                {file ? file.name : "Choose a PDF or Word file"}
+                {file ? file.name : t("onboarding.chooseFile")}
               </span>
               <input
                 type="file"
@@ -265,9 +272,9 @@ export default function OnboardingPage() {
             {error && <p className="mt-3 text-sm text-danger">{error}</p>}
 
             <div className="mt-5 flex items-center justify-between">
-              <SkipLink onClick={handleSkipCv}>Skip for now</SkipLink>
+              <SkipLink onClick={handleSkipCv}>{t("onboarding.skipForNow")}</SkipLink>
               <PrimaryButton onClick={handleUpload} disabled={!file || busy}>
-                {busy ? "Reading..." : "Continue"}
+                {busy ? t("onboarding.reading") : t("onboarding.continue")}
               </PrimaryButton>
             </div>
           </Panel>
@@ -275,9 +282,9 @@ export default function OnboardingPage() {
 
         {step === "qa" && (
           <Panel>
-            <h1 className="text-2xl font-medium text-text-primary">A few quick questions</h1>
+            <h1 className="text-2xl font-medium text-text-primary">{t("onboarding.qaTitle")}</h1>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              Based on your CV. Answer what you want — leave the rest blank.
+              {t("onboarding.qaBody")}
             </p>
 
             <div className="mt-5 space-y-4">
@@ -295,13 +302,13 @@ export default function OnboardingPage() {
 
               <div>
                 <label className="text-sm text-text-secondary">
-                  Anything else you want to add?
+                  {t("onboarding.anythingElseLabel")}
                 </label>
                 <textarea
                   value={introText}
                   onChange={(e) => setIntroText(e.target.value)}
                   rows={3}
-                  placeholder="Optional"
+                  placeholder={t("onboarding.optionalPlaceholder")}
                   className="mt-1.5 w-full resize-none rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
                 />
               </div>
@@ -311,7 +318,7 @@ export default function OnboardingPage() {
 
             <div className="mt-5 flex justify-end">
               <PrimaryButton onClick={handleSubmitQa} disabled={busy}>
-                {busy ? "Saving..." : "Continue"}
+                {busy ? t("onboarding.saving") : t("onboarding.continue")}
               </PrimaryButton>
             </div>
           </Panel>
@@ -319,24 +326,24 @@ export default function OnboardingPage() {
 
         {step === "track" && suggestedTrack && selectedTrack && (
           <Panel>
-            <h1 className="text-2xl font-medium text-text-primary">Your track</h1>
+            <h1 className="text-2xl font-medium text-text-primary">{t("onboarding.trackTitle")}</h1>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">{reasoning}</p>
 
             <div className="mt-5 rounded border border-border-strong bg-bg-surface-raised p-3">
-              <p className="text-xs text-text-muted">Suggested</p>
-              <p className="mt-0.5 text-sm text-text-primary">{TRACKS[suggestedTrack]}</p>
+              <p className="text-xs text-text-muted">{t("onboarding.suggestedLabel")}</p>
+              <p className="mt-0.5 text-sm text-text-primary">{trackLabels[suggestedTrack]}</p>
             </div>
 
             <div className="mt-4">
-              <label className="text-sm text-text-secondary">Not quite right? Pick another</label>
+              <label className="text-sm text-text-secondary">{t("onboarding.notQuiteRight")}</label>
               <select
                 value={selectedTrack}
                 onChange={(e) => setSelectedTrack(e.target.value as ApiTrack)}
                 className="mt-1.5 w-full rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary focus:border-border-strong focus:outline-none"
               >
-                {SELECTABLE_TRACKS.map((t) => (
-                  <option key={t} value={t}>
-                    {TRACKS[t]}
+                {SELECTABLE_ONLY_TRACKS.map((tr) => (
+                  <option key={tr} value={tr}>
+                    {trackLabels[tr]}
                   </option>
                 ))}
               </select>
@@ -346,7 +353,7 @@ export default function OnboardingPage() {
 
             <div className="mt-5 flex justify-end">
               <PrimaryButton onClick={handleApproveTrack} disabled={busy}>
-                {busy ? "Saving..." : "Continue"}
+                {busy ? t("onboarding.saving") : t("onboarding.continue")}
               </PrimaryButton>
             </div>
           </Panel>
@@ -354,10 +361,9 @@ export default function OnboardingPage() {
 
         {step === "agents" && (
           <Panel>
-            <h1 className="text-2xl font-medium text-text-primary">Your team</h1>
+            <h1 className="text-2xl font-medium text-text-primary">{t("onboarding.teamTitle")}</h1>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              Manager, Mentor, and HR are always on your team. Add any of these too — checked
-              ones are what we&apos;d suggest for your track.
+              {t("onboarding.teamBody")}
             </p>
 
             <div className="mt-5 space-y-2">
@@ -384,52 +390,50 @@ export default function OnboardingPage() {
 
             <div className="mt-5 flex justify-end">
               <PrimaryButton onClick={handleApproveAgents} disabled={busy}>
-                {busy ? "Saving..." : "Finish"}
+                {busy ? t("onboarding.saving") : t("onboarding.finish")}
               </PrimaryButton>
             </div>
           </Panel>
         )}
         {step === "project" && (
           <Panel>
-            <h1 className="text-2xl font-medium text-text-primary">Your first project</h1>
+            <h1 className="text-2xl font-medium text-text-primary">{t("onboarding.projectTitle")}</h1>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              The Manager can plan something for you, or you can bring your own project to
-              work on instead.
+              {t("onboarding.projectBody")}
             </p>
 
             <div className="mt-5 space-y-2">
               <button
                 type="button"
                 onClick={() => setProjectChoice("manager")}
-                className={`w-full rounded border p-3 text-left transition-colors ${
+                className={`w-full rounded border p-3 text-start transition-colors ${
                   projectChoice === "manager"
                     ? "border-accent bg-bg-surface-raised"
                     : "border-border hover:border-border-strong"
                 }`}
               >
                 <span className="block text-sm font-medium text-text-primary">
-                  Let the Manager plan it
+                  {t("onboarding.letManagerPlan")}
                 </span>
                 <span className="block text-xs text-text-secondary">
-                  A project picked for your track, broken into weekly tasks.
+                  {t("onboarding.letManagerPlanDesc")}
                 </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setProjectChoice("own")}
-                className={`w-full rounded border p-3 text-left transition-colors ${
+                className={`w-full rounded border p-3 text-start transition-colors ${
                   projectChoice === "own"
                     ? "border-accent bg-bg-surface-raised"
                     : "border-border hover:border-border-strong"
                 }`}
               >
                 <span className="block text-sm font-medium text-text-primary">
-                  I have my own project
+                  {t("onboarding.ownProject")}
                 </span>
                 <span className="block text-xs text-text-secondary">
-                  Bring something you&apos;re already building — the Manager plans your weekly
-                  tasks around it instead.
+                  {t("onboarding.ownProjectDesc")}
                 </span>
               </button>
             </div>
@@ -437,21 +441,23 @@ export default function OnboardingPage() {
             {projectChoice === "own" && (
               <div className="mt-4 flex flex-col gap-3">
                 <div>
-                  <label className="text-sm text-text-secondary">Project title</label>
+                  <label className="text-sm text-text-secondary">
+                    {t("onboarding.projectTitleLabel")}
+                  </label>
                   <input
                     value={ownTitle}
                     onChange={(e) => setOwnTitle(e.target.value)}
-                    placeholder="e.g. Personal expense tracker"
+                    placeholder={t("onboarding.projectTitlePlaceholder")}
                     className="mt-1.5 w-full rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-text-secondary">What is it?</label>
+                  <label className="text-sm text-text-secondary">{t("onboarding.whatIsItLabel")}</label>
                   <textarea
                     value={ownDescription}
                     onChange={(e) => setOwnDescription(e.target.value)}
                     rows={3}
-                    placeholder="What you're building, and the stack you're using."
+                    placeholder={t("onboarding.whatIsItPlaceholder")}
                     className="mt-1.5 w-full resize-none rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
                   />
                 </div>
@@ -462,7 +468,7 @@ export default function OnboardingPage() {
 
             <div className="mt-5 flex justify-end">
               <PrimaryButton onClick={handleFinishProject} disabled={!projectChoice || busy}>
-                {busy ? "Setting up..." : "Finish"}
+                {busy ? t("onboarding.settingUp") : t("onboarding.finish")}
               </PrimaryButton>
             </div>
           </Panel>

@@ -129,7 +129,95 @@ Everywhere else, motion only answers something the user just did
 (opening a panel, submitting a task, flipping the theme toggle) — it
 doesn't run on its own.
 
-## Why not the obvious defaults
+## Internationalization (English / Arabic)
+
+Two languages sharing one string layer, same relationship as the two
+color themes above: `lib/i18n/en.ts` is the type-authoritative
+dictionary, `ar.ts` is typed against it (`Dictionary`, from en.ts), so
+a missing or mis-shaped key fails the build instead of silently
+falling back to English or a raw key string at runtime. Every page and
+component reads text through `useLocale()`'s `t()` (strings),
+`tPlural()` (count-dependent text — see below), or `tRaw()`
+(structural data like the landing page's cycle-step cards), plus
+`useAgents()` / `useStatusLabels()` / `useTrackLabels()` for the
+handful of dictionaries that used to be static English `Record`s in
+`lib/agents.ts` / `lib/tasks.ts` / `lib/tracks.ts`.
+
+`lib/i18n/locale.tsx`'s `LocaleProvider` mirrors `lib/theme.tsx`
+exactly: `<html lang/dir>` set by an inline anti-flash script in
+`layout.tsx` before first paint (stored choice, else the browser's
+`navigator.language` on a first visit, English otherwise), the
+provider picks up whatever's already applied on mount, and
+`components/locale-toggle.tsx` is the EN/AR control wired into every
+header next to `ThemeToggle`.
+
+**Plural handling.** Count-dependent strings use a simple `{one,
+other}` pair (`n === 1` vs everything else), not full ICU plural rules
+or classical Arabic's dual/few/many noun-numeral agreement. The
+Arabic strings use the numeral-plus-plural-noun pattern common in
+real-world Arabic software UI (matches Google/Meta/X's own Arabic
+products) rather than strict classical grammar across every count
+range — a deliberate, documented trade-off, not an oversight.
+
+**RTL layout.** `dir="rtl"` flips automatically for most of the app at
+zero cost: every layout here already uses plain flexbox rows with
+`justify-between`/`gap`, and CSS flexbox's `row` direction is
+direction-aware by default, no `row-reverse` needed anywhere. The
+exceptions — anything using a *physical* CSS property — were converted
+to Tailwind's logical-property utilities app-wide: `ml-/mr-` →
+`ms-/me-`, `pl-/pr-` → `ps-/pe-`, `left-/right-` → `start-/end-`,
+`border-l/r` → `border-s/e`, `text-left/right` → `text-start/end`. One
+non-CSS exception needed a manual fix: the board's detail-panel drawer
+slides in via a framer-motion `x` transform, which is a *physical*
+translateX regardless of `dir` — so its off-screen X offset is flipped
+explicitly based on `dir` (see the comment in `detail-panel.tsx`),
+rather than relying on the logical `end-0` positioning to handle it,
+which only fixes where the drawer rests, not which direction it
+travels from.
+
+**Font.** Space Grotesk and JetBrains Mono don't cover Arabic glyphs
+at all, so `[dir="rtl"]` swaps the body font to **IBM Plex Sans
+Arabic** — picked over rounder, friendlier options (Cairo, Tajawal)
+because it's part of a coordinated multi-script superfamily built for
+technical/corporate contexts, the same "geometric, a little technical"
+reasoning as Space Grotesk itself. Mono-styled Arabic captions still
+request JetBrains Mono first and fall back per-glyph for the Arabic
+characters it lacks — a normal, unbroken fallback, not worth a second
+Arabic mono font for a handful of short labels.
+
+**Bidi embedding.** Genuinely technical content — GitHub links, email
+addresses, task/agent ids, the mono `agent_type:` labels — keeps
+`dir="ltr"` explicitly even inside an RTL page, the same way it stays
+in Latin script regardless of language: a URL or email address doesn't
+localize, and forcing it into RTL flow would scramble how slashes and
+dots read.
+
+**Deliberately out of scope for this pass** (English-only regardless
+of `lang`, and worth flagging before assuming they're bugs):
+- **Agent-generated content** — task titles/descriptions, Mentor
+  review text, HR's narrative summaries, meeting-room replies. This is
+  LLM output from the backend; teaching the agents to respond in
+  Arabic is a prompt/backend change, not a frontend string swap, and
+  wasn't attempted here.
+- **Stage 2's optional-agent catalog** — the extra agents' `name`/
+  `description` (Security Reviewer, Data Reviewer, etc.) come from the
+  backend catalog, not `lib/i18n`, for the same reason.
+- **The Mentor's rubric category labels** (`correctness`,
+  `code_quality`, ...) — backend-defined, same as above.
+- **The interactive agents graph** (React Flow, `flow-section.tsx`) —
+  node *labels* are fully translated, but the graph's geometry (node
+  x/y positions) is left unmirrored, same convention most RTL products
+  use for diagrams and charts (recharts' score-trend chart in
+  `/growth` is the other instance) — flipping a diagram's layout
+  doesn't inherently improve RTL usability and isn't worth re-deriving
+  every coordinate for.
+- A handful of short, snake_case labels (`how_it_works`, `get_started`,
+  `your_team`, `employee_file`, `week_`, `agent_type`, ...) are
+  identical in both dictionaries on purpose — they read as system
+  tokens in the mono "blueprint" furniture, not prose, the same
+  category as task IDs and timestamps.
+
+
 
 Worth writing down so nobody "fixes" this back to the default later:
 

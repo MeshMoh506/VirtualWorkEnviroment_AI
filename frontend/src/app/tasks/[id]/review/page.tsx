@@ -2,14 +2,15 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { AGENTS } from "@/lib/agents";
 import { useRequireAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import { fetchTaskDetail, type Task } from "@/lib/tasks";
 import { fetchTaskReview, type Review } from "@/lib/reviews";
 import { RubricBar } from "@/components/rubric-bar";
 import { AttachmentList } from "@/components/workspace/attachment-list";
+import { useAgents, useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleToggle } from "@/components/locale-toggle";
 
 interface ReviewPageProps {
   params: Promise<{ id: string }>;
@@ -18,6 +19,8 @@ interface ReviewPageProps {
 export default function ReviewPage({ params }: ReviewPageProps) {
   const { id } = use(params);
   const { user, loading: authLoading } = useRequireAuth();
+  const { t } = useLocale();
+  const { mentor } = useAgents();
 
   const [task, setTask] = useState<Task | null>(null);
   const [review, setReview] = useState<Review | null>(null);
@@ -32,17 +35,16 @@ export default function ReviewPage({ params }: ReviewPageProps) {
         setReview(r);
       })
       .catch((err) =>
-        setError(err instanceof ApiError ? err.message : "Couldn't load this review.")
+        setError(err instanceof ApiError ? err.message : t("review.loadError"))
       )
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user]);
-
-  const mentor = AGENTS.mentor;
 
   if (authLoading || !user) {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-text-muted">Loading...</p>
+        <p className="text-sm text-text-muted">{t("common.loading")}</p>
       </main>
     );
   }
@@ -55,31 +57,34 @@ export default function ReviewPage({ params }: ReviewPageProps) {
             href="/workspace"
             className="font-mono text-xs text-text-muted hover:text-text-secondary"
           >
-            venv / workspace
+            {t("nav.venvWorkspace")}
           </Link>
           <h1 className="mt-1 text-lg font-medium text-text-primary">
-            Mentor&apos;s review
+            {t("nav.mentorReviewTitle")}
           </h1>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <LocaleToggle />
+          <ThemeToggle />
+        </div>
       </header>
 
       <div className="mx-auto max-w-2xl px-6 py-8">
         {loading ? (
-          <p className="text-sm text-text-muted">Loading...</p>
+          <p className="text-sm text-text-muted">{t("common.loading")}</p>
         ) : error ? (
           <p className="text-sm text-danger">{error}</p>
         ) : !task ? (
-          <p className="text-sm text-text-secondary">Task not found.</p>
+          <p className="text-sm text-text-secondary">{t("review.taskNotFound")}</p>
         ) : (
           <>
             <div className="rounded border border-border bg-bg-surface p-4">
-              <p className="font-mono text-[11px] text-text-muted">task</p>
+              <p className="font-mono text-[11px] text-text-muted">{t("review.taskLabel")}</p>
               <p className="mt-1 text-sm font-medium text-text-primary">
                 {task.title}
               </p>
               {task.githubLink && (
-                <p className="mt-2 font-mono text-[11px] text-text-muted">
+                <p dir="ltr" className="mt-2 font-mono text-[11px] text-text-muted">
                   {task.githubLink}
                 </p>
               )}
@@ -93,7 +98,7 @@ export default function ReviewPage({ params }: ReviewPageProps) {
 
             {!review ? (
               <p className="mt-8 text-sm text-text-secondary">
-                No review yet for this task.
+                {t("review.noReviewYet")}
               </p>
             ) : (
               <>
@@ -103,10 +108,10 @@ export default function ReviewPage({ params }: ReviewPageProps) {
                     style={{ backgroundColor: `var(${mentor.colorVar})` }}
                   />
                   <span className="text-sm font-medium text-text-primary">
-                    {review.verdict === "approved" ? "Approved" : "Needs changes"}
+                    {review.verdict === "approved" ? t("review.approved") : t("review.needsChanges")}
                   </span>
                   <span className="font-mono text-[11px] text-text-muted">
-                    by {mentor.name}
+                    {t("review.by", { name: mentor.name })}
                   </span>
                 </div>
 
@@ -125,7 +130,7 @@ export default function ReviewPage({ params }: ReviewPageProps) {
                 </div>
 
                 <div className="mt-8">
-                  <p className="font-mono text-[11px] text-text-muted">comments</p>
+                  <p className="font-mono text-[11px] text-text-muted">{t("review.commentsLabel")}</p>
                   <div className="mt-3 flex flex-col gap-3">
                     {review.comments.map((comment) => {
                       const categoryLabel =
@@ -156,7 +161,7 @@ export default function ReviewPage({ params }: ReviewPageProps) {
           href="/workspace"
           className="mt-10 inline-block text-xs text-text-muted hover:text-text-secondary"
         >
-          Back to task board
+          {t("review.backToTaskBoard")}
         </Link>
       </div>
     </main>

@@ -1,8 +1,8 @@
 "use client";
 
-import { STATUS_LABEL, STATUS_ORDER, type Task, type TaskStatus } from "@/lib/tasks";
-import { AGENTS } from "@/lib/agents";
+import { STATUS_ORDER, type Task, type TaskStatus } from "@/lib/tasks";
 import { timeUntil } from "@/lib/format";
+import { useLocale, useStatusLabels } from "@/lib/i18n/locale";
 
 interface TaskRailProps {
   tasks: Task[];
@@ -26,19 +26,21 @@ export function TaskRail({
   onAskManager,
   assigning,
 }: TaskRailProps) {
+  const { t } = useLocale();
+  const statusLabels = useStatusLabels();
   const grouped: Record<TaskStatus, Task[]> = {
     todo: [],
     in_progress: [],
     submitted: [],
     reviewed: [],
   };
-  for (const t of tasks) grouped[t.status].push(t);
+  for (const task of tasks) grouped[task.status].push(task);
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <p className="font-mono text-[11px] text-text-muted">
-          tasks · {tasks.length}
+          {t("taskRail.tasksCount", { n: tasks.length })}
         </p>
         <button
           type="button"
@@ -46,21 +48,21 @@ export function TaskRail({
           disabled={assigning}
           className="rounded border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {assigning ? "Thinking..." : "+ Ask manager"}
+          {assigning ? t("taskRail.thinking") : t("taskRail.askManagerShort")}
         </button>
       </div>
 
       <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
         {tasks.length === 0 ? (
           <p className="px-4 py-8 text-center text-xs text-text-muted">
-            No tasks yet — ask your manager for one.
+            {t("taskRail.noTasksYet")}
           </p>
         ) : (
           STATUS_ORDER.map((status) =>
             grouped[status].length === 0 ? null : (
               <div key={status} className="border-b border-border/60 py-2">
                 <p className="px-4 py-1 font-mono text-[10px] uppercase tracking-wide text-text-muted">
-                  {STATUS_LABEL[status]} · {grouped[status].length}
+                  {statusLabels[status]} · {grouped[status].length}
                 </p>
                 {grouped[status].map((task) => {
                   const selected = task.id === selectedId;
@@ -69,7 +71,7 @@ export function TaskRail({
                       key={task.id}
                       type="button"
                       onClick={() => onSelect(task.id)}
-                      className={`flex w-full flex-col gap-1 border-l-2 px-4 py-2.5 text-left transition-colors ${
+                      className={`flex w-full flex-col gap-1 border-s-2 px-4 py-2.5 text-start transition-colors ${
                         selected
                           ? "border-accent bg-bg-surface"
                           : "border-transparent hover:bg-bg-surface"
@@ -84,9 +86,9 @@ export function TaskRail({
                           {task.title}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 pl-3.5">
-                        <span className="font-mono text-[10px] text-text-muted">
-                          {AGENTS[task.createdByAgent].id}
+                      <div className="flex items-center gap-2 ps-3.5">
+                        <span dir="ltr" className="font-mono text-[10px] text-text-muted">
+                          {task.createdByAgent}
                         </span>
                         {task.deadline && task.status !== "reviewed" && (
                           <span
@@ -94,12 +96,12 @@ export function TaskRail({
                               task.isLate ? "text-danger" : "text-text-muted"
                             }`}
                           >
-                            due {timeUntil(task.deadline)}
+                            {t("taskRail.due", { time: timeUntil(task.deadline) })}
                           </span>
                         )}
                         {task.status === "reviewed" && task.isLate && (
                           <span className="font-mono text-[10px] text-danger">
-                            late
+                            {t("taskRail.late")}
                           </span>
                         )}
                       </div>

@@ -53,13 +53,6 @@ export const STATUS_ORDER: TaskStatus[] = [
   "reviewed",
 ];
 
-export const STATUS_LABEL: Record<TaskStatus, string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  submitted: "Submitted",
-  reviewed: "Reviewed",
-};
-
 function toTaskMessage(m: TaskDetailApiOut["messages"][number]): TaskMessage {
   return {
     id: m.id,

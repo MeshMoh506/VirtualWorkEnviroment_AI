@@ -2,10 +2,11 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import { AGENTS, type AgentId } from "@/lib/agents";
+import type { AgentId } from "@/lib/agents";
 import type { ExtraAgent } from "@/lib/team";
 import type { Week } from "@/lib/projects";
 import { timeUntil } from "@/lib/format";
+import { useAgents, useLocale } from "@/lib/i18n/locale";
 
 // Reserved sentinels are "employee-file" and "week"; anything else is
 // either one of the three default agent ids or an extra agent's catalog
@@ -29,22 +30,6 @@ interface DetailPanelProps {
   onClose: () => void;
 }
 
-const NEXT_UP: Partial<Record<AgentId, string>> = {
-  manager: "The task board is live — see and act on what the manager assigns.",
-  hr: "The growth view is live — a score trend and timeline across reviews.",
-};
-
-const BOX_LABEL: Record<AgentId, string> = {
-  manager: "task board",
-  mentor: "example review",
-  hr: "growth view",
-};
-
-const AGENT_LINK: Partial<Record<AgentId, { href: string; label: string }>> = {
-  manager: { href: "/tasks", label: "Open task board" },
-  hr: { href: "/growth", label: "Open growth view" },
-};
-
 export function DetailPanel({
   selection,
   hasCv,
@@ -54,9 +39,31 @@ export function DetailPanel({
   extraAgents,
   onClose,
 }: DetailPanelProps) {
+  const { t, dir } = useLocale();
+  const agents = useAgents();
+  // framer-motion's x transform is a physical offset (translateX), not
+  // direction-aware like the `end-0` position below — so the slide-in
+  // origin has to be flipped explicitly, or the panel would animate in
+  // from the physical right even once RTL has moved it to the left edge.
+  const offscreenX = dir === "rtl" ? "-100%" : "100%";
+
+  const NEXT_UP: Partial<Record<AgentId, string>> = {
+    manager: t("detailPanel.nextUpManager"),
+    hr: t("detailPanel.nextUpHr"),
+  };
+  const BOX_LABEL: Record<AgentId, string> = {
+    manager: t("detailPanel.boxLabelManager"),
+    mentor: t("detailPanel.boxLabelMentor"),
+    hr: t("detailPanel.boxLabelHr"),
+  };
+  const AGENT_LINK: Partial<Record<AgentId, { href: string; label: string }>> = {
+    manager: { href: "/tasks", label: t("detailPanel.openTaskBoard") },
+    hr: { href: "/growth", label: t("detailPanel.openGrowthView") },
+  };
+
   const isReserved = selection === "employee-file" || selection === "week";
-  const isDefaultAgent = !isReserved && selection !== null && selection in AGENTS;
-  const meta = isDefaultAgent ? AGENTS[selection as AgentId] : null;
+  const isDefaultAgent = !isReserved && selection !== null && selection in agents;
+  const meta = isDefaultAgent ? agents[selection as AgentId] : null;
   const customAgent =
     !isReserved && !isDefaultAgent && selection
       ? (extraAgents.find((a) => a.id === selection) ?? null)
@@ -67,16 +74,16 @@ export function DetailPanel({
   const agentLink =
     meta?.id === "mentor"
       ? reviewedTaskId
-        ? { href: `/tasks/${reviewedTaskId}/review`, label: "See your review" }
-        : { href: "/tasks", label: "Open task board" }
+        ? { href: `/tasks/${reviewedTaskId}/review`, label: t("detailPanel.seeYourReview") }
+        : { href: "/tasks", label: t("detailPanel.openTaskBoard") }
       : meta
         ? AGENT_LINK[meta.id]
         : undefined;
   const nextUpText =
     meta?.id === "mentor"
       ? reviewedTaskId
-        ? "See a worked example: feedback plus a rubric score on your own submitted task."
-        : "Submit a task first — the mentor reviews it with feedback and a rubric score."
+        ? t("detailPanel.mentorNextUpWithReview")
+        : t("detailPanel.mentorNextUpNoReview")
       : meta
         ? NEXT_UP[meta.id]
         : undefined;
@@ -95,11 +102,11 @@ export function DetailPanel({
           />
           <motion.aside
             key="panel"
-            initial={{ x: "100%" }}
+            initial={{ x: offscreenX }}
             animate={{ x: 0 }}
-            exit={{ x: "100%" }}
+            exit={{ x: offscreenX }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col border-l border-border bg-bg-surface-raised p-6"
+            className="fixed inset-y-0 end-0 z-50 flex w-full max-w-sm flex-col border-s border-border bg-bg-surface-raised p-6"
           >
             {/* Content scrolls internally if it doesn't fit — the page
                 itself never does, however much the "week" detail grows. */}
@@ -147,16 +154,15 @@ export function DetailPanel({
                     </h2>
                   </div>
                   <p className="mt-1 text-sm text-text-secondary">
-                    Added to your team during onboarding
+                    {t("detailPanel.addedToTeam")}
                   </p>
                   <p className="mt-5 text-sm leading-relaxed text-text-secondary">
                     {customAgent.description}
                   </p>
                   <div className="mt-8 rounded border border-dashed border-border bg-bg-surface px-4 py-3">
-                    <p className="font-mono text-xs text-text-muted">status</p>
+                    <p className="font-mono text-xs text-text-muted">{t("detailPanel.statusLabel")}</p>
                     <p className="mt-1 text-sm text-text-secondary">
-                      Not wired into the task flow yet — Manager, Mentor, and HR do the
-                      actual reviewing for now.
+                      {t("detailPanel.customAgentStatus")}
                     </p>
                   </div>
                 </>
@@ -168,7 +174,7 @@ export function DetailPanel({
                       style={{ backgroundColor: "var(--agent-manager)" }}
                     />
                     <h2 className="text-lg font-medium text-text-primary">
-                      {week ? `Week ${week.weekNumber}` : "Week status"}
+                      {week ? t("detailPanel.weekTitle", { n: week.weekNumber }) : t("detailPanel.weekStatusFallback")}
                     </h2>
                   </div>
                   {projectTitle && (
@@ -178,8 +184,7 @@ export function DetailPanel({
                   )}
                   {!week ? (
                     <p className="mt-5 text-sm leading-relaxed text-text-secondary">
-                      No active week yet — ask the manager for your first task
-                      and one will start.
+                      {t("detailPanel.noActiveWeek")}
                     </p>
                   ) : (
                     <>
@@ -188,13 +193,12 @@ export function DetailPanel({
                       </p>
                       <div className="mt-6 flex items-center justify-between">
                         <p className="font-mono text-[11px] text-text-muted">
-                          {week.subtasksReleased}/{week.subtasksPlan.length}{" "}
-                          handed out
+                          {t("detailPanel.handedOut", { done: week.subtasksReleased, total: week.subtasksPlan.length })}
                         </p>
                         <p className="font-mono text-[11px] text-text-muted">
                           {week.status === "completed"
-                            ? "week complete"
-                            : `ends ${timeUntil(week.targetEndAt)}`}
+                            ? t("detailPanel.weekComplete")
+                            : t("detailPanel.ends", { time: timeUntil(week.targetEndAt) })}
                         </p>
                       </div>
                       <ul className="mt-4 flex flex-col gap-2">
@@ -213,11 +217,11 @@ export function DetailPanel({
                                   {s.title}
                                 </p>
                                 <span className="shrink-0 font-mono text-[10px] text-text-muted">
-                                  {done ? "done" : upNext ? "up next" : "later"}
+                                  {done ? t("detailPanel.done") : upNext ? t("detailPanel.upNext") : t("detailPanel.later")}
                                 </span>
                               </div>
                               <p className="mt-1 font-mono text-[11px] text-text-muted">
-                                due {timeUntil(s.deadline)}
+                                {t("detailPanel.due", { time: timeUntil(s.deadline) })}
                               </p>
                             </li>
                           );
@@ -227,7 +231,7 @@ export function DetailPanel({
                         href="/workspace"
                         className="mt-6 inline-block rounded border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong"
                       >
-                        Open task board
+                        {t("detailPanel.openTaskBoard")}
                       </Link>
                     </>
                   )}
@@ -235,44 +239,38 @@ export function DetailPanel({
               ) : (
                 <>
                   <h2 className="text-lg font-medium text-text-primary">
-                    Employee file
+                    {t("detailPanel.employeeFileTitle")}
                   </h2>
                   <p className="mt-1 text-sm text-text-secondary">
-                    The one record all three agents read from and write to.
+                    {t("detailPanel.employeeFileSubtitle")}
                   </p>
                   <p className="mt-5 text-sm leading-relaxed text-text-secondary">
-                    Your CV, skills, task history, and every review live here.
-                    When the mentor reviews your code, HR sees it. When HR notes
-                    a growth area, the manager&apos;s next task can account for
-                    it — no agent works from a stale or partial picture of you.
+                    {t("detailPanel.employeeFileBody")}
                   </p>
                   <div className="mt-8 rounded border border-border bg-bg-surface px-4 py-3">
                     <p className="font-mono text-xs text-text-muted">
-                      growth view
+                      {t("detailPanel.growthViewLabel")}
                     </p>
                     <p className="mt-1 text-sm text-text-secondary">
-                      Skills, strengths, growth areas, and the score trend
-                      behind them — HR&apos;s view of this same file.
+                      {t("detailPanel.growthViewBody")}
                     </p>
                     <Link
                       href="/growth"
                       className="mt-3 inline-block rounded border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong"
                     >
-                      Open growth view
+                      {t("detailPanel.openGrowthView")}
                     </Link>
                   </div>
                   <div className="mt-3 rounded border border-border bg-bg-surface px-4 py-3">
-                    <p className="font-mono text-xs text-text-muted">cv</p>
+                    <p className="font-mono text-xs text-text-muted">{t("detailPanel.cvLabel")}</p>
                     <p className="mt-1 text-sm text-text-secondary">
-                      {hasCv
-                        ? "On file — the manager uses it to calibrate your tasks."
-                        : "Not on file yet — the manager is working from your task history alone."}
+                      {hasCv ? t("detailPanel.cvOnFile") : t("detailPanel.cvNotOnFile")}
                     </p>
                     <Link
                       href="/onboarding/cv"
                       className="mt-3 inline-block rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
                     >
-                      {hasCv ? "Update your CV" : "Add your CV"}
+                      {hasCv ? t("detailPanel.updateCv") : t("detailPanel.addCv")}
                     </Link>
                   </div>
                 </>
@@ -283,7 +281,7 @@ export function DetailPanel({
               onClick={onClose}
               className="mt-4 self-start rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
             >
-              Close
+              {t("common.close")}
             </button>
           </motion.aside>
         </>
