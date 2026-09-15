@@ -91,7 +91,11 @@ export default function OnboardingPage() {
   }
 
   async function handleSkipCv() {
-    router.push("/board");
+    // Every other path through this wizard ends at orientation
+    // (handleFinishProject, below) — skipping the CV step is still a
+    // path through onboarding, so it shouldn't be the one way to skip
+    // the walkthrough entirely.
+    router.push("/orientation");
   }
 
   async function handleSubmitQa() {

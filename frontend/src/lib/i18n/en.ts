@@ -46,8 +46,8 @@ const en = {
   },
   landing: {
     badge: "stage 1 \u00b7 ai-powered web apps",
-    heroLine1: "Your first job,",
-    heroLine2: "before your first job.",
+    heroLine1: "Practice the job,",
+    heroLine2: "before you get the job.",
     heroSubtitle:
       "Venv is a simulated workplace for recent graduates. A manager assigns real tasks, a mentor reviews your code, and HR tracks how you grow \u2014 three AI agents sharing one file on you.",
     getStarted: "Get started",
