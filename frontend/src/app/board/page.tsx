@@ -95,6 +95,12 @@ export default function BoardPage() {
           >
             Meeting room
           </Link>
+          <Link
+            href="/orientation"
+            className="rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+          >
+            How it works
+          </Link>
           <span className="hidden font-mono text-xs text-text-muted lg:inline">
             {user.email}
           </span>

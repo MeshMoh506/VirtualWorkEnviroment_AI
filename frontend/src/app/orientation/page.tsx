@@ -3,11 +3,29 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRequireAuth } from "@/lib/auth-context";
 import { AGENT_ORDER, AGENTS } from "@/lib/agents";
 import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 import { fetchMyProject, type Project } from "@/lib/projects";
 import { assignNextTask } from "@/lib/tasks";
+
+// Reworked from a single long scroll into a guided, step-by-step
+// walkthrough — same four pieces of content as before (welcome, team,
+// project, how-it-works), plus a closing step, each one its own screen
+// with Back/Next and a clickable progress tracker. Also no longer
+// first-time-only: reachable any time from the board header, so a
+// returning graduate can jump straight to whichever step via the
+// tracker dots instead of re-reading everything.
+type StepId = "welcome" | "team" | "project" | "how" | "ready";
+
+const STEPS: { id: StepId; label: string }[] = [
+  { id: "welcome", label: "Welcome" },
+  { id: "team", label: "Your team" },
+  { id: "project", label: "Your project" },
+  { id: "how", label: "How it works" },
+  { id: "ready", label: "Ready" },
+];
 
 const HOW_IT_WORKS = [
   {
@@ -34,8 +52,9 @@ export default function OrientationPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [extraAgents, setExtraAgents] = useState<ExtraAgent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -43,27 +62,30 @@ export default function OrientationPage() {
       const [existing, agents] = await Promise.all([fetchMyProject(), fetchMyExtraAgents()]);
       setExtraAgents(agents);
       if (existing) {
+        // Returning graduate, or a first-timer who already has a
+        // project from elsewhere — nothing to bootstrap.
         setProject(existing);
-        setLoading(false);
+        setDataLoading(false);
         return;
       }
-      // First time through: nobody's asked the Manager for a project yet
-      // (the own-project path is a separate, not-yet-built screen — see
-      // docs/STAGE2_OWN_PROJECT.md) — so orientation itself is what
-      // triggers it, same call the task board's "ask manager" button
-      // makes. weekly_cycle.py's bootstrap is idempotent, so this is
-      // safe to call even if it somehow runs twice.
+      // First time through with no project yet: orientation itself is
+      // what triggers it, same call the task board's "ask manager"
+      // button makes. weekly_cycle.py's bootstrap is idempotent, so
+      // this is safe even if a graduate revisits this page later.
       try {
         await assignNextTask();
         setProject(await fetchMyProject());
       } catch {
         setError(true);
       }
-      setLoading(false);
+      setDataLoading(false);
     })();
   }, [user]);
 
   const firstName = user?.fullName?.split(" ")[0] ?? "there";
+  const step = STEPS[stepIndex].id;
+  const isFirst = stepIndex === 0;
+  const isLast = stepIndex === STEPS.length - 1;
 
   if (authLoading || !user) {
     return (
@@ -76,101 +98,236 @@ export default function OrientationPage() {
   return (
     <main className="bg-blueprint-grid flex flex-1 justify-center px-6 py-12">
       <div className="w-full max-w-2xl">
-        <Link href="/" className="font-mono text-xs text-text-muted hover:text-text-secondary">
-          venv
-        </Link>
-        <h1 className="mt-3 text-2xl font-medium text-text-primary">Welcome, {firstName}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          Here&apos;s your project, your team, and how the day-to-day works.
-        </p>
+        <div className="flex items-center justify-between">
+          <Link href="/" className="font-mono text-xs text-text-muted hover:text-text-secondary">
+            venv
+          </Link>
+          <button
+            type="button"
+            onClick={() => router.push("/board")}
+            className="text-xs text-text-muted transition-colors hover:text-text-secondary"
+          >
+            Skip to board
+          </button>
+        </div>
 
-        {loading ? (
+        <StepTracker steps={STEPS} activeIndex={stepIndex} onSelect={setStepIndex} />
+
+        {dataLoading ? (
           <div className="mt-8 rounded border border-border bg-bg-surface p-8 text-center">
             <p className="text-sm text-text-muted">Setting things up...</p>
           </div>
         ) : (
-          <div className="mt-8 flex flex-col gap-8">
-            <section>
-              <p className="font-mono text-[11px] text-text-muted">your_project</p>
-              {error || !project ? (
-                <div className="mt-2 rounded border border-border bg-bg-surface p-4">
-                  <p className="text-sm text-text-secondary">
-                    Couldn&apos;t reach the Manager just now — no project yet. Head to the task
-                    board and ask for one when you&apos;re ready.
-                  </p>
-                </div>
+          <>
+            <div className="mt-8 min-h-[320px]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={step}
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                >
+                  {step === "welcome" && <WelcomeStep firstName={firstName} />}
+                  {step === "team" && <TeamStep extraAgents={extraAgents} />}
+                  {step === "project" && <ProjectStep project={project} error={error} />}
+                  {step === "how" && <HowStep />}
+                  {step === "ready" && <ReadyStep firstName={firstName} />}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            <div className="mt-8 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
+                disabled={isFirst}
+                className="rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Back
+              </button>
+              {isLast ? (
+                <button
+                  type="button"
+                  onClick={() => router.push("/board")}
+                  className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
+                >
+                  Go to board
+                </button>
               ) : (
-                <div className="mt-2 rounded border border-border-strong bg-bg-surface-raised p-4">
-                  <h2 className="text-base font-medium text-text-primary">{project.title}</h2>
-                  <p className="mt-1.5 text-sm leading-relaxed text-text-secondary">
-                    {project.description}
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setStepIndex((i) => Math.min(STEPS.length - 1, i + 1))}
+                  className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
+                >
+                  Next
+                </button>
               )}
-            </section>
-
-            <section>
-              <p className="font-mono text-[11px] text-text-muted">your_team</p>
-              <div className="mt-2 grid gap-3 sm:grid-cols-3">
-                {AGENT_ORDER.map((id) => {
-                  const meta = AGENTS[id];
-                  return (
-                    <div key={id} className="rounded border border-border bg-bg-surface p-3">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: `var(${meta.colorVar})` }}
-                        />
-                        <span className="font-medium text-text-primary">{meta.name}</span>
-                      </div>
-                      <p className="mt-1.5 text-xs text-text-secondary">{meta.role}</p>
-                    </div>
-                  );
-                })}
-                {extraAgents.map((agent) => (
-                  <div
-                    key={agent.id}
-                    className="rounded border border-dashed border-border p-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-text-muted" />
-                      <span className="font-medium text-text-primary">{agent.name}</span>
-                    </div>
-                    <p className="mt-1.5 text-xs text-text-secondary">{agent.description}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <p className="font-mono text-[11px] text-text-muted">how_it_works</p>
-              <div className="mt-2 flex flex-col gap-2">
-                {HOW_IT_WORKS.map((step, i) => (
-                  <div key={i} className="rounded border border-border bg-bg-surface p-3">
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-mono text-[11px] text-text-muted">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <span className="text-sm font-medium text-text-primary">{step.title}</span>
-                    </div>
-                    <p className="mt-1 text-sm leading-relaxed text-text-secondary">
-                      {step.body}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <button
-              type="button"
-              onClick={() => router.push("/board")}
-              className="self-start rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
-            >
-              Go to board
-            </button>
-          </div>
+            </div>
+          </>
         )}
       </div>
     </main>
+  );
+}
+
+// Same connected-timeline shape as the board's week-strip subtask
+// dots (filled accent = visited, ringed accent = current, hollow =
+// upcoming) so the walkthrough reads as one visual language with the
+// rest of the app rather than a bespoke wizard control. Dots are
+// clickable — the main way a returning graduate jumps straight to one
+// section instead of re-reading the whole thing.
+function StepTracker({
+  steps,
+  activeIndex,
+  onSelect,
+}: {
+  steps: { id: StepId; label: string }[];
+  activeIndex: number;
+  onSelect: (i: number) => void;
+}) {
+  return (
+    <ol className="relative mt-6 flex justify-between">
+      <span className="absolute left-0 right-0 top-[7px] h-px bg-border" aria-hidden />
+      {steps.map((s, i) => {
+        const done = i < activeIndex;
+        const active = i === activeIndex;
+        return (
+          <li key={s.id} className="relative flex min-w-0 flex-1 flex-col items-center px-1 text-center">
+            <button
+              type="button"
+              onClick={() => onSelect(i)}
+              className="relative z-10 h-3.5 w-3.5 cursor-pointer rounded-full border-2 bg-bg-surface"
+              style={{
+                borderColor: done || active ? "var(--accent)" : "var(--border-strong)",
+                backgroundColor: done ? "var(--accent)" : "var(--bg-surface)",
+              }}
+              aria-label={`Go to ${s.label}`}
+            />
+            <span
+              className={`mt-2 hidden text-[11px] sm:block ${
+                active ? "text-text-primary" : "text-text-muted"
+              }`}
+            >
+              {s.label}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function WelcomeStep({ firstName }: { firstName: string }) {
+  return (
+    <section>
+      <h1 className="text-2xl font-medium text-text-primary">Welcome, {firstName}</h1>
+      <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+        Venv simulates a real company around you — a Manager who assigns your work, a Mentor
+        who reviews it, and HR who tracks how you&apos;re growing. This walkthrough covers your
+        team, your first project, and how the week-to-week rhythm works.
+      </p>
+    </section>
+  );
+}
+
+function TeamStep({ extraAgents }: { extraAgents: ExtraAgent[] }) {
+  return (
+    <section>
+      <p className="font-mono text-[11px] text-text-muted">your_team</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        {AGENT_ORDER.map((id) => {
+          const meta = AGENTS[id];
+          return (
+            <div key={id} className="rounded border border-border bg-bg-surface p-3">
+              <div className="flex items-center gap-2">
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: `var(${meta.colorVar})` }}
+                />
+                <span className="font-medium text-text-primary">{meta.name}</span>
+              </div>
+              <p className="mt-1.5 text-xs text-text-secondary">{meta.role}</p>
+            </div>
+          );
+        })}
+        {extraAgents.map((agent) => (
+          <div key={agent.id} className="rounded border border-dashed border-border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-text-muted" />
+                <span className="font-medium text-text-primary">{agent.name}</span>
+              </div>
+              <span className="rounded-full border border-border px-1.5 py-0.5 font-mono text-[10px] text-text-muted">
+                soon
+              </span>
+            </div>
+            <p className="mt-1.5 text-xs text-text-secondary">{agent.description}</p>
+          </div>
+        ))}
+      </div>
+      {extraAgents.length > 0 && (
+        <p className="mt-3 text-xs text-text-muted">
+          Manager, Mentor, and HR handle task reviews today — the rest of your team joins the
+          workflow as we build them in.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function ProjectStep({ project, error }: { project: Project | null; error: boolean }) {
+  return (
+    <section>
+      <p className="font-mono text-[11px] text-text-muted">your_project</p>
+      {error || !project ? (
+        <div className="mt-3 rounded border border-border bg-bg-surface p-4">
+          <p className="text-sm text-text-secondary">
+            Couldn&apos;t reach the Manager just now — no project yet. Head to the task board
+            and ask for one when you&apos;re ready.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-3 rounded border border-border-strong bg-bg-surface-raised p-4">
+          <h2 className="text-base font-medium text-text-primary">{project.title}</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-text-secondary">
+            {project.description}
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function HowStep() {
+  return (
+    <section>
+      <p className="font-mono text-[11px] text-text-muted">how_it_works</p>
+      <div className="mt-3 flex flex-col gap-2">
+        {HOW_IT_WORKS.map((s, i) => (
+          <div key={i} className="rounded border border-border bg-bg-surface p-3">
+            <div className="flex items-baseline gap-2">
+              <span className="font-mono text-[11px] text-text-muted">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="text-sm font-medium text-text-primary">{s.title}</span>
+            </div>
+            <p className="mt-1 text-sm leading-relaxed text-text-secondary">{s.body}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ReadyStep({ firstName }: { firstName: string }) {
+  return (
+    <section>
+      <h2 className="text-xl font-medium text-text-primary">You&apos;re set, {firstName}</h2>
+      <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+        Your board has your first task, your team, and this week&apos;s progress. Come back to
+        this walkthrough any time from the board header if you need a refresher.
+      </p>
+    </section>
   );
 }
