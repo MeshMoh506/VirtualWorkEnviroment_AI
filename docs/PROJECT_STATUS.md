@@ -1,228 +1,176 @@
 # Project Status — Venv
 
-> **Stage 1 — final state (submission).** Everything below the spec note is
-> historical build log; this block is the current summary.
->
-> **Backend** (FastAPI + SQLAlchemy, Postgres or sqlite): auth, CV intake,
-> the full weekly-cycle flow (Manager plans a project → one big task/week →
-> 5 subtasks released one at a time → Mentor reviews each, iteratively →
-> end-of-week Manager progress + HR behavioral evaluation → next week),
-> plus a home-dashboard aggregation endpoint and a task-free meeting-room
-> chat with each agent. Models: Organization, User, EmployeeFile, Project,
-> Week, Task, TaskMessage, Review, ChatMessage. Verified by **5 smoke suites,
-> 127 checks total**, all passing (`smoke_test.py` 20, `_agents` 19,
-> `_weekly_cycle` 17, `_orchestration` 56, `_meeting` 15).
->
-> **Frontend** (Next.js + React Flow): landing page, `/board` home dashboard
-> (focus, stats, week progress, interactive agents graph), `/workspace`
-> (Jira-style task rail + detail + per-task agents discussion), `/meeting`
-> (direct agent chat), `/growth` (HR view), `/onboarding/cv`, `/logout`. All
-> wired to the real backend — no mock data. Clean production build + lint.
->
-> **Known open items** (documented, intentionally out of Stage 1 scope):
-> curated task bank vs. LLM-improvised subtasks, finalized Mentor rubric,
-> CV file upload (currently paste), Alembic migrations, and whether
-> `needs_changes` needs its own board column. See "Not built yet" below.
+> **Stage 2 — complete, merged to `main`.** Stage 1 (Manager/Mentor/HR,
+> the weekly cycle, one track) plus everything Stage 2 added: CV-file
+> intake with agent-generated Q&A, track selection across six IT majors,
+> a selectable optional-agent roster, an own-project path, a first-time
+> orientation screen, the Meeting Room open to any agent on your team,
+> multi-modal task submissions (link/text/images/files, with real vision
+> review), and the **agent roundtable** — optional agents actually
+> discussing a submission with each other, then the Manager synthesizing
+> the discussion. 300 backend checks across 14 smoke suites, all passing;
+> frontend eslint clean; full `next build` succeeds. See "Stage 2, in
+> full" below for the doc-by-doc breakdown, and "Handoff — starting the
+> next chat" for exactly what's queued up next.
 
-_Last updated: Sep 2026 — the weekly-cycle flow from
-`docs/STAGE1_PRODUCT_FLOW.md` is now fully built, schema AND orchestration:
-`Project`, `Week`, `Task` deadline/lateness fields, `Review.kind`/`week_id`,
-iterative Mentor review, and `backend/app/agents/weekly_cycle.py`'s state
-machine that actually bootstraps a Project/Week, releases subtasks one at a
-time, and runs the end-of-week cascade (Manager's progress review, then
-HR's behavioral review) before rolling into the next week. All of it hangs
-off the existing `POST /agents/manager/assign-task` — no new endpoint
-needed for the core loop. Read `docs/STAGE1_PRODUCT_FLOW.md` for the full
-picture; every open question there is now resolved, confirmed with Meshari
-directly (not just a working default)._
+_Last updated: Sep 2026._
 
 ## Where things stand right now
 
-**Backend: built, tested, running — schema + orchestration + agent logic all in.**
-- Schema live: `Organization`, `User`, `EmployeeFile`, `Task`, `TaskMessage`,
-  `Review`, `Project`, `Week` (`organization_id` nullable everywhere, so
-  Stage 3 multi-tenancy is additive later)
-- `Task` gained `week_id`, `deadline`, `submitted_at`, `completed_at`, and a
-  computed `is_late` property. `Review` gained `kind` (`task_review` /
-  `week_progress` / `behavioral` / `skills_rollup`) and `week_id`.
-  `TaskOut`/`ReviewOut` surface all of it, and `Project`/`Week` are now
-  created and advanced for real — see the orchestration bullet below and
-  `GET /projects/me`.
-- JWT auth, task board CRUD with status transitions, per-task threaded messages,
-  CV intake endpoint
-- `EmployeeFile` auto-created per user at registration — the shared context
-  object all three agents read/write
-- Verified with `smoke_test.py` (20 checks), `smoke_test_agents.py` (19
-  checks), `smoke_test_weekly_cycle.py` (17 checks, the Project/Week/Task
-  schema + the needs_changes bounce-back, exercised directly via the ORM),
-  and `smoke_test_orchestration.py` (56 checks, the real thing
-  end to end through the API — bootstrap, idempotency, all 5 subtasks,
-  the full end-of-week cascade, landing correctly on week 2). All four
-  pass together against sqlite; `smoke_test.py` was originally verified
-  against real Postgres too.
-- Local dev database: `docker compose up -d` from repo root
-- Confirmed running locally via `uvicorn app.main:app --reload` →
-  `http://localhost:8000/docs`
+**Backend** (FastAPI + SQLAlchemy, Postgres or sqlite; LangGraph for the
+onboarding flow and the weekly-cycle cascade — see
+`docs/STAGE2_ONBOARDING_FLOW.md` for why that framework, and
+`docs/STAGE2_WEEKLY_CYCLE_FLOW.md` for what stayed plain Python and why):
 
-**Agent logic (`backend/app/agents/`) — weekly-cycle orchestration new this round.**
-- LLM: Anthropic Claude (`ANTHROPIC_API_KEY` + `LLM_MODEL` in `.env`,
-  default `claude-sonnet-5`). Orchestration is a plain custom router
-  (`orchestrator.py`) plus a small state machine (`weekly_cycle.py`), not a
-  framework (CrewAI was considered — not worth the dependency at this scale).
-- **Manager** — introduces the graduate's main `Project` once
-  (`create_project`), plans each `Week` as a big task + exactly 5 subtasks
-  with deadlines decided upfront against the Saudi Sun-Thu workweek
-  (`plan_week`, `app/scheduling.py`), hands out one subtask at a time
-  (`release_next_subtask` — no LLM call, the plan's already decided),
-  replies in the task thread (`respond_in_thread`), and writes the
-  end-of-week progress review (`submit_week_progress`).
-- **Mentor** — reads a submitted task's real public `github_link` (via a
-  new unauthenticated `github_client.py`), writes a structured `Review`
-  (verdict + 4-category rubric + inline comments, matching the frontend's
-  proposed shape in `reviews.ts`), and moves the task to `reviewed` only on
-  `approved` — `needs_changes` sends it back to `in_progress` for
-  resubmission (iterative review).
-- **HR** — `run_rollup` rolls up Mentor review history into `EmployeeFile`
-  (skills, strengths, growth areas, summary) plus a standalone
-  `skills_rollup` `Review`. `run_behavioral_review` (new) writes the
-  end-of-week behavioral evaluation — attendance/absence/lateness are
-  computed in code from existing timestamps ("meaningful progress": a
-  status change, submission, or resubmission counts as a day present,
-  confirmed with Meshari), and the LLM only writes the narrative + a
-  consistency rating on top of those numbers.
-- **`weekly_cycle.get_next_task`** — the state machine tying it together.
-  Bootstraps a Project + Week 1 on the graduate's very first
-  `assign-task` call; returns the same in-flight subtask if one's still
-  open (idempotent, no duplicates); releases the next one once the
-  current is approved; and once all 5 are approved, runs the cascade
-  (Manager's `submit_week_progress` then HR's `run_behavioral_review`,
-  that order), closes the Week, and rolls straight into the next one —
-  all in the same call, so the graduate always gets a task back.
-- Endpoints: `POST /agents/manager/assign-task` (now does all of the
-  above, not just a flat task), `POST /agents/manager/reply/{task_id}`,
-  `POST /agents/mentor/review/{task_id}`, `POST /agents/hr/rollup`; reads
-  via `GET /projects/me` (new — the Project + all its Weeks), `GET
-  /tasks/{id}/review`, `GET /users/me/employee-file`, `GET /users/me/reviews`.
-- Tested with `smoke_test_agents.py` (basic per-agent sanity) and, more
-  importantly, `smoke_test_orchestration.py` (the full cycle end to end —
-  see above). All four smoke tests pass together, no regressions.
-- Full detail and what's still open (task bank content, rubric
-  finalization, CV parsing, `needs_changes` board visibility, frontend
-  wiring) in `backend/app/agents/README.md`.
+- Auth, CV file intake (PDF/.docx/plain text), the full weekly-cycle flow
+  (Manager plans a project → one big task/week → 5 subtasks released one
+  at a time → Mentor reviews each, iteratively → end-of-week Manager
+  progress + HR behavioral evaluation, both now genuinely informed by
+  consulting the Mentor directly → next week), a home-dashboard
+  aggregation endpoint, and the Meeting Room — open to the default three
+  agents plus whichever optional agents a graduate added, gated on their
+  actual roster.
+- Task submission is multi-modal: a GitHub link, free text, and up to 5
+  files/images, any combination. Images go to the Mentor as real vision
+  content blocks, not just filenames.
+- The **agent roundtable**: after the Mentor's review, any optional
+  agents on the graduate's team (Security Reviewer / Data Reviewer /
+  DevOps) discuss the submission with each other in sequence — each one
+  sees the Mentor's review and every prior teammate's turn — then the
+  Manager posts a synthesis. Career Coach stays meeting-room-only by
+  design (not a code review). Full writeup: `docs/STAGE2_ROUNDTABLE.md`.
+- Models: `Organization`, `User` (+ Stage 2 onboarding fields), `Track`
+  (six IT majors + the Stage 1 default), `AgentCatalog`/`UserAgent` (the
+  optional-agent catalog and roster), `EmployeeFile`, `Project` (+
+  `source`: Manager-planned or the graduate's own), `Week`, `Task` (+
+  `submission_text`), `TaskAttachment`, `TaskMessage`, `Review`,
+  `ChatMessage`.
+- Local file storage for attachments (`app/storage.py`, one module so a
+  future cloud-storage swap is contained) — dev-scope, one box, not yet
+  cloud.
+- 14 smoke suites, 300 checks, all passing together (mocked LLM, no API
+  key needed to run them) — see the updated list further down.
 
-**Frontend: all four screens plus CV intake, wired to the real backend — no mock data left.**
-- Next.js (App Router, TypeScript, Tailwind v4), a real design system
-  documented in `frontend/DESIGN.md` — a dark "blueprint" look (hairline
-  borders, faint grid, one accent color) instead of a generic SaaS theme.
-  Fonts self-hosted via `@fontsource`, no external font CDN call.
-- **Auth is real**: `/login` (toggles sign-in/register), `lib/auth-context.tsx`
-  (`AuthProvider`, `useAuth`, `useRequireAuth` — redirects signed-out
-  visitors to `/login`, `refreshUser()` to re-sync after something changes
-  server-side mid-session). JWT in `localStorage`. Every other page is
-  auth-gated.
-- **`lib/api.ts`** is the one place that knows the backend's wire format
-  (snake_case, matching `schemas.py` exactly) — every page/lib function
-  goes through it, nothing calls `fetch` directly elsewhere.
-- **`/onboarding/cv`** — paste-a-CV step, shown once right after
-  registration (Manager handles a missing CV gracefully, so skipping is a
-  real option, not a dead end). Copy adapts to an "update" framing if
-  `user.hasCv` is already true, reachable anytime from the board's
-  Employee File panel. `UserOut` gained a `has_cv` boolean (derived from
-  `cv_raw_text`, not the raw text itself) specifically so returning users
-  aren't re-prompted every login.
-- `/board` — React Flow canvas: a You node connects to Manager, Mentor, and
-  HR, all three feeding into a shared Employee File node (dashed, animated
-  edges — the shared-memory differentiator made visible, not just claimed).
-  Clicking a node opens a slide-over detail panel. Header shows the
-  signed-in user's email + a logout button. Employee File panel now shows
-  CV status with an Add/Update link.
-- `/tasks` — kanban board (To do / In progress / Submitted / Reviewed),
-  fetching real tasks. "Ask manager for a task" button calls
-  `POST /agents/manager/assign-task`. Submitting a task auto-triggers the
-  Mentor's review (`POST /agents/mentor/review/{id}`) — no separate "run
-  review" button. Posting a thread message auto-triggers the Manager's
-  reply (`POST /agents/manager/reply/{id}`) — it's a live conversation now,
-  not a one-way comment box. `TaskDetailPanel` shows which agent is
-  currently working (`busy: "review" | "reply" | null`).
-- `/tasks/[id]/review` — Mentor's review, a client component fetching
-  the real task + `GET /tasks/{id}/review`. **The rubric categories are
-  still a first pass, not a finalized contract** — see
-  `backend/app/agents/README.md`'s "Still open" section.
-- `/growth` — HR's view: real `GET /users/me/employee-file` +
-  `GET /users/me/reviews`, a "Ask HR for a review" button
-  (`POST /agents/hr/rollup`), and an empty state before any reviews exist
-  (`employeeFile.summary` is `null` until HR's first rollup — see
-  `hr.py`'s storage note for why skills/strengths/growth-areas are `{}`
-  until then, `{"items": [...]}` after).
-- One new design token: `danger` (`#d9765f`), documented in `DESIGN.md`,
-  used only for error text — the app can now actually fail (bad login,
-  server down, an agent call erroring) and needed a way to show that.
-- Hit and fixed a newer ESLint rule (`react-hooks/set-state-in-effect`)
-  false-positive on the standard "fetch on mount" pattern across three
-  files — targeted, commented `eslint-disable-next-line`s rather than
-  restructuring working code; see the comments at each site for why.
-- Verified end-to-end against the real running backend at every stage
-  (not just `npm run build`/`lint`): register → login → `/users/me` →
-  task create/detail/status/messages → employee-file/reviews reads → CV
-  submit flipping `has_cv`. Every response matched the TypeScript wire
-  types field-for-field, including CORS preflight from `localhost:3000`.
+**Frontend** (Next.js + React Flow, dark "blueprint" design system —
+`frontend/DESIGN.md`):
 
-**Repo:** https://github.com/MeshMoh506/VirtualWorkEnviroment_AI — `main`
-had 13 merged PRs as of the frontend-wiring update (repo scaffold + VS
-Code config, backend + Docker Postgres, project status doc, frontend
-scaffold + design system, home board, task board, the React Flow height
-fix + docs update, Mentor's review view, a docs refresh, HR's growth
-view, agent logic, frontend wiring). This round adds the CV upload flow
-on a new branch, not yet merged — see below.
+- `/onboarding/cv` — a 5-step wizard: CV file upload → adaptive,
+  agent-generated Q&A (skippable) → track suggestion with an override →
+  optional-agent roster (suggested + editable) → own-project choice
+  ("let the Manager plan it" or bring your own). `POST
+  /onboarding/reset` sends a graduate back to the start if they want to
+  redo it — also the fix for any account whose onboarding state got
+  stuck (see "Recently fixed" below).
+- `/orientation` — shown once right after onboarding: the graduate's
+  project (bootstrapped automatically if they picked "let the Manager
+  plan it"), their full team (default three + any extras), and a short
+  "how it works" walkthrough.
+- `/board` — the agents graph, team cards, and detail panel all render
+  extra agents dynamically now, not just the fixed three.
+- `/workspace` — task rail + detail + the agents-meeting thread, which
+  now renders the whole roundtable discussion (Mentor → specialists →
+  Manager synthesis), each correctly attributed and colored.
+- `/meeting` — open to any agent on the graduate's actual team, not just
+  the fixed three.
+- `/growth`, `/tasks/[id]/review` — unchanged in shape, now also show
+  submission text/attachments alongside the GitHub link.
+- Verified: eslint clean across `src/`, full `next build` succeeds (13
+  routes).
 
-Since then, `main` also picked up the weekly-cycle spec doc and the
-weekly-cycle schema (16 merged PRs as of this update). This round's
-orchestration work (`weekly_cycle.py`, `scheduling.py`, the Manager/HR
-additions, `GET /projects/me`) is on `feature/weekly-cycle-orchestration`,
-not yet merged.
+**Recently fixed:** every graduate was hitting a dead-end "you've
+already been through onboarding" screen — pre-Stage-2 accounts never had
+`onboarding_stage` properly initialized (no migration tooling, schema
+changed via `create_all`), so they read as complete. `POST
+/onboarding/reset` + a "Go through it again" button fixes it for anyone
+stuck, going forward.
 
-**Not built yet:**
-- **Frontend isn't wired to the weekly-cycle flow yet.** `GET /projects/me`
-  exists and returns the Project + all its Weeks, but nothing in
-  `frontend/` calls it — the home board's node UI still shows the old flat
-  model. The core task-board loop (`POST /agents/manager/assign-task` etc.)
-  still works unchanged from the frontend's point of view — it just does
-  more behind the scenes now — but there's no UI yet for "which week am I
-  on" / "what's this week's big task" / the end-of-week reviews.
-- Concrete task bank content, finalized Mentor rubric (current one is a
-  first pass, not team-agreed) — still open, see
-  `backend/app/agents/README.md`'s "Still open" section. Confirmed this
-  round: for now, subtasks stay LLM-improvised (not sourced from a bank) —
-  company-uploaded tasks and Phase 3's user-uploaded-project flow are
-  separate, later, out-of-scope paths.
-- **Whether `needs_changes` needs its own visible board state** — right
-  now it just sends the task back to `in_progress`, indistinguishable from
-  a task that was never reviewed. Product call, not made yet.
-- CV file upload (PDF/docx) — currently paste-only; no file parsing
-  exists anywhere in the stack
-- Alembic migrations — schema currently created via `create_all` on
-  startup; the schema has changed shape twice now (weekly-cycle schema,
-  then nothing new needed for orchestration itself) without a migration
-  tool, worth doing before it changes again
-- **Attendance computation is only tested at the "everything happens in
-  the same second" level** — `smoke_test_orchestration.py` proves the
-  formula is right, but hasn't (and can't, as a smoke test) exercise a
-  week that actually spans multiple real days.
+## Stage 2, in full — one doc per slice, in build order
+
+1. `docs/STAGE2_ONBOARDING_FLOW.md` — the onboarding LangGraph (CV → Q&A
+   → track → roster) and why LangGraph was the right call here.
+2. `docs/STAGE2_WEEKLY_CYCLE_FLOW.md` — the end-of-week cascade ported
+   to a small StateGraph, Manager/HR actually consulting the Mentor.
+3. `docs/STAGE2_OWN_PROJECT.md` — `POST /projects/own`, and why it
+   needed almost no new code (Stage 1's `Project`/`Week` tables were
+   already general-purpose).
+4. `docs/STAGE2_ONBOARDING_FRONTEND.md` — the wizard UI.
+5. `docs/STAGE2_TEAM_AND_ORIENTATION.md` — extra agents in the team
+   graph, the first-time orientation screen.
+6. `docs/STAGE2_MEETING_AND_SUBMISSIONS.md` — extra agents in the
+   Meeting Room, multi-modal submissions with vision review.
+7. `docs/STAGE2_AGENT_TASK_WORK.md` — the first version of optional
+   agents doing task work (parallel co-reviews) — superseded by #8, kept
+   as the simpler fallback (`co_reviewers.py`).
+8. `docs/STAGE2_ROUNDTABLE.md` — the roundtable (sequential discussion +
+   Manager synthesis) and the onboarding-reset fix.
+
+## Not built yet
+
+- **Onboarding mid-flow resume.** Closing the tab partway through the
+  wizard means starting over from the CV step — `reset` is all-or-
+  nothing, not a true resume. (`STAGE2_ONBOARDING_FLOW.md`'s LangGraph
+  gotcha note explains the underlying constraint.)
+- **CV re-upload after onboarding completes** has no dedicated path yet.
+- **Roundtable specialists don't get vision** — only the Mentor's review
+  sees image attachments as real content blocks; specialists just see
+  filenames.
+- **In-memory checkpointer** for the onboarding graph — fine for one dev
+  box, loses in-progress onboarding on a restart. Needs a persistent one
+  before any real deployment.
+- **Alembic migrations** — still `create_all` on startup; the schema has
+  changed shape many times now without a migration tool. The exact bug
+  that caused the onboarding dead-end (a new column with no migration to
+  backfill it) is a live example of why this matters.
+- Task bank content / finalized Mentor rubric — still LLM-improvised,
+  first-pass rubric, unchanged since Stage 1.
+- `needs_changes` board visibility — still silent, no dedicated state.
+
+## Handoff — starting the next chat
+
+Three things, in Meshari's words, that close out Stage 2 before Stage 3:
+
+1. **Rework the onboarding/orientation greeting for new users** — how to
+   use the app, what team they're working with, what project they're on.
+   `/orientation` already exists and covers this ground
+   (`STAGE2_TEAM_AND_ORIENTATION.md`) — this is about improving/
+   reworking it, not building it from nothing. Worth reading that doc
+   first, and clarifying with Meshari exactly what's missing from the
+   current version before assuming a rebuild.
+2. **Arabic support** — the app is English-only right now, no i18n
+   infrastructure exists anywhere in `frontend/`. This is a real
+   architecture decision (routing strategy, RTL layout implications for
+   the whole design system, whether agent responses themselves should be
+   bilingual) — worth a planning pass before writing code, same as how
+   Stage 2 itself started.
+3. **Light mode** — `DESIGN.md`'s whole system (colors, the blueprint
+   grid, agent colors) is written for the dark theme only. Needs a real
+   token strategy (CSS variables already used throughout, which helps),
+   not a one-off toggle bolted on.
+
+Given the scope of #2 and #3 especially, this is a good candidate for
+the same kind of planning conversation Stage 2 opened with, before
+diving into code.
 
 ## Repo map
 
 ```
 .
 ├── docker-compose.yml   one-command local Postgres
-├── backend/             FastAPI — done, tested, running
-│   └── app/agents/       Manager/Mentor/HR + weekly_cycle.py's state
-│                         machine — implemented, see its README
-│                         (app/scheduling.py, alongside, is the Saudi
-│                         workweek date math it depends on)
-├── frontend/             Next.js + React Flow — all 4 screens (home
-│                         board, task board, review, growth) plus CV
-│                         intake, wired to the flat task-board API (not
-│                         yet to the weekly-cycle Project/Week endpoints)
+├── backend/
+│   └── app/
+│       ├── agents/       Manager/Mentor/HR/Meeting + Stage 2's roundtable,
+│       │                 co_reviewers, weekly_cycle, scheduling — see
+│       │                 app/agents/README.md
+│       │   └── graph/    LangGraph agents: onboarding_graph, weekly_cycle_graph,
+│       │                 collaboration (ask_mentor), models (model routing), catalog
+│       ├── routers/      onboarding, projects, tasks, meeting, agents, users, auth
+│       └── storage.py    local-disk attachment storage
+├── frontend/
+│   └── src/
+│       ├── app/           landing, login, board, orientation, onboarding/cv,
+│       │                  workspace, meeting, growth, tasks/[id]/review
+│       ├── components/    board/, dashboard/, workspace/ (incl. attachment-list)
+│       └── lib/           api.ts (wire format), one file per domain
 └── .vscode/              shared editor config
 ```
 
@@ -232,82 +180,90 @@ not yet merged.
    `chore/...`, `docs/...`.
 2. Commit in small, logical chunks with imperative messages ("add X", not
    "added X"). Code gets brief comments explaining *why*, not just what.
-3. Test before committing — don't commit something known-broken.
+3. Test before committing — don't commit something known-broken. Run the
+   full smoke suite (all of it, not just the file you touched) before
+   calling anything done.
 4. Push the branch, open a PR on GitHub, merge into `main`.
 5. `main` stays deployable at all times.
 
 ## Conventions established so far (keep these consistent going forward)
 
-- Every core table carries a nullable `organization_id`, even where Stage 1
-  doesn't use it.
-- `EmployeeFile` is the one shared context object — new agent logic should
-  read/write its existing fields (`skills_json`, `strengths_json`,
-  `growth_areas_json`, `summary_text`) rather than inventing a parallel
+- Every core table carries a nullable `organization_id`, even where
+  nothing uses it yet.
+- `EmployeeFile` is the one shared context object — new agent logic
+  reads/writes its existing fields rather than inventing a parallel
   structure.
-- `TaskMessage.sender_type` is derived, not set directly: pass `agent_type`
-  in the request to record it as an agent message, omit it for a user
-  message.
-- Secrets live in `.env` (gitignored), never committed; `.env.example` is
-  the template.
+- `TaskMessage.sender_type` is derived, not set directly: pass
+  `agent_type` in the request to record it as an agent message, omit it
+  for a user message.
+- Secrets live in `.env` (gitignored), never committed; `.env.example`
+  is the template.
 - Frontend: hairline borders + a faint grid instead of rounded cards and
   shadows, one accent color, monospace reserved for actual technical
-  content (IDs, timestamps, links) rather than every label — see
-  `frontend/DESIGN.md` before adding new UI.
-
-## Handoff notes for whatever's next (starting in a new chat)
-
-**The weekly-cycle flow is fully built now** — schema and orchestration
-both. `docs/STAGE1_PRODUCT_FLOW.md` has the full picture; every open
-question in it is resolved, confirmed with Meshari (not a working
-default). The natural next piece is **wiring the frontend to it**: the
-home board doesn't show Project/Week context at all yet (`GET
-/projects/me` is ready and waiting), and there's no UI distinguishing
-"this week's big task" from the flat task list, or surfacing the
-end-of-week `week_progress`/`behavioral` reviews anywhere. The core
-task-board loop itself needs no frontend changes — it already calls
-`POST /agents/manager/assign-task` and gets a real subtask back, same
-shape as before.
-
-If that's blocked or deprioritized, the smaller standalone items are
-still open:
-
-- **Task bank + rubric**: the Manager currently improvises subtasks from
-  scratch each time (confirmed as the intended behavior for now — see
-  `STAGE1_PRODUCT_FLOW.md`), and the Mentor's 4-category rubric
-  (`correctness`, `code_quality`, `testing`, `documentation` — see
-  `backend/app/agents/tools.py`'s `SUBMIT_REVIEW_TOOL`) is a first pass,
-  not team-agreed. This is mostly a content/product decision, not code —
-  good for a session with the whole team weighing in, not just backend.
-- **`needs_changes` board visibility** — currently silent (task just goes
-  back to `in_progress`). Decide whether it needs its own visible state.
-- **CV file upload**: right now `/onboarding/cv` is paste-only text. Real
-  file upload (PDF/docx) would need client-side text extraction (no
-  parsing exists on the backend — `POST /users/me/cv` just stores
-  whatever text it's given) before this is worth doing.
-- `frontend/DESIGN.md` has the full design rationale — read it before
-  adding new colors, fonts, or components.
+  content — see `frontend/DESIGN.md` before adding new UI. (Note for the
+  light-mode work above: check whether these tokens generalize or need a
+  parallel light set before assuming a simple swap.)
+- Model routing (Stage 2): cheap/mechanical steps (onboarding
+  suggestions, roundtable specialist comments) use the small model
+  (`settings.small_llm_model`); the primary judgment calls (Mentor's
+  review, the Manager's synthesis/progress writeups) use the main model.
+  See `STAGE2_ONBOARDING_FLOW.md` and `STAGE2_ROUNDTABLE.md`.
+- Any new agent capability that isn't a hard requirement for every
+  graduate goes through the `AgentCatalog`/`UserAgent` roster pattern,
+  not a new always-on code path — that's the whole reason Stage 2's
+  extra agents were cheap to add.
 
 ## Reference: full API surface
 
 - Backend base URL in dev: `http://localhost:8000`. Interactive schema
   for every endpoint at `/docs`.
-- Auth: `POST /auth/register` → `{email, password, full_name}`. `POST
-  /auth/login` → **form-encoded** `username`/`password` (OAuth2 password
-  flow) → `{access_token, token_type}`. `GET /users/me` (includes
-  `has_cv`).
-- CV: `POST /users/me/cv` → `{cv_raw_text}` → returns `UserOut`.
-- Tasks: `GET /tasks`, `POST /tasks` (manual/admin — the app itself never
-  calls this; real tasks come from the Manager agent), `GET /tasks/{id}`,
-  `PATCH /tasks/{id}/status`, `POST /tasks/{id}/messages`,
-  `GET /tasks/{id}/review`.
-- Agents: `POST /agents/manager/assign-task` (bootstraps/advances the
-  weekly cycle — see `docs/STAGE1_PRODUCT_FLOW.md`), `POST
-  /agents/manager/reply/{task_id}`, `POST /agents/mentor/review/{task_id}`,
-  `POST /agents/hr/rollup`.
-- Projects: `GET /projects/me` (new — the graduate's active `Project` with
-  all its `Week`s nested).
-- `GET /users/me/employee-file`, `GET /users/me/reviews`.
-- All of this except `GET /projects/me` is already wired into
-  `frontend/src/lib/api.ts`, `auth-context.tsx`, `tasks.ts`, `reviews.ts`,
-  and `employee-file.ts` — `/projects/me` is new this round and not yet
-  called from anywhere in the frontend.
+- **Auth**: `POST /auth/register`, `POST /auth/login` (form-encoded).
+  `GET /users/me` (includes `has_cv`, `track`). `GET /users/me/agents`
+  (selected optional agents). `GET /users/me/dashboard`,
+  `/users/me/employee-file`, `/users/me/reviews`.
+- **Onboarding**: `POST /onboarding/cv` (file upload, starts the graph),
+  `POST /onboarding/qa`, `POST /onboarding/track`, `POST
+  /onboarding/agents`, `GET /onboarding/state`, `POST /onboarding/reset`,
+  `GET /onboarding/catalog` (full agent catalog, no auth required).
+- **Projects**: `GET /projects/me`, `POST /projects/own`.
+- **Tasks**: `GET /tasks`, `POST /tasks` (admin/manual — the app itself
+  never calls this), `GET /tasks/{id}`, `PATCH /tasks/{id}/status`,
+  `POST /tasks/{id}/submit` (multipart — link/text/files, the path the
+  frontend actually uses), `GET /tasks/{id}/attachments/{attachment_id}`
+  (owner-only download), `POST /tasks/{id}/messages`, `GET
+  /tasks/{id}/review`.
+- **Agents**: `POST /agents/manager/assign-task` (bootstraps/advances the
+  weekly cycle), `POST /agents/manager/reply/{task_id}`, `POST
+  /agents/mentor/review/{task_id}` (also runs the roundtable), `POST
+  /agents/hr/rollup`.
+- **Meeting**: `GET /meeting/{agent}`, `POST /meeting/{agent}` — `agent`
+  is any of the seven `AgentType` values; the router 403s an optional
+  agent the graduate hasn't added.
+- All of the above is wired into `frontend/src/lib/api.ts` and the
+  per-domain `lib/*.ts` files — nothing calls `fetch` directly elsewhere.
+
+## Running the smoke suite
+
+Mocked LLM calls throughout — no API key needed:
+
+```bash
+cd backend
+python smoke_test.py                        # auth → task → thread (20)
+python smoke_test_agents.py                  # Manager/Mentor/HR basics (19)
+python smoke_test_weekly_cycle.py            # Project/Week schema + iterative review (17)
+python smoke_test_orchestration.py           # full weekly cycle, end to end (57)
+python smoke_test_meeting.py                 # direct agent chat, Stage 1 scope (15)
+python smoke_test_llm_errors.py              # graceful LLM-failure handling (8)
+python smoke_test_stage2_onboarding.py       # onboarding graph, isolated (28)
+python smoke_test_stage2_onboarding_router.py # onboarding endpoints, incl. reset (34)
+python smoke_test_stage2_collaboration.py    # Manager/HR consulting the Mentor (9)
+python smoke_test_stage2_own_project.py      # POST /projects/own (12)
+python smoke_test_stage2_meeting.py          # Meeting Room roster gating (9)
+python smoke_test_stage2_submissions.py      # multi-modal submission + vision (41)
+python smoke_test_stage2_co_reviews.py       # co_reviewers.py unit tests (11)
+python smoke_test_stage2_roundtable.py       # the roundtable, end to end (20)
+```
+
+If the LLM key is missing, wrong, or out of credit, the agent endpoints
+return a clean, actionable error (503/429/502) rather than a 500 stack
+trace — so a missing key never looks like a crash.
