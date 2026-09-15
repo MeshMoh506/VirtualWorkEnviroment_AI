@@ -226,7 +226,7 @@ export function TaskWorkspace({ task, busy, onAdvance }: TaskWorkspaceProps) {
           {task.status === "reviewed" && (
             <div className="flex flex-col items-start gap-3">
               <div className="flex items-center gap-2 text-sm text-text-primary">
-                <CircleCheck className="h-4 w-4 text-accent" />
+                <CircleCheck className="h-4 w-4 text-accent-ink" />
                 <span>Reviewed by the mentor.</span>
               </div>
               <Link

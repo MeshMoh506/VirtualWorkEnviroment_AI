@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ApiError, useAuth } from "@/lib/auth-context";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function LoginPage() {
   const { login, register } = useAuth();
@@ -38,14 +39,17 @@ export default function LoginPage() {
   return (
     <main className="bg-blueprint-grid flex flex-1 flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <Link
-            href="/"
-            className="font-mono text-xs text-text-muted hover:text-text-secondary"
-          >
-            venv
-          </Link>
-          <h1 className="mt-1 text-2xl font-medium text-text-primary">
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <Link
+              href="/"
+              className="font-mono text-xs text-text-muted hover:text-text-secondary"
+            >
+              venv
+            </Link>
+            <ThemeToggle />
+          </div>
+          <h1 className="mt-3 text-center text-2xl font-medium text-text-primary">
             {mode === "login" ? "Sign in" : "Create your account"}
           </h1>
         </div>

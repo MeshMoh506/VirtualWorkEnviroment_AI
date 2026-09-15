@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { AGENT_ORDER, AGENTS } from "@/lib/agents";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const fadeUp = {
   initial: { opacity: 0, y: 16 },
@@ -21,6 +22,7 @@ const CYCLE_STEPS = [
 export default function Home() {
   return (
     <main className="h-dvh snap-y snap-mandatory overflow-y-auto overflow-x-hidden">
+      <ThemeToggle className="fixed right-6 top-6 z-10 bg-bg-base" />
       {/* ---- hero ---- */}
       <section className="bg-blueprint-grid flex min-h-dvh snap-start flex-col items-center justify-center px-6">
         <motion.div
@@ -35,7 +37,7 @@ export default function Home() {
           <h1 className="mt-6 text-5xl font-medium tracking-tight text-text-primary sm:text-6xl">
             Your first job,
             <br />
-            <span className="text-accent">before your first job.</span>
+            <span className="text-accent-ink">before your first job.</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-text-secondary">
             Venv is a simulated workplace for recent graduates. A manager
@@ -136,7 +138,7 @@ export default function Home() {
                 transition={{ ...fadeUp.transition, delay: 0.08 * i }}
                 className="rounded border border-border bg-bg-surface p-5"
               >
-                <span className="font-mono text-2xl text-accent">
+                <span className="font-mono text-2xl text-accent-ink">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <p className="mt-2 font-mono text-[11px] uppercase tracking-wide text-text-muted">

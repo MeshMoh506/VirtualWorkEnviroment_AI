@@ -14,6 +14,7 @@ import { WeekStrip } from "@/components/dashboard/week-strip";
 import { StatRow } from "@/components/dashboard/stat-row";
 import { AgentCards } from "@/components/dashboard/agent-cards";
 import { FlowSection } from "@/components/dashboard/flow-section";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // The one task the graduate should act on now: the most recent
 // non-reviewed task (todo/in_progress/submitted). Mirrors the backend's
@@ -110,6 +111,7 @@ export default function BoardPage() {
           >
             Log out
           </Link>
+          <ThemeToggle />
         </div>
       </header>
 

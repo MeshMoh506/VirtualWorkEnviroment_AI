@@ -9,6 +9,7 @@ import { fetchTaskDetail, type Task } from "@/lib/tasks";
 import { fetchTaskReview, type Review } from "@/lib/reviews";
 import { RubricBar } from "@/components/rubric-bar";
 import { AttachmentList } from "@/components/workspace/attachment-list";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface ReviewPageProps {
   params: Promise<{ id: string }>;
@@ -60,6 +61,7 @@ export default function ReviewPage({ params }: ReviewPageProps) {
             Mentor&apos;s review
           </h1>
         </div>
+        <ThemeToggle />
       </header>
 
       <div className="mx-auto max-w-2xl px-6 py-8">

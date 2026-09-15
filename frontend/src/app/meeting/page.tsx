@@ -14,6 +14,7 @@ import {
   type ChatMessage,
 } from "@/lib/meeting";
 import { timeAgo } from "@/lib/format";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const OPENERS: Record<AgentId, string> = {
   manager: "Ask about your project, this week's plan, or what to prioritize.",
@@ -134,6 +135,7 @@ export default function MeetingPage() {
           >
             Log out
           </Link>
+          <ThemeToggle />
         </div>
       </header>
 

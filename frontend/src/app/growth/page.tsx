@@ -18,6 +18,7 @@ import { fetchEmployeeFile, type EmployeeFile } from "@/lib/employee-file";
 import { api } from "@/lib/api";
 import { averageScore, fetchMyReviews, type Review } from "@/lib/reviews";
 import { timeAgo } from "@/lib/format";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const hr = AGENTS.hr;
 
@@ -118,14 +119,17 @@ export default function GrowthPage() {
           </Link>
           <h1 className="mt-1 text-lg font-medium text-text-primary">Growth</h1>
         </div>
-        <button
-          type="button"
-          onClick={handleAskHr}
-          disabled={rollingUp}
-          className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {rollingUp ? "HR is updating your file..." : "Ask HR for a review"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleAskHr}
+            disabled={rollingUp}
+            className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {rollingUp ? "HR is updating your file..." : "Ask HR for a review"}
+          </button>
+          <ThemeToggle />
+        </div>
       </header>
 
       <div className="mx-auto max-w-2xl px-6 py-8">

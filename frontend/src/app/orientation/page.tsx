@@ -9,6 +9,7 @@ import { AGENT_ORDER, AGENTS } from "@/lib/agents";
 import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 import { fetchMyProject, type Project } from "@/lib/projects";
 import { assignNextTask } from "@/lib/tasks";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // Reworked from a single long scroll into a guided, step-by-step
 // walkthrough — same four pieces of content as before (welcome, team,
@@ -102,13 +103,16 @@ export default function OrientationPage() {
           <Link href="/" className="font-mono text-xs text-text-muted hover:text-text-secondary">
             venv
           </Link>
-          <button
-            type="button"
-            onClick={() => router.push("/board")}
-            className="text-xs text-text-muted transition-colors hover:text-text-secondary"
-          >
-            Skip to board
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/board")}
+              className="text-xs text-text-muted transition-colors hover:text-text-secondary"
+            >
+              Skip to board
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
 
         <StepTracker steps={STEPS} activeIndex={stepIndex} onSelect={setStepIndex} />
