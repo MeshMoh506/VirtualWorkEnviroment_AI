@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 /**
  * A deliberate sign-off screen rather than an instant token-clear + bounce.
@@ -30,12 +31,15 @@ export default function LogoutPage() {
         transition={{ duration: 0.35, ease: "easeOut" }}
         className="w-full max-w-sm rounded border border-border bg-bg-surface p-6 text-center"
       >
-        <Link
-          href="/"
-          className="font-mono text-xs text-text-muted hover:text-text-secondary"
-        >
-          venv
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href="/"
+            className="font-mono text-xs text-text-muted hover:text-text-secondary"
+          >
+            venv
+          </Link>
+          <ThemeToggle />
+        </div>
 
         {!signedOut ? (
           <>

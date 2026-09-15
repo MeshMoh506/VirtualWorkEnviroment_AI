@@ -19,6 +19,7 @@ import { TaskRail } from "@/components/workspace/task-rail";
 import { TaskWorkspace, type SubmitPayload } from "@/components/workspace/task-workspace";
 import { AgentsMeeting } from "@/components/workspace/agents-meeting";
 import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function WorkspacePage() {
   const { user, loading: authLoading } = useRequireAuth();
@@ -175,6 +176,7 @@ export default function WorkspacePage() {
           >
             Log out
           </Link>
+          <ThemeToggle />
         </div>
       </header>
 

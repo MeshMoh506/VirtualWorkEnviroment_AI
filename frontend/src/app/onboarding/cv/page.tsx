@@ -8,6 +8,7 @@ import { ApiError, useRequireAuth } from "@/lib/auth-context";
 import { api, type AgentCatalogApiOut, type ApiTrack } from "@/lib/api";
 import { SELECTABLE_TRACKS, TRACKS } from "@/lib/tracks";
 import { createOwnProject } from "@/lib/projects";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type Step = "loading" | "cv" | "qa" | "track" | "agents" | "project" | "already-done";
 
@@ -204,12 +205,15 @@ export default function OnboardingPage() {
   return (
     <main className="bg-blueprint-grid flex flex-1 flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-lg">
-        <div className="mb-8 text-center">
-          <Link href="/" className="font-mono text-xs text-text-muted hover:text-text-secondary">
-            venv
-          </Link>
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="font-mono text-xs text-text-muted hover:text-text-secondary">
+              venv
+            </Link>
+            <ThemeToggle />
+          </div>
           {step !== "already-done" && (
-            <p className="mt-3 text-xs text-text-muted">
+            <p className="mt-3 text-center text-xs text-text-muted">
               Step {STEP_NUMBER[step]} of {TOTAL_STEPS}
             </p>
           )}
