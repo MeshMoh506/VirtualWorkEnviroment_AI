@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
+import { useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleToggle } from "@/components/locale-toggle";
 
 /**
  * A deliberate sign-off screen rather than an instant token-clear + bounce.
@@ -16,6 +18,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 export default function LogoutPage() {
   const { user, clearSession } = useAuth();
   const router = useRouter();
+  const { t } = useLocale();
   const [signedOut, setSignedOut] = useState(false);
 
   function confirm() {
@@ -36,20 +39,23 @@ export default function LogoutPage() {
             href="/"
             className="font-mono text-xs text-text-muted hover:text-text-secondary"
           >
-            venv
+            {t("common.venv")}
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <LocaleToggle />
+            <ThemeToggle />
+          </div>
         </div>
 
         {!signedOut ? (
           <>
             <h1 className="mt-2 text-xl font-medium text-text-primary">
-              Sign out?
+              {t("logout.signOutQuestion")}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
               {user
-                ? `You're signed in as ${user.email}. Your work is saved — you can pick up right where you left off.`
-                : "You're about to sign out. Your work is saved."}
+                ? t("logout.signedInAs", { email: user.email })
+                : t("logout.aboutToSignOut")}
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <button
@@ -57,30 +63,30 @@ export default function LogoutPage() {
                 onClick={confirm}
                 className="rounded border border-accent bg-accent px-4 py-2.5 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
               >
-                Sign out
+                {t("logout.confirm")}
               </button>
               <button
                 type="button"
                 onClick={() => router.back()}
                 className="rounded border border-border px-4 py-2.5 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
               >
-                Stay signed in
+                {t("logout.staySignedIn")}
               </button>
             </div>
           </>
         ) : (
           <>
             <h1 className="mt-2 text-xl font-medium text-text-primary">
-              Signed out.
+              {t("logout.signedOutTitle")}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              Thanks for the work today. Everything&apos;s saved for next time.
+              {t("logout.signedOutBody")}
             </p>
             <Link
               href="/login"
               className="mt-6 inline-block rounded border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
             >
-              Sign back in
+              {t("logout.signBackIn")}
             </Link>
           </>
         )}

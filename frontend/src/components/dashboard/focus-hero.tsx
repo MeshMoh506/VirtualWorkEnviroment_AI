@@ -4,8 +4,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import type { Task } from "@/lib/tasks";
 import type { Week } from "@/lib/projects";
-import { STATUS_LABEL } from "@/lib/tasks";
 import { timeUntil } from "@/lib/format";
+import { useLocale, useStatusLabels } from "@/lib/i18n/locale";
 
 interface FocusHeroProps {
   /** The task the graduate should act on now: the one open task in the
@@ -17,14 +17,10 @@ interface FocusHeroProps {
   hasProject: boolean;
 }
 
-const STATUS_HINT: Record<Task["status"], string> = {
-  todo: "Ready to start whenever you are.",
-  in_progress: "In progress — submit a GitHub link when it's ready for review.",
-  submitted: "Submitted — the mentor is reviewing it.",
-  reviewed: "Reviewed — nice work.",
-};
-
 export function FocusHero({ task, week, hasProject }: FocusHeroProps) {
+  const { t } = useLocale();
+  const statusLabels = useStatusLabels();
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}
@@ -32,55 +28,52 @@ export function FocusHero({ task, week, hasProject }: FocusHeroProps) {
       transition={{ duration: 0.4, ease: "easeOut" }}
       className="bg-blueprint-grid relative overflow-hidden rounded border border-border-strong bg-bg-surface p-6 sm:p-8"
     >
-      {/* Accent hairline down the left edge — the one signal color, marking
-          this as the primary thing on the page (DESIGN.md: accent = the
-          manager, who drives the work). */}
-      <span className="absolute inset-y-0 left-0 w-[3px] bg-accent" />
+      {/* Accent hairline down the leading edge — the one signal color,
+          marking this as the primary thing on the page (DESIGN.md:
+          accent = the manager, who drives the work). */}
+      <span className="absolute inset-y-0 start-0 w-[3px] bg-accent" />
 
       {!hasProject ? (
         <>
-          <p className="font-mono text-[11px] text-text-muted">get_started</p>
+          <p className="font-mono text-[11px] text-text-muted">{t("focusHero.getStartedEyebrow")}</p>
           <h2 className="mt-2 text-2xl font-medium text-text-primary">
-            Your workspace is ready.
+            {t("focusHero.workspaceReadyTitle")}
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-secondary">
-            Ask your manager for your first task. They&apos;ll set up a
-            project calibrated to your background and hand you the first
-            piece of it — one focused task at a time.
+            {t("focusHero.workspaceReadyBody")}
           </p>
           <Link
             href="/workspace"
             className="mt-5 inline-block rounded border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
           >
-            Ask the manager for a task
+            {t("focusHero.askManagerCta")}
           </Link>
         </>
       ) : !task ? (
         <>
-          <p className="font-mono text-[11px] text-text-muted">all_clear</p>
+          <p className="font-mono text-[11px] text-text-muted">{t("focusHero.allClearEyebrow")}</p>
           <h2 className="mt-2 text-2xl font-medium text-text-primary">
-            You&apos;re all caught up.
+            {t("focusHero.allCaughtUpTitle")}
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-secondary">
-            Nothing needs your attention right now. Your next task will
-            appear here as soon as the manager hands it out.
+            {t("focusHero.allCaughtUpBody")}
           </p>
           <Link
             href="/workspace"
             className="mt-5 inline-block rounded border border-border px-5 py-2.5 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
-            Open the task board
+            {t("focusHero.openTaskBoard")}
           </Link>
         </>
       ) : (
         <>
           <div className="flex items-center gap-2">
             <p className="font-mono text-[11px] text-text-muted">
-              your_focus_now
+              {t("focusHero.focusNowEyebrow")}
             </p>
             {week && (
               <span className="font-mono text-[11px] text-text-muted">
-                · week {week.weekNumber}
+                {t("focusHero.weekLabel", { n: week.weekNumber })}
               </span>
             )}
           </div>
@@ -96,7 +89,7 @@ export function FocusHero({ task, week, hasProject }: FocusHeroProps) {
               href="/workspace"
               className="rounded border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
             >
-              {task.status === "todo" ? "Start this task" : "Open on the board"}
+              {task.status === "todo" ? t("focusHero.startThisTask") : t("focusHero.openOnBoard")}
             </Link>
             <div className="flex items-center gap-2">
               <span
@@ -104,16 +97,18 @@ export function FocusHero({ task, week, hasProject }: FocusHeroProps) {
                 style={{ backgroundColor: "var(--agent-manager)" }}
               />
               <span className="text-xs text-text-secondary">
-                {STATUS_LABEL[task.status]}
+                {statusLabels[task.status]}
               </span>
             </div>
             {task.deadline && (
               <span className="font-mono text-[11px] text-text-muted">
-                due {timeUntil(task.deadline)}
+                {t("focusHero.due", { time: timeUntil(task.deadline) })}
               </span>
             )}
           </div>
-          <p className="mt-3 text-xs text-text-muted">{STATUS_HINT[task.status]}</p>
+          <p className="mt-3 text-xs text-text-muted">
+            {t(`focusHero.statusHint.${task.status}`)}
+          </p>
         </>
       )}
     </motion.section>

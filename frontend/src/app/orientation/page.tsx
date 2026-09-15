@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRequireAuth } from "@/lib/auth-context";
-import { AGENT_ORDER, AGENTS } from "@/lib/agents";
+import { AGENT_ORDER } from "@/lib/agents";
 import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 import { fetchMyProject, type Project } from "@/lib/projects";
 import { assignNextTask } from "@/lib/tasks";
+import { useAgents, useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleToggle } from "@/components/locale-toggle";
 
 // Reworked from a single long scroll into a guided, step-by-step
 // walkthrough — same four pieces of content as before (welcome, team,
@@ -19,37 +21,17 @@ import { ThemeToggle } from "@/components/theme-toggle";
 // returning graduate can jump straight to whichever step via the
 // tracker dots instead of re-reading everything.
 type StepId = "welcome" | "team" | "project" | "how" | "ready";
+const STEP_IDS: StepId[] = ["welcome", "team", "project", "how", "ready"];
 
-const STEPS: { id: StepId; label: string }[] = [
-  { id: "welcome", label: "Welcome" },
-  { id: "team", label: "Your team" },
-  { id: "project", label: "Your project" },
-  { id: "how", label: "How it works" },
-  { id: "ready", label: "Ready" },
-];
-
-const HOW_IT_WORKS = [
-  {
-    title: "One task at a time",
-    body: "The Manager plans each week as one big goal, broken into five subtasks. You get them one at a time, not all at once.",
-  },
-  {
-    title: "Submit with a GitHub link",
-    body: "Push your work to a public repo and submit the link. The Mentor reads it and either approves it or sends it back with feedback to revise.",
-  },
-  {
-    title: "The week wraps up together",
-    body: "At the end of the week, the Manager and HR review your progress together — then the next week starts right away.",
-  },
-  {
-    title: "Talk to any agent directly",
-    body: "The meeting room is open any time for a direct conversation, outside of task threads.",
-  },
-];
+interface HowItWorksItem {
+  title: string;
+  body: string;
+}
 
 export default function OrientationPage() {
   const { user, loading: authLoading } = useRequireAuth();
   const router = useRouter();
+  const { t, tRaw } = useLocale();
 
   const [project, setProject] = useState<Project | null>(null);
   const [extraAgents, setExtraAgents] = useState<ExtraAgent[]>([]);
@@ -83,15 +65,16 @@ export default function OrientationPage() {
     })();
   }, [user]);
 
-  const firstName = user?.fullName?.split(" ")[0] ?? "there";
-  const step = STEPS[stepIndex].id;
+  const stepLabels = tRaw<string[]>("orientation.steps");
+  const firstName = user?.fullName?.split(" ")[0] || t("orientation.fallbackName");
+  const step = STEP_IDS[stepIndex];
   const isFirst = stepIndex === 0;
-  const isLast = stepIndex === STEPS.length - 1;
+  const isLast = stepIndex === STEP_IDS.length - 1;
 
   if (authLoading || !user) {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-text-muted">Loading...</p>
+        <p className="text-sm text-text-muted">{t("common.loading")}</p>
       </main>
     );
   }
@@ -101,7 +84,7 @@ export default function OrientationPage() {
       <div className="w-full max-w-2xl">
         <div className="flex items-center justify-between">
           <Link href="/" className="font-mono text-xs text-text-muted hover:text-text-secondary">
-            venv
+            {t("common.venv")}
           </Link>
           <div className="flex items-center gap-3">
             <button
@@ -109,17 +92,18 @@ export default function OrientationPage() {
               onClick={() => router.push("/board")}
               className="text-xs text-text-muted transition-colors hover:text-text-secondary"
             >
-              Skip to board
+              {t("orientation.skipToBoard")}
             </button>
+            <LocaleToggle />
             <ThemeToggle />
           </div>
         </div>
 
-        <StepTracker steps={STEPS} activeIndex={stepIndex} onSelect={setStepIndex} />
+        <StepTracker labels={stepLabels} activeIndex={stepIndex} onSelect={setStepIndex} />
 
         {dataLoading ? (
           <div className="mt-8 rounded border border-border bg-bg-surface p-8 text-center">
-            <p className="text-sm text-text-muted">Setting things up...</p>
+            <p className="text-sm text-text-muted">{t("orientation.settingUp")}</p>
           </div>
         ) : (
           <>
@@ -135,7 +119,7 @@ export default function OrientationPage() {
                   {step === "welcome" && <WelcomeStep firstName={firstName} />}
                   {step === "team" && <TeamStep extraAgents={extraAgents} />}
                   {step === "project" && <ProjectStep project={project} error={error} />}
-                  {step === "how" && <HowStep />}
+                  {step === "how" && <HowStep items={tRaw<HowItWorksItem[]>("orientation.howItWorksSteps")} />}
                   {step === "ready" && <ReadyStep firstName={firstName} />}
                 </motion.div>
               </AnimatePresence>
@@ -148,7 +132,7 @@ export default function OrientationPage() {
                 disabled={isFirst}
                 className="rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Back
+                {t("orientation.back")}
               </button>
               {isLast ? (
                 <button
@@ -156,15 +140,15 @@ export default function OrientationPage() {
                   onClick={() => router.push("/board")}
                   className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
                 >
-                  Go to board
+                  {t("orientation.goToBoard")}
                 </button>
               ) : (
                 <button
                   type="button"
-                  onClick={() => setStepIndex((i) => Math.min(STEPS.length - 1, i + 1))}
+                  onClick={() => setStepIndex((i) => Math.min(STEP_IDS.length - 1, i + 1))}
                   className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
                 >
-                  Next
+                  {t("orientation.next")}
                 </button>
               )}
             </div>
@@ -182,22 +166,22 @@ export default function OrientationPage() {
 // clickable — the main way a returning graduate jumps straight to one
 // section instead of re-reading the whole thing.
 function StepTracker({
-  steps,
+  labels,
   activeIndex,
   onSelect,
 }: {
-  steps: { id: StepId; label: string }[];
+  labels: string[];
   activeIndex: number;
   onSelect: (i: number) => void;
 }) {
   return (
     <ol className="relative mt-6 flex justify-between">
-      <span className="absolute left-0 right-0 top-[7px] h-px bg-border" aria-hidden />
-      {steps.map((s, i) => {
+      <span className="absolute inset-x-0 top-[7px] h-px bg-border" aria-hidden />
+      {labels.map((label, i) => {
         const done = i < activeIndex;
         const active = i === activeIndex;
         return (
-          <li key={s.id} className="relative flex min-w-0 flex-1 flex-col items-center px-1 text-center">
+          <li key={label} className="relative flex min-w-0 flex-1 flex-col items-center px-1 text-center">
             <button
               type="button"
               onClick={() => onSelect(i)}
@@ -206,14 +190,14 @@ function StepTracker({
                 borderColor: done || active ? "var(--accent)" : "var(--border-strong)",
                 backgroundColor: done ? "var(--accent)" : "var(--bg-surface)",
               }}
-              aria-label={`Go to ${s.label}`}
+              aria-label={label}
             />
             <span
               className={`mt-2 hidden text-[11px] sm:block ${
                 active ? "text-text-primary" : "text-text-muted"
               }`}
             >
-              {s.label}
+              {label}
             </span>
           </li>
         );
@@ -223,25 +207,28 @@ function StepTracker({
 }
 
 function WelcomeStep({ firstName }: { firstName: string }) {
+  const { t } = useLocale();
   return (
     <section>
-      <h1 className="text-2xl font-medium text-text-primary">Welcome, {firstName}</h1>
+      <h1 className="text-2xl font-medium text-text-primary">
+        {t("orientation.welcomeTitle", { name: firstName })}
+      </h1>
       <p className="mt-3 text-sm leading-relaxed text-text-secondary">
-        Venv simulates a real company around you — a Manager who assigns your work, a Mentor
-        who reviews it, and HR who tracks how you&apos;re growing. This walkthrough covers your
-        team, your first project, and how the week-to-week rhythm works.
+        {t("orientation.welcomeBody")}
       </p>
     </section>
   );
 }
 
 function TeamStep({ extraAgents }: { extraAgents: ExtraAgent[] }) {
+  const { t } = useLocale();
+  const agents = useAgents();
   return (
     <section>
-      <p className="font-mono text-[11px] text-text-muted">your_team</p>
+      <p className="font-mono text-[11px] text-text-muted">{t("orientation.yourTeamEyebrow")}</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
         {AGENT_ORDER.map((id) => {
-          const meta = AGENTS[id];
+          const meta = agents[id];
           return (
             <div key={id} className="rounded border border-border bg-bg-surface p-3">
               <div className="flex items-center gap-2">
@@ -263,7 +250,7 @@ function TeamStep({ extraAgents }: { extraAgents: ExtraAgent[] }) {
                 <span className="font-medium text-text-primary">{agent.name}</span>
               </div>
               <span className="rounded-full border border-border px-1.5 py-0.5 font-mono text-[10px] text-text-muted">
-                soon
+                {t("orientation.soonBadge")}
               </span>
             </div>
             <p className="mt-1.5 text-xs text-text-secondary">{agent.description}</p>
@@ -271,25 +258,20 @@ function TeamStep({ extraAgents }: { extraAgents: ExtraAgent[] }) {
         ))}
       </div>
       {extraAgents.length > 0 && (
-        <p className="mt-3 text-xs text-text-muted">
-          Manager, Mentor, and HR handle task reviews today — the rest of your team joins the
-          workflow as we build them in.
-        </p>
+        <p className="mt-3 text-xs text-text-muted">{t("orientation.extrasNote")}</p>
       )}
     </section>
   );
 }
 
 function ProjectStep({ project, error }: { project: Project | null; error: boolean }) {
+  const { t } = useLocale();
   return (
     <section>
-      <p className="font-mono text-[11px] text-text-muted">your_project</p>
+      <p className="font-mono text-[11px] text-text-muted">{t("orientation.yourProjectEyebrow")}</p>
       {error || !project ? (
         <div className="mt-3 rounded border border-border bg-bg-surface p-4">
-          <p className="text-sm text-text-secondary">
-            Couldn&apos;t reach the Manager just now — no project yet. Head to the task board
-            and ask for one when you&apos;re ready.
-          </p>
+          <p className="text-sm text-text-secondary">{t("orientation.projectError")}</p>
         </div>
       ) : (
         <div className="mt-3 rounded border border-border-strong bg-bg-surface-raised p-4">
@@ -303,15 +285,16 @@ function ProjectStep({ project, error }: { project: Project | null; error: boole
   );
 }
 
-function HowStep() {
+function HowStep({ items }: { items: HowItWorksItem[] }) {
+  const { t } = useLocale();
   return (
     <section>
-      <p className="font-mono text-[11px] text-text-muted">how_it_works</p>
+      <p className="font-mono text-[11px] text-text-muted">{t("orientation.howItWorksEyebrow")}</p>
       <div className="mt-3 flex flex-col gap-2">
-        {HOW_IT_WORKS.map((s, i) => (
-          <div key={i} className="rounded border border-border bg-bg-surface p-3">
+        {items.map((s, i) => (
+          <div key={s.title} className="rounded border border-border bg-bg-surface p-3">
             <div className="flex items-baseline gap-2">
-              <span className="font-mono text-[11px] text-text-muted">
+              <span dir="ltr" className="font-mono text-[11px] text-text-muted">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <span className="text-sm font-medium text-text-primary">{s.title}</span>
@@ -325,12 +308,14 @@ function HowStep() {
 }
 
 function ReadyStep({ firstName }: { firstName: string }) {
+  const { t } = useLocale();
   return (
     <section>
-      <h2 className="text-xl font-medium text-text-primary">You&apos;re set, {firstName}</h2>
+      <h2 className="text-xl font-medium text-text-primary">
+        {t("orientation.readyTitle", { name: firstName })}
+      </h2>
       <p className="mt-3 text-sm leading-relaxed text-text-secondary">
-        Your board has your first task, your team, and this week&apos;s progress. Come back to
-        this walkthrough any time from the board header if you need a refresher.
+        {t("orientation.readyBody")}
       </p>
     </section>
   );

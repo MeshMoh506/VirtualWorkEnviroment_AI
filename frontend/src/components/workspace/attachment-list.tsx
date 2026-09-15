@@ -75,11 +75,11 @@ export function AttachmentList({ taskId, attachments }: AttachmentListProps) {
               key={a.id}
               type="button"
               onClick={() => downloadAttachment(taskId, a.id, a.filename)}
-              className="flex items-center gap-2 rounded border border-border px-3 py-2 text-left text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+              className="flex items-center gap-2 rounded border border-border px-3 py-2 text-start text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
             >
               <FileText className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{a.filename}</span>
-              <Download className="ml-auto h-3.5 w-3.5 shrink-0 text-text-muted" />
+              <Download className="ms-auto h-3.5 w-3.5 shrink-0 text-text-muted" />
             </button>
           ))}
         </div>

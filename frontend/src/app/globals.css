@@ -53,6 +53,21 @@
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
 }
 
+/* Arabic has no real monospace tradition and Space Grotesk/JetBrains
+   Mono don't cover Arabic glyphs at all, so [dir="rtl"] swaps the body
+   font to IBM Plex Sans Arabic — chosen over the friendlier, rounder
+   options (Cairo, Tajawal) because it's part of a coordinated
+   multi-script superfamily built for technical/corporate contexts,
+   which is the same "geometric, a little technical" reasoning DESIGN.md
+   gives for Space Grotesk. Mono-styled Arabic text (short labels like
+   "نقاط القوة") still requests JetBrains Mono first; the browser's own
+   glyph-level fallback covers the Arabic characters it doesn't have —
+   not a perfect visual match, but a normal, unbroken fallback, not
+   worth a second Arabic mono font for a handful of short captions. */
+[dir="rtl"] {
+  --font-sans: "IBM Plex Sans Arabic", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+}
+
 /*
   Light mode — deliberately not just an inverted dark theme. The
   "blueprint" idea actually started life as light drafting paper with
