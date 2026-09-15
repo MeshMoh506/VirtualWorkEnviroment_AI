@@ -1,7 +1,9 @@
-# Venv Backend (Stage 1)
+# Venv Backend (Stage 2)
 
-FastAPI + PostgreSQL backend for Venv — auth, task board, agent logic
-(Manager/Mentor/HR), and the shared Employee File they all read and write.
+FastAPI + PostgreSQL backend for Venv — auth, the weekly-cycle task
+board, agent logic (Manager/Mentor/HR/Meeting + Stage 2's roundtable),
+onboarding (a LangGraph agent), and the shared Employee File they all
+read and write.
 
 ## Quickstart
 
@@ -13,7 +15,7 @@ docker compose up -d
 Then, from this `backend/` folder:
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt   # includes LangGraph/LangChain, pypdf, python-docx
 
 cp .env.example .env
 # .env already points at the Docker Postgres above — no edits needed.
@@ -24,7 +26,7 @@ uvicorn app.main:app --reload
 
 Then open http://localhost:8000/docs for interactive Swagger UI.
 
-Verify everything works end-to-end:
+Verify everything works end-to-end (full list in `docs/PROJECT_STATUS.md`):
 ```bash
 python smoke_test.py
 ```
@@ -33,66 +35,68 @@ python smoke_test.py
 
 | File | Purpose |
 |---|---|
-| `app/models.py` | SQLAlchemy schema: Organization, User, EmployeeFile, Project, Week, Task, TaskMessage, Review, ChatMessage |
+| `app/models.py` | SQLAlchemy schema: Organization, User, Track, AgentCatalog/UserAgent, EmployeeFile, Project, Week, Task, TaskAttachment, TaskMessage, Review, ChatMessage |
 | `app/schemas.py` | Pydantic request/response shapes |
 | `app/auth.py` | Password hashing + JWT issue/verify + `get_current_user` dependency |
 | `app/scheduling.py` | Saudi (Sun–Thu) workweek date math for week/subtask deadlines |
 | `app/dashboard.py` | Aggregates the home-dashboard stats (`GET /users/me/dashboard`) |
-| `app/agents/` | Manager, Mentor, HR + the weekly-cycle state machine (see its own README) |
+| `app/storage.py` | Local-disk storage for task attachments (`backend/uploads/`, gitignored) |
+| `app/agents/` | Manager, Mentor, HR, Meeting, the roundtable, and the LangGraph agents (see its own README) |
 | `app/routers/auth.py` | `POST /auth/register`, `POST /auth/login` |
-| `app/routers/users.py` | `GET /users/me`, `POST /users/me/cv`, `GET /users/me/employee-file`, `GET /users/me/reviews`, `GET /users/me/dashboard` |
-| `app/routers/tasks.py` | Task board CRUD, threaded messages, `GET /tasks/{id}/review` |
-| `app/routers/projects.py` | `GET /projects/me` — active project + all its weeks |
-| `app/routers/agents.py` | Endpoints that trigger the three agents |
-| `app/routers/meeting.py` | `GET`/`POST /meeting/{agent}` — direct task-free agent chat |
-| `smoke_test.py` | End-to-end check of auth/task/thread/CV flow against sqlite (20 checks) |
-| `smoke_test_agents.py` | The three agents' basics (LLM mocked, real GitHub fetch) (19) |
-| `smoke_test_weekly_cycle.py` | Project/Week schema + iterative Mentor review (17) |
-| `smoke_test_orchestration.py` | The full weekly cycle end-to-end through the API (56) |
-| `smoke_test_meeting.py` | Direct agent chat / meeting room (15) |
-| `smoke_test_llm_errors.py` | Graceful LLM-failure handling — clean errors, not 500s (8) |
+| `app/routers/users.py` | `GET /users/me`, `GET /users/me/agents`, `/employee-file`, `/reviews`, `/dashboard` |
+| `app/routers/onboarding.py` | The full onboarding flow: CV upload, Q&A, track, agent roster, reset |
+| `app/routers/tasks.py` | Task board CRUD, multi-modal submission, attachment download, threaded messages |
+| `app/routers/projects.py` | `GET /projects/me`, `POST /projects/own` |
+| `app/routers/agents.py` | Endpoints that trigger Manager/Mentor/HR — Mentor's endpoint also runs the roundtable |
+| `app/routers/meeting.py` | `GET`/`POST /meeting/{agent}` — any agent on the graduate's actual team |
+| `smoke_test*.py` (14 files) | Full list + check counts in `docs/PROJECT_STATUS.md`'s "Running the smoke suite" |
 
 ## Schema notes for the rest of the team
 
-- **`organization_id` is nullable on every core table** (Users, Tasks, EmployeeFile,
-  Reviews) even though Stage 1 has no organizations. This was a deliberate call from
-  the proposal so Stage 3 (companies build their own Venvs) is additive — you add
-  rows to `organizations` and start setting the FK — instead of a migration that
-  touches every table.
-- **`EmployeeFile` is the shared context object.** Every user gets one automatically
-  at registration (see `routers/auth.py`). This is what should back the Manager's
-  task-difficulty calibration, the Mentor's findings, and HR's rollup reviews — write
-  to `skills_json` / `strengths_json` / `growth_areas_json` / `summary_text` rather
-  than inventing a parallel structure.
-- **`Task.created_by_agent`** defaults to `manager`. `POST /tasks` is still a
-  plain authenticated endpoint (useful for testing); the Manager agent itself
-  builds `Task` rows directly rather than calling its own HTTP endpoint — see
-  `app/agents/manager.py`'s docstring for why that's an equivalent, not a
-  shortcut.
-- **`TaskMessage.sender_type`** is derived automatically: pass `agent_type` in
-  the request body and it's recorded as an agent message; omit it and it's
-  recorded as the user. The Manager agent calls this same path to post
-  replies into a task's thread.
-- **CV parsing is intentionally shallow.** `POST /users/me/cv` just stores
-  `cv_raw_text` and returns `has_cv: true`. Turning that into structured
-  `EmployeeFile.skills_json` doesn't happen at intake — the Manager agent
-  reads the raw text directly as prompt context instead.
+- **`organization_id` is nullable on every core table** (Users, Tasks,
+  EmployeeFile, Reviews) even though nothing uses it yet. Deliberate from
+  the original proposal, so a future multi-tenant stage is additive —
+  add rows to `organizations` and start setting the FK — instead of a
+  schema migration that touches every table.
+- **`EmployeeFile` is the shared context object.** Every user gets one
+  automatically at registration. Write to `skills_json` /
+  `strengths_json` / `growth_areas_json` / `summary_text` rather than
+  inventing a parallel structure.
+- **`AgentCatalog`/`UserAgent`** (Stage 2) is the pattern for any new
+  optional agent capability: a catalog row + a per-user selection table,
+  not a new always-on code path. This is why Security Reviewer/Data
+  Reviewer/Career Coach/DevOps were cheap to add — follow this pattern
+  for anything similar later.
+- **`Task.created_by_agent`** defaults to `manager`. `POST /tasks` is
+  still a plain authenticated endpoint (useful for testing); the Manager
+  agent itself builds `Task` rows directly.
+- **`TaskMessage.sender_type`** is derived automatically: pass
+  `agent_type` in the request body and it's recorded as an agent
+  message; omit it and it's recorded as the user.
+- **`Task.submission_text` / `TaskAttachment`** (Stage 2) — a submission
+  is a GitHub link, free text, and/or up to 5 files/images, any
+  combination, via `POST /tasks/{id}/submit`. Images reach the Mentor
+  (and only the Mentor, not the roundtable specialists yet) as real
+  vision content blocks.
+- **CV parsing is real now** (Stage 2) — `POST /onboarding/cv` extracts
+  text from PDF/.docx via `app/agents/graph/cv_parsing.py`, not just
+  paste. The older `POST /users/me/cv` (plain text, no parsing) still
+  exists unchanged for anything still calling it.
 
 ## Still open
 
-See **`docs/STAGE1_PRODUCT_FLOW.md`** at the repo root — that's the current
-priority, and it'll add new tables (a Project/Week-shaped entity, task
-deadlines, end-of-week evaluation records) on top of what's here. Smaller
-standalone items:
+See `docs/PROJECT_STATUS.md`'s "Not built yet" and "Handoff" sections —
+kept there so there's one current list instead of this file and the root
+doc drifting apart. Quick pointers specific to this folder:
 
-- Example task bank content — not modeled as a separate table yet; the
-  Manager currently improvises tasks live from CV/skills context alone.
-- Mentor's rubric (`SUBMIT_REVIEW_TOOL` in `app/agents/tools.py`) is a first
-  pass, not team-agreed.
-- CV file upload (PDF/docx) — currently paste-only, no parsing anywhere.
-- Migrations: tables are still created via `Base.metadata.create_all` on
-  startup. Worth switching to Alembic once the Stage 1 flow's new tables
-  land, not before — no point migrating the schema twice.
+- Alembic migrations — still `create_all` on startup. The onboarding
+  dead-end bug (pre-Stage-2 rows never got the new `onboarding_stage`
+  column backfilled) is a live example of why this is worth doing before
+  the schema changes shape again.
+- Task bank content, Mentor's rubric — both still first-pass/improvised,
+  unchanged in nature since Stage 1.
+- Onboarding's LangGraph checkpointer is in-memory — fine for one dev
+  box, not for a real deployment.
 
 ## Auth flow for the frontend team
 
