@@ -3,6 +3,12 @@
 // later without a mapping layer.
 export type AgentId = "manager" | "mentor" | "hr";
 
+// name/role/description used to live here as static English strings —
+// they're translated now, in lib/i18n/en.ts and ar.ts under `agents.*`.
+// This file keeps only what's locale-independent: the id set, its
+// display order, and which CSS variable each agent's identity color
+// reads from. Use lib/i18n/locale.tsx's useAgents() hook to get the
+// full, translated AgentMeta for the current language.
 export interface AgentMeta {
   id: AgentId;
   name: string;
@@ -11,31 +17,10 @@ export interface AgentMeta {
   colorVar: string;
 }
 
-export const AGENTS: Record<AgentId, AgentMeta> = {
-  manager: {
-    id: "manager",
-    name: "Manager",
-    role: "Assigns your work",
-    description:
-      "Calibrates your first task against your CV, then keeps assigning work based on how the task thread goes.",
-    colorVar: "--agent-manager",
-  },
-  mentor: {
-    id: "mentor",
-    name: "Mentor",
-    role: "Reviews what you submit",
-    description:
-      "Reads the GitHub link on a submitted task, leaves feedback, and writes a structured review.",
-    colorVar: "--agent-mentor",
-  },
-  hr: {
-    id: "hr",
-    name: "HR",
-    role: "Tracks how you grow",
-    description:
-      "Reads your review history and the employee file to keep a running summary of your strengths and growth areas.",
-    colorVar: "--agent-hr",
-  },
+export const AGENT_COLOR_VAR: Record<AgentId, string> = {
+  manager: "--agent-manager",
+  mentor: "--agent-mentor",
+  hr: "--agent-hr",
 };
 
 export const AGENT_ORDER: AgentId[] = ["manager", "mentor", "hr"];

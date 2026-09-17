@@ -11,15 +11,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { AGENTS } from "@/lib/agents";
 import { useRequireAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import { fetchEmployeeFile, type EmployeeFile } from "@/lib/employee-file";
 import { api } from "@/lib/api";
 import { averageScore, fetchMyReviews, type Review } from "@/lib/reviews";
 import { timeAgo } from "@/lib/format";
-
-const hr = AGENTS.hr;
+import { useAgents, useLocale } from "@/lib/i18n/locale";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleToggle } from "@/components/locale-toggle";
 
 interface TooltipPayloadItem {
   value: number;
@@ -47,6 +47,8 @@ function ChartTooltip({
 
 export default function GrowthPage() {
   const { user, loading: authLoading } = useRequireAuth();
+  const { t } = useLocale();
+  const { hr } = useAgents();
 
   const [employeeFile, setEmployeeFile] = useState<EmployeeFile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -61,11 +63,11 @@ export default function GrowthPage() {
       setReviews(rv);
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't load your growth view.");
+      setError(err instanceof ApiError ? err.message : t("growth.loadError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     // Fetching on mount is the "subscribe to an external system" case
@@ -82,11 +84,7 @@ export default function GrowthPage() {
       await api.agents.hrRollup();
       await refresh();
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "HR couldn't update your file — you may need at least one reviewed task first."
-      );
+      setError(err instanceof ApiError ? err.message : t("growth.hrRollupError"));
     } finally {
       setRollingUp(false);
     }
@@ -101,7 +99,7 @@ export default function GrowthPage() {
   if (authLoading || !user) {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-text-muted">Loading...</p>
+        <p className="text-sm text-text-muted">{t("common.loading")}</p>
       </main>
     );
   }
@@ -114,25 +112,29 @@ export default function GrowthPage() {
             href="/board"
             className="font-mono text-xs text-text-muted hover:text-text-secondary"
           >
-            venv / board
+            {t("nav.venvBoard")}
           </Link>
-          <h1 className="mt-1 text-lg font-medium text-text-primary">Growth</h1>
+          <h1 className="mt-1 text-lg font-medium text-text-primary">{t("nav.growthTitle")}</h1>
         </div>
-        <button
-          type="button"
-          onClick={handleAskHr}
-          disabled={rollingUp}
-          className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {rollingUp ? "HR is updating your file..." : "Ask HR for a review"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleAskHr}
+            disabled={rollingUp}
+            className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {rollingUp ? t("growth.hrUpdating") : t("growth.askHrReview")}
+          </button>
+          <LocaleToggle />
+          <ThemeToggle />
+        </div>
       </header>
 
       <div className="mx-auto max-w-2xl px-6 py-8">
         {error && <p className="mb-6 text-sm text-danger">{error}</p>}
 
         {loading ? (
-          <p className="text-sm text-text-muted">Loading...</p>
+          <p className="text-sm text-text-muted">{t("common.loading")}</p>
         ) : (
           <>
             <div className="flex items-center gap-2">
@@ -141,14 +143,13 @@ export default function GrowthPage() {
                 style={{ backgroundColor: `var(${hr.colorVar})` }}
               />
               <span className="font-mono text-[11px] text-text-muted">
-                employee_file
+                {t("growth.employeeFileEyebrow")}
               </span>
             </div>
 
             {!employeeFile?.summary ? (
               <p className="mt-5 text-sm text-text-secondary">
-                No employee file yet — complete a task and ask HR for a review
-                to build one.
+                {t("growth.noEmployeeFile")}
               </p>
             ) : (
               <>
@@ -169,7 +170,7 @@ export default function GrowthPage() {
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   <div className="rounded border border-border bg-bg-surface p-4">
-                    <p className="font-mono text-[11px] text-text-muted">strengths</p>
+                    <p className="font-mono text-[11px] text-text-muted">{t("growth.strengths")}</p>
                     <ul className="mt-2 flex flex-col gap-2">
                       {employeeFile.strengths.map((item) => (
                         <li key={item} className="flex gap-2 text-sm text-text-secondary">
@@ -181,7 +182,7 @@ export default function GrowthPage() {
                   </div>
                   <div className="rounded border border-border bg-bg-surface p-4">
                     <p className="font-mono text-[11px] text-text-muted">
-                      growth areas
+                      {t("growth.growthAreas")}
                     </p>
                     <ul className="mt-2 flex flex-col gap-2">
                       {employeeFile.growthAreas.map((item) => (
@@ -199,7 +200,7 @@ export default function GrowthPage() {
             {mentorReviews.length > 0 && (
               <>
                 <p className="mt-10 font-mono text-[11px] text-text-muted">
-                  score trend
+                  {t("growth.scoreTrend")}
                 </p>
                 <div style={{ width: "100%", height: 260 }} className="mt-3">
                   <ResponsiveContainer width="100%" height="100%">
@@ -243,7 +244,7 @@ export default function GrowthPage() {
                   </ResponsiveContainer>
                 </div>
 
-                <p className="mt-10 font-mono text-[11px] text-text-muted">timeline</p>
+                <p className="mt-10 font-mono text-[11px] text-text-muted">{t("growth.timeline")}</p>
                 <div className="mt-3 flex flex-col gap-3">
                   {mentorReviews.map((review) => (
                     <Link
@@ -257,7 +258,7 @@ export default function GrowthPage() {
                         </p>
                         <p className="mt-0.5 font-mono text-[11px] text-text-muted">
                           {timeAgo(review.createdAt)} ·{" "}
-                          {review.verdict === "approved" ? "approved" : "needs changes"}
+                          {review.verdict === "approved" ? t("growth.approved") : t("growth.needsChanges")}
                         </p>
                       </div>
                       <span className="font-mono text-xs text-text-secondary">
@@ -275,7 +276,7 @@ export default function GrowthPage() {
           href="/board"
           className="mt-10 inline-block text-xs text-text-muted hover:text-text-secondary"
         >
-          Back to home board
+          {t("growth.backToBoard")}
         </Link>
       </div>
     </main>

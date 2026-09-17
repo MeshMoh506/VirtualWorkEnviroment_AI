@@ -19,9 +19,13 @@ import { TaskRail } from "@/components/workspace/task-rail";
 import { TaskWorkspace, type SubmitPayload } from "@/components/workspace/task-workspace";
 import { AgentsMeeting } from "@/components/workspace/agents-meeting";
 import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
+import { useLocale } from "@/lib/i18n/locale";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleToggle } from "@/components/locale-toggle";
 
 export default function WorkspacePage() {
   const { user, loading: authLoading } = useRequireAuth();
+  const { t } = useLocale();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [extraAgents, setExtraAgents] = useState<ExtraAgent[]>([]);
@@ -47,11 +51,11 @@ export default function WorkspacePage() {
         return open?.id ?? list[0]?.id ?? null;
       });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't load tasks.");
+      setError(err instanceof ApiError ? err.message : t("workspace.loadTasksError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -67,7 +71,7 @@ export default function WorkspacePage() {
       const detail = await fetchTaskDetail(id);
       setTasks((prev) => prev.map((t) => (t.id === id ? detail : t)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't load that task.");
+      setError(err instanceof ApiError ? err.message : t("workspace.loadTaskError"));
     }
   }
 
@@ -79,9 +83,7 @@ export default function WorkspacePage() {
       setTasks((prev) => [task, ...prev]);
       setSelectedId(task.id);
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "The manager couldn't assign a task."
-      );
+      setError(err instanceof ApiError ? err.message : t("workspace.assignError"));
     } finally {
       setAssigning(false);
     }
@@ -101,15 +103,13 @@ export default function WorkspacePage() {
           const reviewed = await requestMentorReview(task.id);
           setTasks((prev) => prev.map((t) => (t.id === reviewed.id ? reviewed : t)));
         } catch (err) {
-          setError(
-            err instanceof ApiError ? err.message : "The mentor couldn't review this yet."
-          );
+          setError(err instanceof ApiError ? err.message : t("workspace.reviewError"));
         } finally {
           setBusy(null);
         }
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't update the task.");
+      setError(err instanceof ApiError ? err.message : t("workspace.updateError"));
     }
   }
 
@@ -132,21 +132,19 @@ export default function WorkspacePage() {
           )
         );
       } catch (err) {
-        setError(
-          err instanceof ApiError ? err.message : "The manager couldn't reply yet."
-        );
+        setError(err instanceof ApiError ? err.message : t("workspace.replyError"));
       } finally {
         setBusy(null);
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't send that message.");
+      setError(err instanceof ApiError ? err.message : t("workspace.sendMessageError"));
     }
   }
 
   if (authLoading || !user) {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-text-muted">Loading...</p>
+        <p className="text-sm text-text-muted">{t("common.loading")}</p>
       </main>
     );
   }
@@ -161,20 +159,22 @@ export default function WorkspacePage() {
             href="/board"
             className="font-mono text-xs text-text-muted hover:text-text-secondary"
           >
-            venv / board
+            {t("nav.venvBoard")}
           </Link>
-          <h1 className="mt-1 text-lg font-medium text-text-primary">Workspace</h1>
+          <h1 className="mt-1 text-lg font-medium text-text-primary">{t("nav.workspaceTitle")}</h1>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden font-mono text-xs text-text-muted lg:inline">
+          <span dir="ltr" className="hidden font-mono text-xs text-text-muted lg:inline">
             {user.email}
           </span>
           <Link
             href="/logout"
             className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
-            Log out
+            {t("common.logOut")}
           </Link>
+          <LocaleToggle />
+          <ThemeToggle />
         </div>
       </header>
 
@@ -186,7 +186,7 @@ export default function WorkspacePage() {
 
       {loading ? (
         <div className="flex items-center justify-center">
-          <p className="text-sm text-text-muted">Loading workspace...</p>
+          <p className="text-sm text-text-muted">{t("workspace.loadingWorkspace")}</p>
         </div>
       ) : (
         // Three regions: task rail | task detail | agents meeting. The two
@@ -194,7 +194,7 @@ export default function WorkspacePage() {
         // screens the meeting panel drops (it's reachable by scrolling the
         // center on tablet) and the rail narrows.
         <div className="grid min-h-0 grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_360px]">
-          <div className="min-h-0 border-r border-border">
+          <div className="min-h-0 border-e border-border">
             <TaskRail
               tasks={tasks}
               selectedId={selectedId}
@@ -206,7 +206,7 @@ export default function WorkspacePage() {
 
           {selected ? (
             <>
-              <div className="min-h-0 border-r border-border">
+              <div className="min-h-0 border-e border-border">
                 <TaskWorkspace
                   task={selected}
                   busy={taskBusy}
@@ -225,7 +225,7 @@ export default function WorkspacePage() {
           ) : (
             <div className="flex flex-col items-center justify-center gap-3 md:col-span-1 xl:col-span-2">
               <p className="text-sm text-text-secondary">
-                No task selected.
+                {t("workspace.noTaskSelected")}
               </p>
               <button
                 type="button"
@@ -233,7 +233,7 @@ export default function WorkspacePage() {
                 disabled={assigning}
                 className="rounded border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:opacity-50"
               >
-                {assigning ? "Manager is thinking..." : "Ask your manager for a task"}
+                {assigning ? t("workspace.managerThinking") : t("workspace.askManagerTask")}
               </button>
             </div>
           )}

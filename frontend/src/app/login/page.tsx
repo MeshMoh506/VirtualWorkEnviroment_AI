@@ -4,10 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ApiError, useAuth } from "@/lib/auth-context";
+import { useLocale } from "@/lib/i18n/locale";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleToggle } from "@/components/locale-toggle";
 
 export default function LoginPage() {
   const { login, register } = useAuth();
   const router = useRouter();
+  const { t } = useLocale();
 
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
@@ -29,7 +33,7 @@ export default function LoginPage() {
         router.push("/onboarding/cv");
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong.");
+      setError(err instanceof ApiError ? err.message : t("common.genericError"));
     } finally {
       setBusy(false);
     }
@@ -38,15 +42,21 @@ export default function LoginPage() {
   return (
     <main className="bg-blueprint-grid flex flex-1 flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <Link
-            href="/"
-            className="font-mono text-xs text-text-muted hover:text-text-secondary"
-          >
-            venv
-          </Link>
-          <h1 className="mt-1 text-2xl font-medium text-text-primary">
-            {mode === "login" ? "Sign in" : "Create your account"}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <Link
+              href="/"
+              className="font-mono text-xs text-text-muted hover:text-text-secondary"
+            >
+              {t("common.venv")}
+            </Link>
+            <div className="flex items-center gap-2">
+              <LocaleToggle />
+              <ThemeToggle />
+            </div>
+          </div>
+          <h1 className="mt-3 text-center text-2xl font-medium text-text-primary">
+            {mode === "login" ? t("login.signIn") : t("login.createAccount")}
           </h1>
         </div>
 
@@ -57,33 +67,34 @@ export default function LoginPage() {
           {mode === "register" && (
             <div className="flex flex-col gap-1.5">
               <label className="font-mono text-[11px] text-text-muted">
-                full name
+                {t("login.fullNameLabel")}
               </label>
               <input
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Jordan Lee"
+                placeholder={t("login.fullNamePlaceholder")}
                 className="rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
               />
             </div>
           )}
           <div className="flex flex-col gap-1.5">
             <label className="font-mono text-[11px] text-text-muted">
-              email
+              {t("login.emailLabel")}
             </label>
             <input
               required
               type="email"
+              dir="ltr"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("login.emailPlaceholder")}
               className="rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
             />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="font-mono text-[11px] text-text-muted">
-              password
+              {t("login.passwordLabel")}
             </label>
             <input
               required
@@ -103,10 +114,10 @@ export default function LoginPage() {
             className="mt-2 rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy
-              ? "Working..."
+              ? t("common.working")
               : mode === "login"
-                ? "Sign in"
-                : "Create account"}
+                ? t("login.submitSignIn")
+                : t("login.submitCreateAccount")}
           </button>
         </form>
 
@@ -118,9 +129,7 @@ export default function LoginPage() {
           }}
           className="mt-4 w-full text-center text-xs text-text-muted transition-colors hover:text-text-secondary"
         >
-          {mode === "login"
-            ? "New here? Create an account"
-            : "Already have an account? Sign in"}
+          {mode === "login" ? t("login.switchToRegister") : t("login.switchToLogin")}
         </button>
       </div>
     </main>

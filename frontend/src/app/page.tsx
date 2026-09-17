@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { AGENT_ORDER, AGENTS } from "@/lib/agents";
+import { AGENT_ORDER } from "@/lib/agents";
+import { useAgents, useLocale } from "@/lib/i18n/locale";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleToggle } from "@/components/locale-toggle";
 
 const fadeUp = {
   initial: { opacity: 0, y: 16 },
@@ -11,16 +14,22 @@ const fadeUp = {
   transition: { duration: 0.5, ease: "easeOut" as const },
 };
 
-const CYCLE_STEPS = [
-  { label: "assign", text: "The manager hands you one scoped task at a time." },
-  { label: "build", text: "You do the work and submit a GitHub link." },
-  { label: "review", text: "The mentor reviews it — approve, or revise and resubmit." },
-  { label: "grow", text: "At week's end, HR evaluates your progress and consistency." },
-];
+interface CycleStep {
+  label: string;
+  text: string;
+}
 
 export default function Home() {
+  const { t, tRaw } = useLocale();
+  const agents = useAgents();
+  const cycleSteps = tRaw<CycleStep[]>("landing.cycleSteps");
+
   return (
     <main className="h-dvh snap-y snap-mandatory overflow-y-auto overflow-x-hidden">
+      <div className="fixed end-6 top-6 z-10 flex items-center gap-2">
+        <LocaleToggle className="bg-bg-base" />
+        <ThemeToggle className="bg-bg-base" />
+      </div>
       {/* ---- hero ---- */}
       <section className="bg-blueprint-grid flex min-h-dvh snap-start flex-col items-center justify-center px-6">
         <motion.div
@@ -30,34 +39,32 @@ export default function Home() {
           className="flex max-w-2xl flex-col items-center text-center"
         >
           <span className="rounded border border-border bg-bg-surface px-3 py-1 font-mono text-xs text-text-secondary">
-            stage 1 · ai-powered web apps
+            {t("landing.badge")}
           </span>
           <h1 className="mt-6 text-5xl font-medium tracking-tight text-text-primary sm:text-6xl">
-            Your first job,
+            {t("landing.heroLine1")}
             <br />
-            <span className="text-accent">before your first job.</span>
+            <span className="text-accent-ink">{t("landing.heroLine2")}</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-text-secondary">
-            Venv is a simulated workplace for recent graduates. A manager
-            assigns real tasks, a mentor reviews your code, and HR tracks how
-            you grow — three AI agents sharing one file on you.
+            {t("landing.heroSubtitle")}
           </p>
           <div className="mt-8 flex items-center gap-4">
             <Link
               href="/login"
               className="rounded border border-accent bg-accent px-6 py-3 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
             >
-              Get started
+              {t("landing.getStarted")}
             </Link>
             <Link
               href="/board"
               className="text-sm text-text-secondary transition-colors hover:text-text-primary"
             >
-              See the board →
+              {t("landing.seeTheBoard")}
             </Link>
           </div>
           <p className="mt-16 animate-pulse font-mono text-[11px] text-text-muted">
-            scroll to explore ↓
+            {t("landing.scrollToExplore")}
           </p>
         </motion.div>
       </section>
@@ -66,20 +73,18 @@ export default function Home() {
       <section className="flex min-h-dvh snap-start flex-col justify-center px-6 py-16">
         <div className="mx-auto w-full max-w-5xl">
           <motion.div {...fadeUp}>
-            <p className="font-mono text-[11px] text-text-muted">how_it_works</p>
+            <p className="font-mono text-[11px] text-text-muted">{t("landing.howItWorksEyebrow")}</p>
             <h2 className="mt-2 text-3xl font-medium text-text-primary">
-              Three agents. One shared file.
+              {t("landing.howItWorksTitle")}
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-secondary">
-              They don&apos;t keep separate notes. Everything the mentor sees,
-              HR sees. Everything HR notes, the manager&apos;s next task
-              accounts for. No agent works from a stale picture of you.
+              {t("landing.howItWorksBody")}
             </p>
           </motion.div>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-3">
             {AGENT_ORDER.map((id, i) => {
-              const m = AGENTS[id];
+              const m = agents[id];
               return (
                 <motion.div
                   key={id}
@@ -117,26 +122,24 @@ export default function Home() {
       <section className="bg-blueprint-grid flex min-h-dvh snap-start flex-col justify-center px-6 py-16">
         <div className="mx-auto w-full max-w-4xl">
           <motion.div {...fadeUp}>
-            <p className="font-mono text-[11px] text-text-muted">the_loop</p>
+            <p className="font-mono text-[11px] text-text-muted">{t("landing.loopEyebrow")}</p>
             <h2 className="mt-2 text-3xl font-medium text-text-primary">
-              A week at a time.
+              {t("landing.loopTitle")}
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-secondary">
-              Each week is one big task, broken into five. You get them one by
-              one — finish, get reviewed, move on. It&apos;s the rhythm of a
-              real team, without the real-world stakes.
+              {t("landing.loopBody")}
             </p>
           </motion.div>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {CYCLE_STEPS.map((step, i) => (
+            {cycleSteps.map((step, i) => (
               <motion.div
                 key={step.label}
                 {...fadeUp}
                 transition={{ ...fadeUp.transition, delay: 0.08 * i }}
                 className="rounded border border-border bg-bg-surface p-5"
               >
-                <span className="font-mono text-2xl text-accent">
+                <span className="font-mono text-2xl text-accent-ink">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <p className="mt-2 font-mono text-[11px] uppercase tracking-wide text-text-muted">
@@ -155,19 +158,18 @@ export default function Home() {
       <section className="flex min-h-dvh snap-start flex-col items-center justify-center px-6 text-center">
         <motion.div {...fadeUp} className="flex max-w-xl flex-col items-center">
           <h2 className="text-4xl font-medium tracking-tight text-text-primary">
-            Ready to clock in?
+            {t("landing.closingTitle")}
           </h2>
           <p className="mt-4 text-base leading-relaxed text-text-secondary">
-            Upload your CV, meet your team, and get your first task. Everything
-            you build is yours to keep.
+            {t("landing.closingBody")}
           </p>
           <Link
             href="/login"
             className="mt-8 rounded border border-accent bg-accent px-6 py-3 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
           >
-            Get started
+            {t("landing.getStarted")}
           </Link>
-          <p className="mt-16 font-mono text-xs text-text-muted">venv</p>
+          <p className="mt-16 font-mono text-xs text-text-muted">{t("common.venv")}</p>
         </motion.div>
       </section>
     </main>

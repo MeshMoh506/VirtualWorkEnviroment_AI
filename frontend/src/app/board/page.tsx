@@ -14,6 +14,9 @@ import { WeekStrip } from "@/components/dashboard/week-strip";
 import { StatRow } from "@/components/dashboard/stat-row";
 import { AgentCards } from "@/components/dashboard/agent-cards";
 import { FlowSection } from "@/components/dashboard/flow-section";
+import { useLocale } from "@/lib/i18n/locale";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleToggle } from "@/components/locale-toggle";
 
 // The one task the graduate should act on now: the most recent
 // non-reviewed task (todo/in_progress/submitted). Mirrors the backend's
@@ -28,6 +31,7 @@ function focusTask(tasks: Task[]): Task | null {
 
 export default function BoardPage() {
   const { user, loading } = useRequireAuth();
+  const { t } = useLocale();
   const [selection, setSelection] = useState<BoardSelection>(null);
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -58,12 +62,12 @@ export default function BoardPage() {
 
   const week = project ? currentWeek(project) : null;
   const focus = focusTask(tasks);
-  const firstName = user?.fullName?.split(" ")[0] ?? "there";
+  const firstName = user?.fullName?.split(" ")[0] || t("orientation.fallbackName");
 
   if (loading || !user) {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-text-muted">Loading...</p>
+        <p className="text-sm text-text-muted">{t("common.loading")}</p>
       </main>
     );
   }
@@ -76,10 +80,10 @@ export default function BoardPage() {
             href="/"
             className="font-mono text-xs text-text-muted hover:text-text-secondary"
           >
-            venv
+            {t("common.venv")}
           </Link>
           <h1 className="mt-1 text-lg font-medium text-text-primary">
-            Home board
+            {t("nav.homeBoardTitle")}
           </h1>
         </div>
         <div className="flex items-center gap-3">
@@ -87,23 +91,31 @@ export default function BoardPage() {
             href="/workspace"
             className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
           >
-            Open workspace
+            {t("nav.workspace")}
           </Link>
           <Link
             href="/meeting"
             className="rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
-            Meeting room
+            {t("nav.meetingRoom")}
           </Link>
-          <span className="hidden font-mono text-xs text-text-muted lg:inline">
+          <Link
+            href="/orientation"
+            className="rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+          >
+            {t("nav.howItWorks")}
+          </Link>
+          <span dir="ltr" className="hidden font-mono text-xs text-text-muted lg:inline">
             {user.email}
           </span>
           <Link
             href="/logout"
             className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
-            Log out
+            {t("common.logOut")}
           </Link>
+          <LocaleToggle />
+          <ThemeToggle />
         </div>
       </header>
 
@@ -112,10 +124,10 @@ export default function BoardPage() {
           they stack (graph gets a fixed height so it never collapses to
           nothing), and the whole thing scrolls as one column. */}
       <div className="grid min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="overlay-scrollbar min-h-0 overflow-y-auto border-b border-dashed border-border lg:border-b-0 lg:border-r">
+        <div className="overlay-scrollbar min-h-0 overflow-y-auto border-b border-dashed border-border lg:border-b-0 lg:border-e">
           <div className="flex flex-col gap-6 px-6 py-8">
             <div>
-              <p className="text-sm text-text-secondary">Welcome back,</p>
+              <p className="text-sm text-text-secondary">{t("board.welcomeBack")}</p>
               <h2 className="text-2xl font-medium text-text-primary">
                 {firstName}
               </h2>
@@ -124,7 +136,7 @@ export default function BoardPage() {
             {dataLoading ? (
               <div className="rounded border border-border bg-bg-surface p-8 text-center">
                 <p className="text-sm text-text-muted">
-                  Loading your workspace...
+                  {t("board.loadingWorkspace")}
                 </p>
               </div>
             ) : (
@@ -139,7 +151,7 @@ export default function BoardPage() {
                 {dashboard && (
                   <div>
                     <p className="mb-3 font-mono text-[11px] text-text-muted">
-                      your_team
+                      {t("board.yourTeam")}
                     </p>
                     <AgentCards dashboard={dashboard} reviews={reviews} extraAgents={extraAgents} />
                   </div>

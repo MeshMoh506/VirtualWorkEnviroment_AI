@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import type { Week } from "@/lib/projects";
 import { timeUntil } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/locale";
 
 interface WeekStripProps {
   week: Week | null;
@@ -11,6 +12,7 @@ interface WeekStripProps {
 }
 
 export function WeekStrip({ week, projectTitle }: WeekStripProps) {
+  const { t } = useLocale();
   if (!week) return null;
 
   return (
@@ -23,7 +25,10 @@ export function WeekStrip({ week, projectTitle }: WeekStripProps) {
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="font-mono text-[11px] text-text-muted">
-            week_{week.weekNumber} · {projectTitle ?? "project"}
+            {t("weekStrip.weekProject", {
+              n: week.weekNumber,
+              project: projectTitle ?? t("weekStrip.projectFallback"),
+            })}
           </p>
           <h3 className="mt-1 text-lg font-medium text-text-primary">
             {week.bigTaskTitle}
@@ -31,8 +36,8 @@ export function WeekStrip({ week, projectTitle }: WeekStripProps) {
         </div>
         <span className="shrink-0 font-mono text-[11px] text-text-muted">
           {week.status === "completed"
-            ? "complete"
-            : `ends ${timeUntil(week.targetEndAt)}`}
+            ? t("weekStrip.complete")
+            : t("weekStrip.ends", { time: timeUntil(week.targetEndAt) })}
         </span>
       </div>
 
@@ -41,7 +46,7 @@ export function WeekStrip({ week, projectTitle }: WeekStripProps) {
           runs behind them, blueprint-style. */}
       <ol className="relative mt-6 flex justify-between">
         <span
-          className="absolute left-0 right-0 top-[7px] h-px bg-border"
+          className="absolute inset-x-0 top-[7px] h-px bg-border"
           aria-hidden
         />
         {week.subtasksPlan.map((s, i) => {
@@ -68,7 +73,7 @@ export function WeekStrip({ week, projectTitle }: WeekStripProps) {
                 {s.title}
               </p>
               <p className="mt-1 font-mono text-[10px] text-text-muted">
-                {done ? "done" : `due ${timeUntil(s.deadline)}`}
+                {done ? t("weekStrip.done") : t("weekStrip.due", { time: timeUntil(s.deadline) })}
               </p>
             </li>
           );
@@ -77,13 +82,13 @@ export function WeekStrip({ week, projectTitle }: WeekStripProps) {
 
       <div className="mt-6 flex items-center justify-between">
         <span className="font-mono text-[11px] text-text-muted">
-          {week.subtasksReleased}/{week.subtasksPlan.length} handed out
+          {t("weekStrip.handedOut", { done: week.subtasksReleased, total: week.subtasksPlan.length })}
         </span>
         <Link
           href="/workspace"
           className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
         >
-          Open task board
+          {t("weekStrip.openTaskBoard")}
         </Link>
       </div>
     </motion.section>
