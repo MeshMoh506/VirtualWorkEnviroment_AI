@@ -7,23 +7,26 @@ specialist agents (Security Reviewer, Data Reviewer, Career Coach, DevOps)
 that actually **discuss submissions with each other** before the Manager
 synthesizes what matters most.
 
-**Current status — Stage 2 is complete and merged to `main`.** Stage 1's
+**Current status — Stage 2 is complete and merged to `main`,** with
+Arabic (RTL) support and a light theme on top of it. Stage 1's
 weekly-cycle flow (a Manager-planned project → one big task per week → 5
 subtasks handed out one at a time → Mentor review of each → end-of-week
 Manager progress + HR behavioral evaluation) plus Stage 2's additions: CV
 file intake with agent-generated follow-up questions, track selection
-across six IT majors, an own-project path, a first-time orientation
-screen, a Meeting Room open to any agent on your team, multi-modal task
-submissions (link/text/images/files, with real vision review), and the
-**agent roundtable** — optional agents building on each other's comments
-in sequence, not just posting in parallel. See `docs/PROJECT_STATUS.md`
-for the exact feature-by-feature state (start there — it links every
-Stage 2 doc in build order) and `docs/STAGE1_PRODUCT_FLOW.md` for the
-weekly-cycle spec that started it all.
+across six IT majors, an own-project path, a guided first-time
+orientation walkthrough, a Meeting Room open to any agent on your team,
+multi-modal task submissions (link/text/images/files, with real vision
+review), the **agent roundtable** — optional agents building on each
+other's comments in sequence, not just posting in parallel — and
+multi-provider LLM support (Anthropic/OpenAI/DeepSeek/Qwen) with
+intelligent, tier-aware provider routing and automatic failover. See
+`docs/PROJECT_STATUS.md` for the exact feature-by-feature state (start
+there — it links every Stage 2 doc in build order) and
+`docs/STAGE1_PRODUCT_FLOW.md` for the weekly-cycle spec that started it
+all.
 
-**Next up (see `docs/PROJECT_STATUS.md`'s handoff section):** reworking
-the onboarding/orientation greeting for new users, Arabic language
-support, and a light-mode theme — then Stage 3.
+**Next up:** see `docs/PROJECT_STATUS.md`'s handoff section — no
+specific work is queued as of this writing.
 
 ## Repo structure
 
@@ -150,9 +153,9 @@ straight to `/board`, same as before Stage 2). From registration:
 
 **The frontend talks to the real backend above** — everything is live, not
 mock data. See `frontend/README.md` and `frontend/DESIGN.md` for the
-structure and design system before adding new UI (the design-system doc is
-dark-theme-only right now — see `docs/PROJECT_STATUS.md`'s handoff section
-for the light-mode work queued up next).
+structure and design system before adding new UI (dark by default, with a
+light theme and Arabic/RTL support both built in — see `frontend/README.md`'s
+"Design system" section).
 
 ## Git workflow
 

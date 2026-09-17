@@ -3,15 +3,18 @@
 > **Stage 2 — complete, merged to `main`.** Stage 1 (Manager/Mentor/HR,
 > the weekly cycle, one track) plus everything Stage 2 added: CV-file
 > intake with agent-generated Q&A, track selection across six IT majors,
-> a selectable optional-agent roster, an own-project path, a first-time
-> orientation screen, the Meeting Room open to any agent on your team,
-> multi-modal task submissions (link/text/images/files, with real vision
-> review), and the **agent roundtable** — optional agents actually
-> discussing a submission with each other, then the Manager synthesizing
-> the discussion. 300 backend checks across 14 smoke suites, all passing;
+> a selectable optional-agent roster, an own-project path, a guided
+> first-time orientation walkthrough, the Meeting Room open to any agent
+> on your team, multi-modal task submissions (link/text/images/files,
+> with real vision review), and the **agent roundtable** — optional
+> agents actually discussing a submission with each other, then the
+> Manager synthesizing the discussion. On top of that: Arabic (RTL)
+> support and a real light theme, and multi-provider LLM support
+> (Anthropic/OpenAI/DeepSeek/Qwen) with tier-aware routing and automatic
+> failover. 316 backend checks across 15 smoke suites, all passing;
 > frontend eslint clean; full `next build` succeeds. See "Stage 2, in
-> full" below for the doc-by-doc breakdown, and "Handoff — starting the
-> next chat" for exactly what's queued up next.
+> full" below for the doc-by-doc breakdown, and "Frontend polish" /
+> "Handoff" further down for what's recently done vs. still open.
 
 _Last updated: Sep 2026._
 
@@ -48,11 +51,11 @@ onboarding flow and the weekly-cycle cascade — see
 - Local file storage for attachments (`app/storage.py`, one module so a
   future cloud-storage swap is contained) — dev-scope, one box, not yet
   cloud.
-- 14 smoke suites, 300 checks, all passing together (mocked LLM, no API
+- 15 smoke suites, 316 checks, all passing together (mocked LLM, no API
   key needed to run them) — see the updated list further down.
 
-**Frontend** (Next.js + React Flow, dark "blueprint" design system —
-`frontend/DESIGN.md`):
+**Frontend** (Next.js + React Flow, dark-by-default "blueprint" design
+system with a light theme and Arabic/RTL support — `frontend/DESIGN.md`):
 
 - `/onboarding/cv` — a 5-step wizard: CV file upload → adaptive,
   agent-generated Q&A (skippable) → track suggestion with an override →
@@ -159,31 +162,52 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
   first-pass rubric, unchanged since Stage 1.
 - `needs_changes` board visibility — still silent, no dedicated state.
 
+## Frontend polish — completed since the last handoff, no dedicated docs yet
+
+The three items from the previous "starting the next chat" handoff were
+built (by a separate frontend-focused pass, not documented per-slice the
+way `STAGE2_*.md` does) and merged to `main` before the LLM-provider/
+hydration work above. Noting the actual scope here so a future session
+doesn't have to rediscover it from the diffs:
+
+- **Orientation reworked** into a guided multi-step walkthrough
+  (`feature/orientation-rework`, PR #33) — `frontend/src/app/
+  orientation/page.tsx` grew substantially (255 insertions). Supersedes
+  the simpler version `STAGE2_TEAM_AND_ORIENTATION.md` describes — that
+  doc is now stale for orientation's actual UI/flow, though the backend
+  side it documents (bootstrapping via `assign-task`, the team-graph
+  fix) is unaffected and still accurate.
+- **Arabic i18n + RTL** (`feature/arabic-support`, PR unnumbered in this
+  log, 33 files) — `frontend/src/lib/i18n/` (`en.ts`/`ar.ts` dictionaries,
+  `locale.tsx` — the `LocaleProvider`/`useLocale`/`t()` this session's
+  hydration fix patched), a `locale-toggle.tsx` component, and every
+  major screen/component updated to use `t()` instead of hardcoded
+  English strings. `lib/agent-display.ts` (a small helper from
+  `STAGE2_TEAM_AND_ORIENTATION.md`) was removed — its logic looks to
+  have been folded into `lib/agents.ts` directly.
+- **Light mode** (`feature/light-mode`, PR #34, 16 files) — real light
+  theme tokens in `globals.css`, a `theme-toggle.tsx` component, and
+  `lib/theme.tsx` (the `ThemeProvider` this session's hydration fix also
+  patched). Confirmed still dark-mode-default; light is opt-in via the
+  toggle.
+
+**Worth doing at some point, not urgent:** write a proper `STAGE2_*.md`-
+style doc for these three (or fold an updated summary into
+`STAGE2_TEAM_AND_ORIENTATION.md`) — right now the only writeup of *why*
+particular decisions were made lives in those PRs' own commit messages,
+not in `docs/`, breaking this project's usual documentation discipline.
+
 ## Handoff — starting the next chat
 
-Three things, in Meshari's words, that close out Stage 2 before Stage 3:
+No specific ask queued up right now — Stage 2's original scope, the
+frontend polish above, the multi-provider LLM work, and this session's
+bug fixes are all merged and passing. Reasonable next directions, not
+yet prioritized:
 
-1. **Rework the onboarding/orientation greeting for new users** — how to
-   use the app, what team they're working with, what project they're on.
-   `/orientation` already exists and covers this ground
-   (`STAGE2_TEAM_AND_ORIENTATION.md`) — this is about improving/
-   reworking it, not building it from nothing. Worth reading that doc
-   first, and clarifying with Meshari exactly what's missing from the
-   current version before assuming a rebuild.
-2. **Arabic support** — the app is English-only right now, no i18n
-   infrastructure exists anywhere in `frontend/`. This is a real
-   architecture decision (routing strategy, RTL layout implications for
-   the whole design system, whether agent responses themselves should be
-   bilingual) — worth a planning pass before writing code, same as how
-   Stage 2 itself started.
-3. **Light mode** — `DESIGN.md`'s whole system (colors, the blueprint
-   grid, agent colors) is written for the dark theme only. Needs a real
-   token strategy (CSS variables already used throughout, which helps),
-   not a one-off toggle bolted on.
-
-Given the scope of #2 and #3 especially, this is a good candidate for
-the same kind of planning conversation Stage 2 opened with, before
-diving into code.
+- The doc-writing gap just above (cheap, worth doing before it's
+  forgotten).
+- Anything in "Not built yet" below.
+- Stage 3, whatever that turns out to be — no scope defined yet.
 
 ## Repo map
 
