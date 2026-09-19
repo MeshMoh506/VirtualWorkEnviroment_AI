@@ -35,6 +35,9 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<Step>("loading");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The step we picked back up on (if this visit resumed a half-finished
+  // onboarding) — drives the "welcome back" note, shown only on that step.
+  const [resumedAt, setResumedAt] = useState<Step | null>(null);
 
   // cv
   const [file, setFile] = useState<File | null>(null);
@@ -58,17 +61,56 @@ export default function OnboardingPage() {
   const [ownTitle, setOwnTitle] = useState("");
   const [ownDescription, setOwnDescription] = useState("");
 
-  // On load, check whether onboarding's already done so we don't make a
-  // graduate redo it. Mid-flow resume (picking back up exactly on the qa/
-  // track/agents step from a previous session) isn't supported yet — see
-  // docs/STAGE2_ONBOARDING_FLOW.md — so anything short of "complete" just
-  // starts the wizard fresh from the CV step.
+  // On load, ask the server where this graduate got to. Complete -> the
+  // "already done" screen; a half-finished wizard -> re-draw exactly that
+  // step from what the server saved (works after a closed tab, a server
+  // restart or a deploy — docs/ONBOARDING_RESUME.md); anything else -> start
+  // at the CV step.
   useEffect(() => {
     if (!user) return;
-    api.onboarding
-      .state()
-      .then((s) => setStep(s.onboarding_stage === "complete" ? "already-done" : "cv"))
-      .catch(() => setStep("cv"));
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await api.onboarding.resume();
+        if (cancelled) return;
+        if (r.onboarding_stage === "complete") {
+          setStep("already-done");
+          return;
+        }
+        if (!r.resumable) {
+          setStep("cv");
+          return;
+        }
+        // The roster step needs the full catalog; fetch it up front so every
+        // resumable step can carry on to it.
+        const agentCatalog = await api.onboarding.catalog();
+        if (cancelled) return;
+        setCatalog(agentCatalog);
+        if (r.onboarding_stage === "qa") {
+          setQuestions(r.questions);
+          setIntroText(r.intro_text ?? "");
+          setStep("qa");
+          setResumedAt("qa");
+        } else if (r.onboarding_stage === "track" && r.suggested_track) {
+          setSuggestedTrack(r.suggested_track);
+          setSelectedTrack(r.suggested_track);
+          setReasoning(r.reasoning ?? "");
+          setStep("track");
+          setResumedAt("track");
+        } else if (r.onboarding_stage === "agents") {
+          setSelectedAgentIds(new Set(r.suggested_agents.map((a) => a.id)));
+          setStep("agents");
+          setResumedAt("agents");
+        } else {
+          setStep("cv");
+        }
+      } catch {
+        if (!cancelled) setStep("cv");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   async function handleUpload() {
@@ -227,6 +269,9 @@ export default function OnboardingPage() {
             <p className="mt-3 text-center text-xs text-text-muted">
               {t("onboarding.stepOf", { n: STEP_NUMBER[step], total: TOTAL_STEPS })}
             </p>
+          )}
+          {resumedAt !== null && resumedAt === step && (
+            <p className="mt-1 text-center text-xs text-text-secondary">{t("onboarding.resumedNote")}</p>
           )}
         </div>
 

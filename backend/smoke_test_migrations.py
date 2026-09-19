@@ -74,6 +74,18 @@ def app_tables(engine):
 
 MODEL_TABLES = set(Base.metadata.tables)
 
+
+def make_legacy(engine):
+    """A database exactly as the OLD code left it: the baseline schema (what
+    create_all built before Alembic existed) and no alembic_version table.
+    Built from the frozen baseline migration — not from today's models —
+    so it stays a faithful "old" database no matter how the models evolve."""
+    with engine.connect() as conn:
+        command.upgrade(alembic_config(conn), BASELINE_REVISION)
+        conn.commit()
+    with engine.begin() as conn:
+        conn.exec_driver_sql("DROP TABLE alembic_version")
+
 # ---- 1. fresh database -------------------------------------------------------
 fresh = new_engine("fresh")
 check("fresh database: upgrade reports 'fresh'", upgrade_database(fresh) == "fresh")
@@ -95,12 +107,14 @@ check(
 
 # ---- 4. legacy (create_all) database is adopted, data intact ------------------
 legacy = new_engine("legacy")
-Base.metadata.create_all(legacy)
+make_legacy(legacy)
 with legacy.begin() as conn:
     conn.execute(text("INSERT INTO organizations (id, name, created_at) VALUES ('org-1', 'Acme', '2026-09-01 00:00:00')"))
 check("legacy database has no alembic_version yet", "alembic_version" not in inspect(legacy).get_table_names())
 check("legacy database is adopted", upgrade_database(legacy) == "adopted-legacy")
 check("adopted database lands on the latest revision", current_revision(legacy) == head_revision(legacy))
+check("adoption ran the post-baseline migrations too (users.suggested_track_reasoning)",
+      "suggested_track_reasoning" in {c["name"] for c in inspect(legacy).get_columns("users")})
 with legacy.connect() as conn:
     kept = conn.execute(text("SELECT name FROM organizations WHERE id = 'org-1'")).scalar()
 check("adoption kept existing rows", kept == "Acme")
@@ -108,7 +122,7 @@ check("adopting again is a no-op", upgrade_database(legacy) == "upgraded")
 
 # ---- 5. out-of-date legacy database is refused with a clear message -----------
 stale = new_engine("stale")
-Base.metadata.create_all(stale)
+make_legacy(stale)
 with stale.begin() as conn:
     conn.exec_driver_sql("ALTER TABLE users DROP COLUMN onboarding_stage")
 try:
@@ -121,7 +135,7 @@ check("the error names the missing column", "users.onboarding_stage" in message)
 check("the error tells the developer how to fix it", "delete the file" in message)
 
 missing_table = new_engine("missing_table")
-Base.metadata.create_all(missing_table)
+make_legacy(missing_table)
 with missing_table.begin() as conn:
     conn.exec_driver_sql("DROP TABLE user_agents")
 try:
@@ -180,7 +194,7 @@ else:
 
     pg_reset()
     pg_legacy = create_engine(PG_URL)
-    Base.metadata.create_all(pg_legacy)
+    make_legacy(pg_legacy)
     with pg_legacy.begin() as conn:
         conn.execute(text("INSERT INTO organizations (id, name, created_at) VALUES ('org-1', 'Acme', now())"))
     check("[pg] legacy database is adopted", upgrade_database(pg_legacy) == "adopted-legacy")
@@ -189,7 +203,7 @@ else:
 
     pg_reset()
     pg_stale = create_engine(PG_URL)
-    Base.metadata.create_all(pg_stale)
+    make_legacy(pg_stale)
     with pg_stale.begin() as conn:
         conn.execute(text("ALTER TABLE users DROP COLUMN onboarding_stage"))
     try:

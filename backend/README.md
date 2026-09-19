@@ -45,15 +45,15 @@ python smoke_test.py
 | `app/storage.py` | Local-disk storage for task attachments (`backend/uploads/`, gitignored) |
 | `app/agents/` | Manager, Mentor, HR, Meeting, the roundtable, and the LangGraph agents (see its own README) |
 | `app/routers/auth.py` | `POST /auth/register`, `POST /auth/login` |
-| `app/routers/users.py` | `GET /users/me`, `GET /users/me/agents`, `/employee-file`, `/reviews`, `/dashboard` |
-| `app/routers/onboarding.py` | The full onboarding flow: CV upload, Q&A, track, agent roster, reset |
+| `app/routers/users.py` | `GET /users/me`, `GET /users/me/agents`, `/employee-file`, `/reviews`, `/dashboard`, `POST /users/me/cv` (paste) and `/users/me/cv/file` (replace) |
+| `app/routers/onboarding.py` | The full onboarding flow: CV upload, Q&A, track, agent roster, resume, reset |
 | `app/routers/tasks.py` | Task board CRUD, multi-modal submission, attachment download, threaded messages |
 | `app/routers/projects.py` | `GET /projects/me`, `POST /projects/own` |
 | `app/routers/agents.py` | Endpoints that trigger Manager/Mentor/HR — Mentor's endpoint also runs the roundtable |
 | `app/routers/meeting.py` | `GET`/`POST /meeting/{agent}` — any agent on the graduate's actual team |
 | `alembic/`, `alembic.ini` | Database migrations — the schema's version history (`docs/MIGRATIONS.md`) |
 | `app/migrations.py` | Runs the migrations at startup; adopts pre-Alembic databases safely |
-| `smoke_test*.py` (16 files) | Full list + check counts in `docs/PROJECT_STATUS.md`'s "Running the smoke suite" |
+| `smoke_test*.py` (17 files) | Full list + check counts in `docs/PROJECT_STATUS.md`'s "Running the smoke suite" |
 
 ## Schema notes for the rest of the team
 

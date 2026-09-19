@@ -94,14 +94,15 @@ python smoke_test_meeting.py                   # direct agent chat, Stage 1 scop
 python smoke_test_llm_errors.py                # graceful LLM-failure handling (10)
 python smoke_test_llm_provider_routing.py      # tier-aware provider selection (14)
 python smoke_test_stage2_onboarding.py         # onboarding graph, isolated (28)
-python smoke_test_stage2_onboarding_router.py  # onboarding endpoints incl. reset (34)
+python smoke_test_stage2_onboarding_router.py  # onboarding endpoints incl. reset (36)
 python smoke_test_stage2_collaboration.py      # Manager/HR consulting the Mentor (9)
 python smoke_test_stage2_own_project.py        # bring-your-own-project path (12)
 python smoke_test_stage2_meeting.py            # Meeting Room roster gating (9)
 python smoke_test_stage2_submissions.py        # multi-modal submission + vision (41)
 python smoke_test_stage2_co_reviews.py         # parallel co-reviewers, unit-level (11)
 python smoke_test_stage2_roundtable.py         # the agent roundtable, end to end (20)
-python smoke_test_migrations.py                # Alembic + model-drift guard (18; +10 with Postgres)
+python smoke_test_migrations.py                # Alembic + model-drift guard (19; +10 with Postgres)
+python smoke_test_stage2_onboarding_resume.py  # restart-proof onboarding + CV replacement (54)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints

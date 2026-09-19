@@ -313,6 +313,20 @@ export interface OnboardingStateApiOut {
   suggested_track: ApiTrack | null;
 }
 
+/** GET /onboarding/resume — what the wizard needs to re-draw the step the
+ * graduate stopped on, read from what the server saved at each pause (no LLM
+ * call). resumable=false means "nothing to restore, start at the CV step".
+ * See docs/ONBOARDING_RESUME.md. */
+export interface OnboardingResumeApiOut {
+  onboarding_stage: ApiOnboardingStage;
+  resumable: boolean;
+  questions: string[];
+  intro_text: string | null;
+  suggested_track: ApiTrack | null;
+  reasoning: string | null;
+  suggested_agents: AgentCatalogApiOut[];
+}
+
 export interface ProjectOwnApiOut {
   id: string;
   title: string;
@@ -347,6 +361,13 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ cv_raw_text: cvRawText }),
       }),
+    /** Replace the CV with a new file (PDF / Word / text) without touching
+     * onboarding, track, team or tasks. Refused (409) mid-onboarding. */
+    uploadFile: (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return request<UserApiOut>("/users/me/cv/file", { method: "POST", body: form });
+    },
   },
 
   onboarding: {
@@ -359,6 +380,7 @@ export const api = {
      * graph and orientation screen. */
     myAgents: () => request<AgentCatalogApiOut[]>("/users/me/agents"),
     state: () => request<OnboardingStateApiOut>("/onboarding/state"),
+    resume: () => request<OnboardingResumeApiOut>("/onboarding/resume"),
     uploadCv: (file: File) => {
       const form = new FormData();
       form.append("file", file);
