@@ -4,7 +4,8 @@ from fastapi.responses import JSONResponse
 
 from app.agents.graph.catalog import seed_agent_catalog
 from app.agents.llm_client import ALL_PROVIDERS_FAILED, LLMConfigError
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal, engine
+from app.migrations import upgrade_database
 from app.routers import agents, auth, meeting, onboarding, projects, tasks, users
 
 app = FastAPI(title="Venv API", version="0.1.0")
@@ -47,7 +48,9 @@ app.include_router(onboarding.router)
 
 @app.on_event("startup")
 def on_startup():
-    Base.metadata.create_all(bind=engine)
+    # Alembic, not create_all: create_all never adds a column to a table that
+    # already exists. See app/migrations.py and docs/MIGRATIONS.md.
+    upgrade_database(engine)
     db = SessionLocal()
     try:
         seed_agent_catalog(db)

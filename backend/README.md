@@ -20,6 +20,8 @@ pip install -r requirements.txt   # includes LangGraph/LangChain, pypdf, python-
 cp .env.example .env
 # .env already points at the Docker Postgres above — no edits needed.
 # Quick local check without Docker? Set DATABASE_URL=sqlite:///./dev.db instead.
+# The first start builds the schema by running the Alembic migrations
+# (see ../docs/MIGRATIONS.md) — there's no separate setup step.
 
 uvicorn app.main:app --reload
 ```
@@ -49,7 +51,9 @@ python smoke_test.py
 | `app/routers/projects.py` | `GET /projects/me`, `POST /projects/own` |
 | `app/routers/agents.py` | Endpoints that trigger Manager/Mentor/HR — Mentor's endpoint also runs the roundtable |
 | `app/routers/meeting.py` | `GET`/`POST /meeting/{agent}` — any agent on the graduate's actual team |
-| `smoke_test*.py` (14 files) | Full list + check counts in `docs/PROJECT_STATUS.md`'s "Running the smoke suite" |
+| `alembic/`, `alembic.ini` | Database migrations — the schema's version history (`docs/MIGRATIONS.md`) |
+| `app/migrations.py` | Runs the migrations at startup; adopts pre-Alembic databases safely |
+| `smoke_test*.py` (16 files) | Full list + check counts in `docs/PROJECT_STATUS.md`'s "Running the smoke suite" |
 
 ## Schema notes for the rest of the team
 

@@ -11,7 +11,7 @@
 > Manager synthesizing the discussion. On top of that: Arabic (RTL)
 > support and a real light theme, and multi-provider LLM support
 > (Anthropic/OpenAI/DeepSeek/Qwen) with tier-aware routing and automatic
-> failover. 316 backend checks across 15 smoke suites, all passing;
+> failover. 334 backend checks across 16 smoke suites, all passing;
 > frontend eslint clean; full `next build` succeeds. See "Stage 2, in
 > full" below for the doc-by-doc breakdown, and "Frontend polish" /
 > "Handoff" further down for what's recently done vs. still open.
@@ -51,8 +51,12 @@ onboarding flow and the weekly-cycle cascade — see
 - Local file storage for attachments (`app/storage.py`, one module so a
   future cloud-storage swap is contained) — dev-scope, one box, not yet
   cloud.
-- 15 smoke suites, 316 checks, all passing together (mocked LLM, no API
+- 16 smoke suites, 334 checks, all passing together (mocked LLM, no API
   key needed to run them) — see the updated list further down.
+- **Database migrations (Alembic)** — the schema is now built and evolved
+  by versioned migrations applied at startup, not `create_all`. Existing
+  dev databases are adopted safely; out-of-date ones get a clear error.
+  Verified on SQLite and PostgreSQL 16. See `docs/MIGRATIONS.md`.
 
 **Frontend** (Next.js + React Flow, dark-by-default "blueprint" design
 system with a light theme and Arabic/RTL support — `frontend/DESIGN.md`):
@@ -154,13 +158,14 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
 - **In-memory checkpointer** for the onboarding graph — fine for one dev
   box, loses in-progress onboarding on a restart. Needs a persistent one
   before any real deployment.
-- **Alembic migrations** — still `create_all` on startup; the schema has
-  changed shape many times now without a migration tool. The exact bug
-  that caused the onboarding dead-end (a new column with no migration to
-  backfill it) is a live example of why this matters.
 - Task bank content / finalized Mentor rubric — still LLM-improvised,
   first-pass rubric, unchanged since Stage 1.
 - `needs_changes` board visibility — still silent, no dedicated state.
+
+## Hardening — built after Stage 2's original scope
+
+1. `docs/MIGRATIONS.md` — Alembic replaces `create_all`; legacy databases
+   adopted safely; a drift guard keeps models and migrations in step.
 
 ## Frontend polish — completed since the last handoff, no dedicated docs yet
 
@@ -321,6 +326,7 @@ python smoke_test_stage2_meeting.py          # Meeting Room roster gating (9)
 python smoke_test_stage2_submissions.py      # multi-modal submission + vision (41)
 python smoke_test_stage2_co_reviews.py       # co_reviewers.py unit tests (11)
 python smoke_test_stage2_roundtable.py       # the roundtable, end to end (20)
+python smoke_test_migrations.py              # Alembic + model-drift guard (18; +10 with Postgres)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints
