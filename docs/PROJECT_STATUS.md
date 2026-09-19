@@ -11,7 +11,7 @@
 > Manager synthesizing the discussion. On top of that: Arabic (RTL)
 > support and a real light theme, and multi-provider LLM support
 > (Anthropic/OpenAI/DeepSeek/Qwen) with tier-aware routing and automatic
-> failover. 334 backend checks across 16 smoke suites, all passing;
+> failover. 391 backend checks across 17 smoke suites, all passing;
 > frontend eslint clean; full `next build` succeeds. See "Stage 2, in
 > full" below for the doc-by-doc breakdown, and "Frontend polish" /
 > "Handoff" further down for what's recently done vs. still open.
@@ -51,12 +51,17 @@ onboarding flow and the weekly-cycle cascade — see
 - Local file storage for attachments (`app/storage.py`, one module so a
   future cloud-storage swap is contained) — dev-scope, one box, not yet
   cloud.
-- 16 smoke suites, 334 checks, all passing together (mocked LLM, no API
+- 17 smoke suites, 391 checks, all passing together (mocked LLM, no API
   key needed to run them) — see the updated list further down.
 - **Database migrations (Alembic)** — the schema is now built and evolved
   by versioned migrations applied at startup, not `create_all`. Existing
   dev databases are adopted safely; out-of-date ones get a clear error.
   Verified on SQLite and PostgreSQL 16. See `docs/MIGRATIONS.md`.
+- **Onboarding resume + CV replacement** — a closed tab, a server restart
+  or a second API worker no longer strands a graduate mid-wizard (state is
+  saved on the `User` row and the graph is rebuilt from it, with no LLM
+  calls); `POST /users/me/cv/file` replaces a CV without touching
+  onboarding. See `docs/ONBOARDING_RESUME.md`.
 
 **Frontend** (Next.js + React Flow, dark-by-default "blueprint" design
 system with a light theme and Arabic/RTL support — `frontend/DESIGN.md`):
@@ -147,17 +152,9 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
 
 ## Not built yet
 
-- **Onboarding mid-flow resume.** Closing the tab partway through the
-  wizard means starting over from the CV step — `reset` is all-or-
-  nothing, not a true resume. (`STAGE2_ONBOARDING_FLOW.md`'s LangGraph
-  gotcha note explains the underlying constraint.)
-- **CV re-upload after onboarding completes** has no dedicated path yet.
 - **Roundtable specialists don't get vision** — only the Mentor's review
   sees image attachments as real content blocks; specialists just see
   filenames.
-- **In-memory checkpointer** for the onboarding graph — fine for one dev
-  box, loses in-progress onboarding on a restart. Needs a persistent one
-  before any real deployment.
 - Task bank content / finalized Mentor rubric — still LLM-improvised,
   first-pass rubric, unchanged since Stage 1.
 - `needs_changes` board visibility — still silent, no dedicated state.
@@ -166,6 +163,8 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
 
 1. `docs/MIGRATIONS.md` — Alembic replaces `create_all`; legacy databases
    adopted safely; a drift guard keeps models and migrations in step.
+2. `docs/ONBOARDING_RESUME.md` — onboarding resumes after a closed tab or a
+   restart; the CV can be replaced after onboarding.
 
 ## Frontend polish — completed since the last handoff, no dedicated docs yet
 
@@ -319,14 +318,15 @@ python smoke_test_meeting.py                 # direct agent chat, Stage 1 scope 
 python smoke_test_llm_errors.py              # graceful LLM-failure handling (10)
 python smoke_test_llm_provider_routing.py    # tier-aware provider selection (14)
 python smoke_test_stage2_onboarding.py       # onboarding graph, isolated (28)
-python smoke_test_stage2_onboarding_router.py # onboarding endpoints, incl. reset (34)
+python smoke_test_stage2_onboarding_router.py # onboarding endpoints, incl. reset (36)
 python smoke_test_stage2_collaboration.py    # Manager/HR consulting the Mentor (9)
 python smoke_test_stage2_own_project.py      # POST /projects/own (12)
 python smoke_test_stage2_meeting.py          # Meeting Room roster gating (9)
 python smoke_test_stage2_submissions.py      # multi-modal submission + vision (41)
 python smoke_test_stage2_co_reviews.py       # co_reviewers.py unit tests (11)
 python smoke_test_stage2_roundtable.py       # the roundtable, end to end (20)
-python smoke_test_migrations.py              # Alembic + model-drift guard (18; +10 with Postgres)
+python smoke_test_migrations.py              # Alembic + model-drift guard (19; +10 with Postgres)
+python smoke_test_stage2_onboarding_resume.py # restart-proof onboarding + CV replacement (54)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints

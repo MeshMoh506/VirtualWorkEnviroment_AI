@@ -86,6 +86,22 @@ class OnboardingAgentsOut(BaseModel):
     suggested_agents: list[AgentCatalogOut]
 
 
+class OnboardingResumeOut(BaseModel):
+    """Everything the wizard needs to re-draw the step a graduate stopped on,
+    read from the database (no LLM calls). See docs/ONBOARDING_RESUME.md."""
+
+    onboarding_stage: OnboardingStage
+    # False -> the wizard should start again from the CV step (nothing to
+    # restore: the graduate is at the CV step, has finished, or was mid-wizard
+    # before resume state existed).
+    resumable: bool
+    questions: list[str] = []  # stage "qa"
+    intro_text: str | None = None
+    suggested_track: TrackEnum | None = None  # stage "track"
+    reasoning: str | None = None
+    suggested_agents: list[AgentCatalogOut] = []  # stage "agents"
+
+
 class OnboardingAgentsApprove(BaseModel):
     agent_ids: list[str] = []
 

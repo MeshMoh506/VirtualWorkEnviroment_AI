@@ -149,6 +149,13 @@ class User(Base):
     # One entry per agent-generated follow-up question:
     # [{"question": ..., "answer": ... | None}] — answer stays None if skipped.
     onboarding_qa_json: Mapped[list] = mapped_column(JSON, default=list)
+    # What the graph produced at its last pause, saved so onboarding can be
+    # resumed from the database alone (docs/ONBOARDING_RESUME.md). The graph's
+    # own checkpointer is in-memory and per-process, so it can't be the source
+    # of truth: a closed tab, a server restart or a second API worker would
+    # otherwise strand the graduate mid-wizard.
+    suggested_track_reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    suggested_agent_ids_json: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     @property
     def has_cv(self) -> bool:

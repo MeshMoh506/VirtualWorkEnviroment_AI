@@ -138,6 +138,7 @@ const en = {
   },
   onboarding: {
     stepOf: "Step {n} of {total}",
+    resumedNote: "Welcome back — picking up where you left off.",
     alreadyDoneTitle: "You're all set",
     alreadyDoneBody:
       "You've already been through onboarding. Head back to the board to keep working \u2014 or go through it again to update your track, team, or project.",
@@ -250,6 +251,20 @@ const en = {
     weeksEvaluated: { one: "{n} week evaluated.", other: "{n} weeks evaluated." },
     growthViewReady: "growth view ready",
     addedDuringOnboarding: "Added during onboarding",
+  },
+  cvUpdate: {
+    title: "Update your CV",
+    body: "Upload a newer CV. Your track, team and tasks stay exactly as they are — the Manager will use the new CV when it plans your next week.",
+    replace: "Replace CV",
+    uploading: "Uploading...",
+    done: "Your CV was updated.",
+    backToBoard: "Back to the board",
+    midOnboardingTitle: "You're partway through onboarding",
+    midOnboardingBody: "Finish onboarding first — your CV is part of it. You can pick up exactly where you left off.",
+    continueOnboarding: "Continue onboarding",
+    errors: {
+      couldntUpdate: "Couldn't update your CV.",
+    },
   },
   detailPanel: {
     nextUpManager: "The task board is live \u2014 see and act on what the manager assigns.",

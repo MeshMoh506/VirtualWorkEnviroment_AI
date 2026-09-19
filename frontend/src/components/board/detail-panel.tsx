@@ -267,7 +267,7 @@ export function DetailPanel({
                       {hasCv ? t("detailPanel.cvOnFile") : t("detailPanel.cvNotOnFile")}
                     </p>
                     <Link
-                      href="/onboarding/cv"
+                      href={hasCv ? "/profile/cv" : "/onboarding/cv"}
                       className="mt-3 inline-block rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
                     >
                       {hasCv ? t("detailPanel.updateCv") : t("detailPanel.addCv")}
