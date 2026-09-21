@@ -35,7 +35,7 @@ export function AgentsMeeting({ task, busy, extraAgents, onSendMessage }: Agents
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [task.messages.length, busy]);
+  }, [task.messages.length, busy, task.roundtableRunning]);
 
   function send() {
     const content = draft.trim();
@@ -52,7 +52,7 @@ export function AgentsMeeting({ task, busy, extraAgents, onSendMessage }: Agents
       </div>
 
       <div ref={scrollRef} className="thin-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
-        {task.messages.length === 0 ? (
+        {task.messages.length === 0 && !task.roundtableRunning ? (
           <p className="py-6 text-center text-xs text-text-muted">
             {t("agentsMeeting.noDiscussion")}
           </p>
@@ -91,6 +91,13 @@ export function AgentsMeeting({ task, busy, extraAgents, onSendMessage }: Agents
               <div className="max-w-[85%] self-start rounded border border-dashed border-border px-3 py-2">
                 <p className="font-mono text-[11px] text-text-muted">
                   {t("agentsMeeting.managerTyping")}
+                </p>
+              </div>
+            )}
+            {task.roundtableRunning && (
+              <div className="max-w-[85%] self-start rounded border border-dashed border-border px-3 py-2">
+                <p className="font-mono text-[11px] text-text-muted">
+                  {t("agentsMeeting.teamDiscussing")}
                 </p>
               </div>
             )}

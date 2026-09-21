@@ -109,6 +109,7 @@ python smoke_test_mentor_rubric.py             # Mentor rubric v2 + enforcement 
 python smoke_test_llm_tool_output.py           # repair / retry / fail over on unusable model output (48)
 python smoke_test_task_bank.py                 # the Manager's task bank: integrity + wiring (62)
 python smoke_test_github_client.py             # what the Mentor sees of a repo; token + rate limit (29)
+python smoke_test_background_roundtable.py     # the specialists' discussion runs after the review; real HTTP timing (43)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints

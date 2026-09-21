@@ -7,6 +7,7 @@ import { ApiError } from "@/lib/api";
 import {
   assignNextTask,
   fetchTaskDetail,
+  mergeMessages,
   fetchTasks,
   managerReply,
   postUserMessage,
@@ -22,6 +23,11 @@ import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 import { useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
+
+// How often to refresh a task whose specialist discussion is still being written, and how long
+// to keep trying (a discussion normally takes 15-40 seconds).
+const ROUNDTABLE_POLL_MS = 2500;
+const ROUNDTABLE_POLL_MAX_MS = 150_000;
 
 export default function WorkspacePage() {
   const { user, loading: authLoading } = useRequireAuth();
@@ -62,6 +68,40 @@ export default function WorkspacePage() {
     if (user) refresh();
     if (user) fetchMyExtraAgents().then(setExtraAgents).catch(() => {});
   }, [user, refresh]);
+
+  // The specialists' discussion runs in the BACKGROUND after the Mentor's review
+  // (docs/BACKGROUND_ROUNDTABLE.md). While a task says it is still going, refresh it every
+  // couple of seconds so each comment appears as it is written. It stops by itself once the
+  // server says the discussion is done, and after a hard cap in case that never arrives.
+  const pollTaskId = tasks.find((t) => t.roundtableRunning)?.id ?? null;
+  useEffect(() => {
+    if (!pollTaskId) return;
+    let cancelled = false;
+    const startedAt = Date.now();
+    const timer = setInterval(async () => {
+      if (Date.now() - startedAt > ROUNDTABLE_POLL_MAX_MS) {
+        clearInterval(timer);
+        // Give up quietly rather than leave a "discussing..." note that never clears.
+        setTasks((prev) => prev.map((t) => (t.id === pollTaskId ? { ...t, roundtableRunning: false } : t)));
+        return;
+      }
+      try {
+        const detail = await fetchTaskDetail(pollTaskId);
+        if (cancelled) return;
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === detail.id ? { ...detail, messages: mergeMessages(t.messages, detail.messages) } : t
+          )
+        );
+      } catch {
+        // A missed refresh is harmless: the next one catches up.
+      }
+    }, ROUNDTABLE_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [pollTaskId]);
 
   const selected = tasks.find((t) => t.id === selectedId) ?? null;
 

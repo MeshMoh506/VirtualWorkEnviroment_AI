@@ -183,6 +183,9 @@ class TaskOut(BaseModel):
     # times it has been bounced in total.
     needs_changes: bool = False
     revision_count: int = 0
+    # The specialists' discussion of the latest review is still being written, in the
+    # background — the thread will keep growing (Task.roundtable_running).
+    roundtable_running: bool = False
     created_at: datetime
     updated_at: datetime
 

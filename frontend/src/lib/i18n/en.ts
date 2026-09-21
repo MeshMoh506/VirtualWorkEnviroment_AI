@@ -356,6 +356,7 @@ const en = {
     revision: "revision {n}",
   },
   taskWorkspace: {
+    teamStillDiscussing: "Your specialists are still weighing in. Their comments will appear in the thread.",
     needsChangesTitle: "The Mentor asked for changes",
     needsChangesBody:
       "Read the Mentor's feedback in the thread below, fix what they flagged, then resubmit.",
@@ -386,6 +387,7 @@ const en = {
     noDiscussion:
       "No discussion yet. Ask a question or share where you're at \u2014 your manager replies here, and once you submit, your team reviews the work together in this thread.",
     managerTyping: "Manager is typing...",
+    teamDiscussing: "Your team is discussing this submission...",
     messagePlaceholder: "Message the team... (Enter to send)",
   },
   review: {

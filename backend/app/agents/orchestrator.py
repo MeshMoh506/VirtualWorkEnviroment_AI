@@ -42,5 +42,22 @@ def run_co_reviews(db: Session, task: Task, user: User) -> list[TaskMessage]:
     return roundtable.run_roundtable(db, user, task)
 
 
+def start_roundtable(db: Session, task: Task, user: User, background) -> bool:
+    """Stage 2 — start the agent roundtable IN THE BACKGROUND, after the Mentor's review.
+    Returns whether one was started (False when the graduate has no specialists: there is
+    nothing to discuss, and nothing should show as "running").
+
+    The graduate gets the Mentor's review as soon as it is written; the specialists' turns
+    and the Manager's synthesis then appear in the task thread one by one, and the task's
+    `roundtable_running` flag tells the frontend to keep refreshing until they are done.
+    See docs/BACKGROUND_ROUNDTABLE.md. (run_co_reviews above is the same discussion run
+    inline; it remains for direct callers and the tests that exercise it.)"""
+    if not roundtable.specialists_for(db, user):
+        return False
+    started_at = roundtable.begin_roundtable(db, task)
+    background.add_task(roundtable.run_roundtable_job, task.id, user.id, started_at)
+    return True
+
+
 def hr_rollup(db: Session, user: User) -> Review:
     return hr.run_rollup(db, user)
