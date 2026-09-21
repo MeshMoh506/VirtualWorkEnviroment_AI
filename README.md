@@ -107,7 +107,8 @@ python smoke_test_needs_changes.py             # visible 'needs changes' state (
 python smoke_test_agent_language.py            # agents answer in Arabic (29)
 python smoke_test_mentor_rubric.py             # Mentor rubric v2 + enforcement (49)
 python smoke_test_llm_tool_output.py           # repair / retry / fail over on unusable model output (48)
-python smoke_test_task_bank.py                 # the Manager's task bank: integrity + wiring (53)
+python smoke_test_task_bank.py                 # the Manager's task bank: integrity + wiring (62)
+python smoke_test_github_client.py             # what the Mentor sees of a repo; token + rate limit (29)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints

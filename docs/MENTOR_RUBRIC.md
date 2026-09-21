@@ -61,7 +61,10 @@ cautious direction.
   were addressed and to approve if the blockers are fixed, rather than raise new
   non-blocking issues.
 - A rule about **honesty**: it can read what it's given, it cannot run code or tests,
-  and must never claim otherwise or mention files it wasn't shown.
+  and must never claim otherwise or mention files it wasn't shown. It is also told what
+  it *does* see of a GitHub repo - the first 25 file names and the first 2,000 characters
+  of the README, not the code - so it asks for evidence to be added rather than assuming
+  something is missing from code it never read (see `docs/TASK_BANK.md`).
 
 ## Style of the feedback
 

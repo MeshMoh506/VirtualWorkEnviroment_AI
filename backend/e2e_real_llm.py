@@ -28,6 +28,8 @@ Run (from backend/, with your venv active):
 Real calls cost real (small) money. The default run makes roughly 10-25 calls.
 
 Notes
+  * GitHub: each review costs 3 requests against an anonymous limit of 60/hour/IP.
+    Set GITHUB_TOKEN in backend/.env (no scopes needed) for anything beyond a quick run.
   * The Mentor reads the GitHub repo you submit. The default (psf/requests) is
     just a harmless public repo, so the Mentor will often say "needs changes"
     because it doesn't match the task — that is fine for checking the
@@ -106,6 +108,7 @@ if not chain_main or not chain_small:
     print("\n[SETUP] No usable provider: none of the providers in the priority list has an API key.")
     print("        Put a key in backend/.env (e.g. ANTHROPIC_API_KEY=...) or pass --provider for one that has one.")
     sys.exit(2)
+print(f"  {'github':<10} " + ("token set" if settings.github_token else "no token: anonymous limit is 60 requests/hour and each review costs 3 (--full-week uses ~45) - set GITHUB_TOKEN in .env"))
 print(f"\nLanguage sent to the agents: {args.language}")
 print(f"Main-tier chain (Mentor reviews, Manager plans): {' -> '.join(chain_main)}")
 print(f"Small-tier chain (onboarding, roundtable comments): {' -> '.join(chain_small)}\n")

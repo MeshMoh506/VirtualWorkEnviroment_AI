@@ -59,6 +59,9 @@ check("only 'meets requirements' can block", [c["key"] for c in rubric.CATEGORIE
 check("the prompt states the verdict rule with the bar", f"below {rubric.APPROVAL_BAR}" in SYSTEM_PROMPT and "VERDICT RULE" in SYSTEM_PROMPT)
 check("the prompt tells the Mentor it cannot run code (no invented test results)", "cannot run the code" in SYSTEM_PROMPT)
 check("the prompt covers resubmissions", "RESUBMISSIONS" in SYSTEM_PROMPT)
+check("the prompt tells the Mentor what it is really shown of a repo (file list + README, not the code)",
+      "README" in SYSTEM_PROMPT and "not the code itself" in SYSTEM_PROMPT and "first 25 files" in SYSTEM_PROMPT)
+check("...and to ask for evidence rather than assume it's missing from the code", "what evidence to add" in SYSTEM_PROMPT)
 check("the bar is 3 and the version is '2'", rubric.APPROVAL_BAR == 3 and rubric.RUBRIC_VERSION == "2")
 
 # ---- enforcement -----------------------------------------------------------------

@@ -37,9 +37,13 @@ def check(label, condition):
 REAL_TRACKS = [t for t in TrackEnum if t != TrackEnum.JUNIOR_DEV]
 
 # ---- the bank: integrity ------------------------------------------------------------
-check("the bank has seeds", len(task_bank.SEEDS) >= 12)
+check("the bank has at least 15 seeds", len(task_bank.SEEDS) >= 15)
 for track in REAL_TRACKS:
     check(f"track {track.value}: at least two seeds", len(task_bank.seeds_for(track)) >= 2)
+for track in (TrackEnum.SOFTWARE_ENGINEERING, TrackEnum.DATA_SCIENCE_AI, TrackEnum.CYBERSECURITY):
+    check(f"the most-used track {track.value} has three seeds", len(task_bank.seeds_for(track)) >= 3)
+check("cybersecurity includes a DEFENSIVE (monitoring / incident response) seed, not only offence and hardening",
+      any("monitoring" in s.title.lower() or "incident" in s.title.lower() for s in task_bank.seeds_for(TrackEnum.CYBERSECURITY)))
 check("the legacy junior_dev track gets the software-engineering seeds",
       [s.id for s in task_bank.seeds_for(TrackEnum.JUNIOR_DEV)] == [s.id for s in task_bank.seeds_for(TrackEnum.SOFTWARE_ENGINEERING)])
 ids = [s.id for s in task_bank.SEEDS]
@@ -52,6 +56,11 @@ check("every brief is a real description", all(80 <= len(s.brief) <= 400 for s i
 check("every seed lists at least three skills", all(len(s.skills) >= 3 and all(x.strip() for x in s.skills) for s in task_bank.SEEDS))
 check("every arc week has a focus and a deliverable of sensible length",
       all(20 <= len(w.focus) <= 220 and 20 <= len(w.deliverable) <= 260 for s in task_bank.SEEDS for w in s.arc))
+check("every seed says what evidence to submit, in a sensible length", all(40 <= len(s.evidence) <= 320 for s in task_bank.SEEDS))
+check("...and every one puts that evidence where the Mentor can SEE it: the repository README (the Mentor is not shown the code)",
+      all("README" in s.evidence and "GitHub" in s.evidence for s in task_bank.SEEDS))
+check("the shaping principles tell the Manager the Mentor reads the file list and README, not the code",
+      "README" in task_bank.SUBTASK_PRINCIPLES and "not the code itself" in task_bank.SUBTASK_PRINCIPLES)
 check("no placeholder text anywhere", not re.search(r"todo|tbd|xxx|lorem|fixme", json.dumps([[s.title, s.brief, [w.focus + w.deliverable for w in s.arc]] for s in task_bank.SEEDS]), re.I))
 check("the first week of every arc starts from foundations/setup (a graduate isn't dropped in the middle)",
       all(re.search(r"found|scope|understand|requirement|design|baseline|ingest|contain|build the lab|start", s.arc[0].focus, re.I) for s in task_bank.SEEDS))
@@ -67,8 +76,10 @@ check("...and tells the Manager to adapt, not copy", "ADAPT" in block and "not a
 seed = cyber[0]
 for w in range(1, 5):
     b = task_bank.week_arc_block(seed.id, w)
-    check(f"arc block for week {w} names the focus and the deliverable", seed.arc[w - 1].focus in b and seed.arc[w - 1].deliverable in b and f"week {w} of 4" in b)
+    check(f"arc block for week {w} names the focus, the deliverable and the evidence to submit",
+          seed.arc[w - 1].focus in b and seed.arc[w - 1].deliverable in b and f"week {w} of 4" in b and seed.evidence in b)
 check("past the arc: the Manager is told to extend and polish", "arc is complete" in task_bank.week_arc_block(seed.id, 5) and "Extend" in task_bank.week_arc_block(seed.id, 9))
+check("...and still told what evidence to ask for", seed.evidence in task_bank.week_arc_block(seed.id, 5))
 check("no seed (your own project): no arc block at all", task_bank.week_arc_block(None, 1) == "" and task_bank.week_arc_block("nope", 1) == "")
 check("get_seed: known / unknown / empty", task_bank.get_seed(seed.id) is seed and task_bank.get_seed("nope") is None and task_bank.get_seed(None) is None)
 tool = task_bank.create_project_tool_for(TrackEnum.CYBERSECURITY)
@@ -151,6 +162,8 @@ with patch("app.agents.llm_client._anthropic") as mock_a:
     check("plan_week is told the project's arc, week 1 of 4", f"PROJECT ARC ({cyber[1].title}, week 1 of 4)" in pw["prompt"])
     check("...with week 1's focus and deliverable", cyber[1].arc[0].focus in pw["prompt"] and cyber[1].arc[0].deliverable in pw["prompt"])
     check("...and the subtask-shaping principles", "HOW TO SHAPE THE FIVE SUBTASKS" in pw["prompt"] and "done when" in pw["prompt"])
+    check("...including the evidence to submit and that the Mentor reads the README, not the code",
+          cyber[1].evidence in pw["prompt"] and "not the code itself" in pw["prompt"])
     check("the project got its 5 subtasks as before", len(project["weeks"][0]["subtasks_plan_json"]) == 5)
 
     # week 2 builds on the arc (planned directly: it only needs the project to exist)
