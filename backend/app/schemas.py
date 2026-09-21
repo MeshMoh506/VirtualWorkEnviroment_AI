@@ -204,6 +204,8 @@ class ProjectOut(BaseModel):
     description: str
     status: ProjectStatus
     source: ProjectSource
+    # The task-bank seed this project was based on (None for your own project).
+    seed_id: str | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -20,6 +20,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.agents.llm_client import call_agentic, call_with_tool
+from app.agents.task_bank import SUBTASK_PRINCIPLES, create_project_tool_for, seeds_for, seeds_prompt_block, week_arc_block
 from app.agents.tool_output import MalformedToolOutput
 from app.agents.tools import (
     CREATE_PROJECT_TOOL,
@@ -93,23 +94,28 @@ def create_project(db: Session, user: User) -> Project:
     docs/STAGE2_OWN_PROJECT.md."""
     prompt = (
         f"{_cv_context(user)}\n\n"
+        f"{seeds_prompt_block(user.track)}\n\n"
         "Introduce this graduate to the main project they'll be working on "
         "throughout the program. Create it now via the create_project tool."
     )
     result = call_with_tool(
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
-        tools=[CREATE_PROJECT_TOOL],
+        tools=[create_project_tool_for(user.track)],
         force_tool="create_project",
         validate=_check_project,
     )
     data = result["input"]
+    # Only ever store a seed that really is one of this track's — a made-up id
+    # would silently break the project's arc.
+    seed_id = data.get("seed_id") if data.get("seed_id") in {s.id for s in seeds_for(user.track)} else None
 
     project = Project(
         user_id=user.id,
         title=data["title"],
         description=data["description"],
         source=ProjectSource.MANAGER,
+        seed_id=seed_id,
     )
     db.add(project)
     db.commit()
@@ -133,6 +139,8 @@ def plan_week(db: Session, user: User, project: Project) -> Week:
         f"Project: {project.title}\n{project.description}\n\n"
         f"{_cv_context(user)}\n\n"
         f"Prior weeks:\n{prior_weeks_text}\n\n"
+        + (f"{week_arc_block(project.seed_id, week_number)}\n\n" if project.seed_id else "")
+        + f"{SUBTASK_PRINCIPLES}\n\n"
         f"Plan week {week_number} now via the plan_week tool."
     )
     result = call_with_tool(

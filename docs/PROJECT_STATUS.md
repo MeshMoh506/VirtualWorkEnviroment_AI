@@ -11,7 +11,7 @@
 > Manager synthesizing the discussion. On top of that: Arabic (RTL)
 > support and a real light theme, and multi-provider LLM support
 > (Anthropic/OpenAI/DeepSeek/Qwen) with tier-aware routing and automatic
-> failover. 546 backend checks across 21 smoke suites, all passing;
+> failover. 599 backend checks across 22 smoke suites, all passing;
 > frontend eslint clean; full `next build` succeeds. See "Stage 2, in
 > full" below for the doc-by-doc breakdown, and "Frontend polish" /
 > "Handoff" further down for what's recently done vs. still open.
@@ -51,7 +51,7 @@ onboarding flow and the weekly-cycle cascade — see
 - Local file storage for attachments (`app/storage.py`, one module so a
   future cloud-storage swap is contained) — dev-scope, one box, not yet
   cloud.
-- 21 smoke suites, 546 checks, all passing together (mocked LLM, no API
+- 22 smoke suites, 599 checks, all passing together (mocked LLM, no API
   key needed to run them) — see the updated list further down.
 - **Database migrations (Alembic)** — the schema is now built and evolved
   by versioned migrations applied at startup, not `create_all`. Existing
@@ -155,10 +155,10 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
 - **Roundtable specialists don't get vision** — only the Mentor's review
   sees image attachments as real content blocks; specialists just see
   filenames.
-- Task bank content — the Manager's tasks are still improvised. (The Mentor's
-  rubric is now v2 — anchored scores, one enforced verdict rule, memory of its
-  own earlier feedback — as *proposed defaults awaiting team approval*; see
-  `docs/MENTOR_RUBRIC.md`.)
+- Team approval of the drafted content: the Mentor's rubric v2
+  (`docs/MENTOR_RUBRIC.md`) and the Manager's task bank (`docs/TASK_BANK.md`) are
+  both *proposed drafts awaiting review*, not yet validated with real models'
+  adaptation of the seeds.
 
 ## Hardening — built after Stage 2's original scope
 
@@ -175,6 +175,8 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
 6. `docs/LLM_PROVIDER_FAILOVER.md` ("Malformed tool output") — found by the first
    real-model run: Claude returned a list as a string and crashed the Manager.
    Now repaired, retried, failed over, and never a 500.
+7. `docs/TASK_BANK.md` — 12 project seeds (two per track) with four-week arcs; the
+   Manager bases each project on one and plans every week against its arc.
 
 ## Frontend polish — completed since the last handoff, no dedicated docs yet
 
@@ -341,6 +343,7 @@ python smoke_test_needs_changes.py            # visible 'needs changes' state (2
 python smoke_test_agent_language.py           # agents answer in Arabic (29)
 python smoke_test_mentor_rubric.py            # Mentor rubric v2 + enforcement (49)
 python smoke_test_llm_tool_output.py          # repair / retry / fail over on unusable model output (48)
+python smoke_test_task_bank.py                # the Manager's task bank: integrity + wiring (53)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints
