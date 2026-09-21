@@ -279,6 +279,10 @@ class Project(Base):
     source: Mapped[ProjectSource] = mapped_column(
         Enum(ProjectSource), default=ProjectSource.MANAGER, nullable=False
     )
+    # Which task-bank seed (agents/task_bank.py) the Manager based this project
+    # on — NULL for a graduate's own project, or if the model named none. It
+    # drives each week's place in the project's arc, and answers "why this task?".
+    seed_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(

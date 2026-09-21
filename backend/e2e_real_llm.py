@@ -23,6 +23,7 @@ Run (from backend/, with your venv active):
   python e2e_real_llm.py --full-week --repo https://github.com/<you>/<repo>
   python e2e_real_llm.py --language ar         # do the agents really answer in Arabic?
   python e2e_real_llm.py --full-week --force-approve   # exercise the end-of-week cascade even if the Mentor keeps bouncing
+  python e2e_real_llm.py --save-report run1.json       # keep what the models produced, to review or share
 
 Real calls cost real (small) money. The default run makes roughly 10-25 calls.
 
@@ -35,6 +36,7 @@ Notes
   * Exit code: 0 = every hard check passed, 1 = a check failed, 2 = setup problem.
 """
 import argparse
+import json
 import logging
 import os
 import re
@@ -59,6 +61,9 @@ parser.add_argument("--force-approve", action="store_true",
                     help="if the Mentor keeps bouncing a subtask (it will, if the repo is unchanged between attempts), "
                          "record a synthetic approval so the week can finish and the end-of-week cascade (Manager + HR + "
                          "Mentor consult, real models) still gets exercised. Clearly marked FORCED in the report.")
+parser.add_argument("--save-report", metavar="FILE",
+                    help="also write everything the models produced (the project, the week plan, every Mentor review with its "
+                         "scores and comments) plus timings and provider stats to this JSON file - send it to whoever is tuning the prompts")
 parser.add_argument("--keep-db", action="store_true", help="keep the throwaway database afterwards")
 parser.add_argument("--language", choices=["en", "ar"], default="en",
                     help="send X-Venv-Language, like the frontend does; with 'ar' the check also FAILS if the agents' "
@@ -265,7 +270,9 @@ def s_plan_week():
     plan = p["weeks"][0]["subtasks_plan_json"]
     expect(len(plan) == 5, f"the week plan has {len(plan)} subtasks, expected 5")
     expect(len({s["title"] for s in plan}) == 5, "the plan has duplicate subtask titles")
-    return f"project: {p['title']!r}; subtask 1: {task['title']!r}"
+    S["produced_plan"] = {"project": p["title"], "description": p["description"], "seed_id": p.get("seed_id"),
+                          "big_task": p["weeks"][0]["big_task_title"], "subtasks": [{"title": s["title"], "description": s["description"]} for s in plan]}
+    return f"project: {p['title']!r} (seed: {p.get('seed_id') or 'none'}); subtask 1: {task['title']!r}"
 
 
 def submit_and_review(task, text, with_image):
@@ -278,13 +285,18 @@ def submit_and_review(task, text, with_image):
     expect(m.get("verdict") in ("approved", "needs_changes"), f"unexpected Mentor verdict {m.get('verdict')!r}")
     expect(len(review["content"].strip()) > 30, "the Mentor's review text is empty or tiny")
     expect_language(review["content"], "the Mentor's review")
+    scores = {c.get("key"): c.get("score") for c in (m.get("categories") or []) if isinstance(c, dict)}
+    S.setdefault("produced_reviews", []).append({
+        "task": task["title"], "verdict": m["verdict"], "scores": scores, "verdict_adjusted": bool(m.get("verdict_adjusted")),
+        "summary": review["content"], "comments": m.get("comments") or [],
+    })
     return review
 
 
 def force_approve(task):
     """Record a synthetic Mentor approval directly in the throwaway database, so a week can
     finish when the real Mentor won't approve an unchanged submission."""
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     from app.database import SessionLocal
     from app.models import AgentType, Review, ReviewKind, Task, TaskStatus
@@ -292,7 +304,7 @@ def force_approve(task):
     db = SessionLocal()
     try:
         t = db.get(Task, task["id"])
-        t.status, t.completed_at = TaskStatus.REVIEWED, datetime.utcnow()
+        t.status, t.completed_at = TaskStatus.REVIEWED, datetime.now(timezone.utc).replace(tzinfo=None)
         db.add(Review(
             user_id=t.user_id, task_id=t.id, week_id=t.week_id, agent_type=AgentType.MENTOR, kind=ReviewKind.TASK_REVIEW,
             content="(Approval recorded by e2e_real_llm.py --force-approve, not by the Mentor.)",
@@ -399,6 +411,28 @@ def finish():
         print(f"\nMALFORMED model output ({len(watcher.malformed)}) - unusable answers that were retried / failed over:")
         for line in watcher.malformed[:8]:
             print("  " + line)
+    plan = S.get("produced_plan")
+    if plan:
+        print("\nWHAT THE MANAGER PRODUCED (judge the quality yourself):")
+        print(f"  Project: {plan['project']}   [seed: {plan['seed_id'] or 'none'}]")
+        print(f"  This week's big task: {plan['big_task']}")
+        for i, st in enumerate(plan["subtasks"], 1):
+            print(f"    {i}. {st['title']}")
+    reviews = S.get("produced_reviews") or []
+    if reviews:
+        print("\nWHAT THE MENTOR PRODUCED:")
+        for i, rv in enumerate(reviews[:6], 1):
+            adj = "  (verdict adjusted by the rubric rule)" if rv["verdict_adjusted"] else ""
+            print(f"  review {i}: {rv['verdict'].upper()}{adj}  scores {rv['scores']}")
+        first = reviews[0]
+        print(f"  first review says: {first['summary'][:360].strip()}{'...' if len(first['summary']) > 360 else ''}")
+    if args.save_report:
+        with open(args.save_report, "w", encoding="utf-8") as fh:
+            json.dump({"language": args.language, "steps": [{"step": n, "status": s, "seconds": round(t, 1), "note": nt} for n, s, t, nt in results],
+                       "plan": plan, "reviews": reviews, "llm_calls_by_provider": dict(watcher.calls),
+                       "failovers": len(watcher.failovers), "repairs": watcher.repairs, "malformed": watcher.malformed},
+                      fh, ensure_ascii=False, indent=2)
+        print(f"\nFull report saved to {args.save_report}")
     failed = [r for r in results if r[1] == "FAIL"]
     print("\n" + ("RESULT: some checks FAILED" if failed else "RESULT: all hard checks passed"))
     if not args.keep_db:
