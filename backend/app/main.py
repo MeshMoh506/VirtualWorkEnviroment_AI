@@ -5,11 +5,15 @@ from fastapi.responses import JSONResponse
 from app.agents.graph.catalog import seed_agent_catalog
 from app.agents.llm_client import ALL_PROVIDERS_FAILED, LLMConfigError
 from app.database import SessionLocal, engine
+from app.language import LanguageMiddleware
 from app.migrations import upgrade_database
 from app.routers import agents, auth, meeting, onboarding, projects, tasks, users
 
 app = FastAPI(title="Venv API", version="0.1.0")
 
+# Reads X-Venv-Language so every agent call answers in the graduate's language
+# (app/language.py, docs/AGENT_LANGUAGE.md).
+app.add_middleware(LanguageMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

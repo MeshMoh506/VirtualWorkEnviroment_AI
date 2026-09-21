@@ -21,6 +21,7 @@ Run (from backend/, with your venv active):
   python e2e_real_llm.py --provider qwen       # force ONE provider for every call
   python e2e_real_llm.py --provider qwen --with-image
   python e2e_real_llm.py --full-week --repo https://github.com/<you>/<repo>
+  python e2e_real_llm.py --language ar         # do the agents really answer in Arabic?
 
 Real calls cost real (small) money. The default run makes roughly 10-25 calls.
 
@@ -35,6 +36,7 @@ Notes
 import argparse
 import logging
 import os
+import re
 import struct
 import sys
 import time
@@ -53,6 +55,9 @@ parser.add_argument("--with-image", action="store_true", help="attach a small PN
 parser.add_argument("--no-specialists", action="store_true", help="skip adding the optional agents (skips the roundtable)")
 parser.add_argument("--repo", default="https://github.com/psf/requests", help="GitHub repo to submit")
 parser.add_argument("--keep-db", action="store_true", help="keep the throwaway database afterwards")
+parser.add_argument("--language", choices=["en", "ar"], default="en",
+                    help="send X-Venv-Language, like the frontend does; with 'ar' the check also FAILS if the agents' "
+                         "questions, plan, review or chat replies come back without Arabic text")
 args = parser.parse_args()
 if args.full_week:
     args.subtasks = 5
@@ -91,7 +96,8 @@ if not chain_main or not chain_small:
     print("\n[SETUP] No usable provider: none of the providers in the priority list has an API key.")
     print("        Put a key in backend/.env (e.g. ANTHROPIC_API_KEY=...) or pass --provider for one that has one.")
     sys.exit(2)
-print(f"\nMain-tier chain (Mentor reviews, Manager plans): {' -> '.join(chain_main)}")
+print(f"\nLanguage sent to the agents: {args.language}")
+print(f"Main-tier chain (Mentor reviews, Manager plans): {' -> '.join(chain_main)}")
 print(f"Small-tier chain (onboarding, roundtable comments): {' -> '.join(chain_small)}\n")
 
 
@@ -117,6 +123,8 @@ watcher = LLMWatcher()
 logging.getLogger("venv.llm").addHandler(watcher)
 
 client = TestClient(app)
+if args.language != "en":
+    client.headers["X-Venv-Language"] = args.language  # what the frontend sends on every call
 client.__enter__()  # runs the startup event (migrations + agent catalog), like a real server
 
 # ----------------------------------------------------------------- tiny helpers
@@ -131,6 +139,15 @@ class HardFail(AssertionError):
 def expect(condition, message):
     if not condition:
         raise HardFail(message)
+
+
+ARABIC_LETTER = re.compile("[\u0600-\u06FF]")
+
+
+def expect_language(text, what):
+    """With --language ar: the model must actually have written Arabic."""
+    if args.language == "ar":
+        expect(ARABIC_LETTER.search(text or ""), f"{what} has no Arabic text - the model ignored the language instruction")
 
 
 def call(method, path, expected=(200, 201), **kw):
@@ -195,6 +212,7 @@ def s_onboarding_cv():
     qs = r.json()["questions"]
     expect(1 <= len(qs) <= 4, f"expected 1-4 questions, got {len(qs)}")
     expect(all(isinstance(q, str) and len(q.strip()) > 8 for q in qs), "a question was empty or too short")
+    expect_language(" ".join(qs), "the onboarding questions")
     S["questions"] = qs
     return f"{len(qs)} questions"
 
@@ -206,6 +224,7 @@ def s_onboarding_qa():
     valid = {"software_engineering", "data_science_ai", "cybersecurity", "networks_infrastructure", "information_systems", "cloud_devops"}
     expect(body["suggested_track"] in valid, f"suggested track {body['suggested_track']!r} is not a Stage 2 track")
     expect(len(body["reasoning"].strip()) > 10, "the track suggestion came with no reasoning")
+    expect_language(body["reasoning"], "the track reasoning")
     return f"track suggested: {body['suggested_track']}"
 
 
@@ -230,6 +249,7 @@ def s_plan_week():
     task = r.json()
     expect(len(task["title"].strip()) > 3 and len(task["description"].strip()) > 30, "the first task looks empty or too short")
     expect(task["deadline"] is not None, "the task has no deadline")
+    expect_language(task["title"] + " " + task["description"], "the Manager's task")
     S["task"] = task
     p = call("GET", "/projects/me", 200, headers=S["h"]).json()
     plan = p["weeks"][0]["subtasks_plan_json"]
@@ -247,6 +267,7 @@ def submit_and_review(task, text, with_image):
     m = review["metrics_json"] or {}
     expect(m.get("verdict") in ("approved", "needs_changes"), f"unexpected Mentor verdict {m.get('verdict')!r}")
     expect(len(review["content"].strip()) > 30, "the Mentor's review text is empty or tiny")
+    expect_language(review["content"], "the Mentor's review")
     return review
 
 
@@ -288,6 +309,7 @@ def s_roundtable_visible():
 def s_meeting():
     r = call("POST", "/meeting/mentor", 201, headers=S["h"], json={"content": "In one sentence, what should I focus on next?"})
     expect(len(r.json()["content"].strip()) > 5, "the Mentor's chat reply was empty")
+    expect_language(r.json()["content"], "the Mentor's chat reply")
     if S["specialists"]:
         agent = S["specialists"][0]
         r = call("POST", f"/meeting/{agent}", 201, headers=S["h"], json={"content": "What is the biggest risk in my work so far?"})
