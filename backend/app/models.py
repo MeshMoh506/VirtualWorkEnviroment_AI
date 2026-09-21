@@ -1,6 +1,6 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import (
     Boolean,
@@ -24,6 +24,11 @@ def gen_uuid() -> str:
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
+# A roundtable normally takes 15-40 seconds. If it has been "running" this long, the process
+# that was running it is gone (a restart or a crash): stop reporting it as running.
+ROUNDTABLE_STALE_AFTER = timedelta(minutes=3)
+
 
 class TrackEnum(str, enum.Enum):
     JUNIOR_DEV = "junior_dev"  # Stage 1's only track — kept for existing users
@@ -370,6 +375,12 @@ class Task(Base):
     # time the Mentor approves.
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # The agent roundtable (specialists + the Manager's synthesis) runs in the BACKGROUND
+    # after the Mentor's review has been returned (docs/BACKGROUND_ROUNDTABLE.md). These two
+    # timestamps are its state. They live in the database, not in memory, so any API worker
+    # can answer "is it still going?" (see Task.roundtable_running).
+    roundtable_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    roundtable_finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -408,6 +419,18 @@ class Task(Base):
             return False
         verdicts = self._task_review_verdicts()
         return bool(verdicts) and verdicts[-1] == "needs_changes"
+
+    @property
+    def roundtable_running(self) -> bool:
+        """True while the specialists' discussion for the latest review is still being
+        written. Started and not yet finished — but only for ROUNDTABLE_STALE_AFTER: a
+        server that died mid-discussion never records "finished", and a spinner that
+        outlives its worker forever would be worse than no spinner."""
+        if self.roundtable_started_at is None:
+            return False
+        if self.roundtable_finished_at is not None and self.roundtable_finished_at >= self.roundtable_started_at:
+            return False
+        return datetime.utcnow() - self.roundtable_started_at < ROUNDTABLE_STALE_AFTER
 
     @property
     def revision_count(self) -> int:

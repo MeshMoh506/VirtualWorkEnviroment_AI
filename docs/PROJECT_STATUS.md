@@ -11,7 +11,7 @@
 > Manager synthesizing the discussion. On top of that: Arabic (RTL)
 > support and a real light theme, and multi-provider LLM support
 > (Anthropic/OpenAI/DeepSeek/Qwen) with tier-aware routing and automatic
-> failover. 639 backend checks across 23 smoke suites, all passing;
+> failover. 682 backend checks across 24 smoke suites, all passing;
 > frontend eslint clean; full `next build` succeeds. See "Stage 2, in
 > full" below for the doc-by-doc breakdown, and "Frontend polish" /
 > "Handoff" further down for what's recently done vs. still open.
@@ -51,7 +51,7 @@ onboarding flow and the weekly-cycle cascade — see
 - Local file storage for attachments (`app/storage.py`, one module so a
   future cloud-storage swap is contained) — dev-scope, one box, not yet
   cloud.
-- 23 smoke suites, 639 checks, all passing together (mocked LLM, no API
+- 24 smoke suites, 682 checks, all passing together (mocked LLM, no API
   key needed to run them) — see the updated list further down.
 - **Database migrations (Alembic)** — the schema is now built and evolved
   by versioned migrations applied at startup, not `create_all`. Existing
@@ -179,6 +179,10 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
    evidence; the Manager bases each project on one and plans every week against
    its arc. Also: `GITHUB_TOKEN` support, because each review costs 3 of GitHub's
    60 anonymous requests per hour.
+8. `docs/BACKGROUND_ROUNDTABLE.md` — the specialists' discussion no longer delays the
+   Mentor's review (about 25s down to about 10s per submission): it runs in the
+   background and appears in the thread live. State in the database, so it is safe
+   with several workers.
 
 ## Frontend polish — completed since the last handoff, no dedicated docs yet
 
@@ -347,6 +351,7 @@ python smoke_test_mentor_rubric.py            # Mentor rubric v2 + enforcement (
 python smoke_test_llm_tool_output.py          # repair / retry / fail over on unusable model output (48)
 python smoke_test_task_bank.py                # the Manager's task bank: integrity + wiring (62)
 python smoke_test_github_client.py            # what the Mentor sees of a repo; token + rate limit (29)
+python smoke_test_background_roundtable.py    # the specialists' discussion runs after the review; real HTTP timing (43)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints
@@ -369,6 +374,7 @@ python e2e_real_llm.py --full-week --force-approve   # run the end-of-week casca
 It drives onboarding, the Manager's plan, a submission (optionally with an
 image), the Mentor's review and roundtable, meeting-room chat and the HR
 rollup, then prints per-step timing, calls per provider and every
-failover. It reports how often a model's output had to be repaired or retried.
+failover. It reports how often a model's output had to be repaired or retried, and
+what a graduate actually waits for a review (over real HTTP).
 First real run (DeepSeek and Claude) found the crash above - the script
 earned its keep.

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { GitPullRequest, Calendar, CircleCheck, Clock, Paperclip, X } from "lucide-react";
+import { GitPullRequest, Calendar, CircleCheck, Clock, Paperclip, Users, X } from "lucide-react";
 import { STATUS_ORDER, type Task } from "@/lib/tasks";
 import { timeUntil, timeAgo } from "@/lib/format";
 import { AttachmentList } from "@/components/workspace/attachment-list";
@@ -249,6 +249,13 @@ export function TaskWorkspace({ task, busy, onAdvance }: TaskWorkspaceProps) {
             </div>
           )}
         </div>
+
+        {task.roundtableRunning && (
+          <p className="mt-4 flex items-center gap-2 font-mono text-[11px] text-text-muted">
+            <Users className="h-3.5 w-3.5" />
+            {t("taskWorkspace.teamStillDiscussing")}
+          </p>
+        )}
 
         {(task.githubLink || task.submissionText || task.attachments.length > 0) && (
           <div className="mt-4 rounded border border-border bg-bg-surface p-4">

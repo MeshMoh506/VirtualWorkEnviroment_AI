@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.agents import orchestrator
@@ -44,6 +44,7 @@ def manager_reply(
 @router.post("/mentor/review/{task_id}", response_model=ReviewOut, status_code=201)
 def mentor_review(
     task_id: str,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -66,9 +67,12 @@ def mentor_review(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     # Stage 2: Security Reviewer/Data Reviewer/DevOps weigh in too, if the
-    # graduate has any of them on their team — best-effort, never blocks
-    # the Mentor's review that already succeeded above.
-    orchestrator.run_co_reviews(db, task, current_user)
+    # graduate has any of them on their team, then the Manager synthesizes.
+    # That discussion runs in the BACKGROUND (docs/BACKGROUND_ROUNDTABLE.md): the
+    # Mentor's review — what the graduate is waiting for — is returned now, and the
+    # discussion appears in the task thread as it is written. Best-effort, never
+    # blocks or breaks the review that already succeeded above.
+    orchestrator.start_roundtable(db, task, current_user, background_tasks)
     return review
 
 

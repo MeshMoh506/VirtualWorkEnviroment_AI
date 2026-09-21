@@ -160,6 +160,10 @@ export interface TaskApiOut {
   // been bounced in total. See docs/NEEDS_CHANGES_VISIBLE.md.
   needs_changes: boolean;
   revision_count: number;
+  // The specialists' discussion of the latest review is still being written, in the
+  // background after the Mentor's review was returned — the thread keeps growing until
+  // this goes false. See docs/BACKGROUND_ROUNDTABLE.md.
+  roundtable_running: boolean;
   created_at: string;
   updated_at: string;
 }

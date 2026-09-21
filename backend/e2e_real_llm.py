@@ -168,6 +168,40 @@ def expect_language(text, what):
         expect(ARABIC_LETTER.search(text or ""), f"{what} has no Arabic text - the model ignored the language instruction")
 
 
+_wire = {}
+
+
+def wire():
+    """A real HTTP client to a real (local, in-process) server. The in-process test client always
+    waits for background work, so it can't show what a graduate actually waits for; this can."""
+    if "http" not in _wire:
+        import socket
+        import threading
+
+        import httpx
+        import uvicorn
+
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            port = s.getsockname()[1]
+        server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
+        thread = threading.Thread(target=server.run, daemon=True)
+        thread.start()
+        for _ in range(100):
+            if server.started:
+                break
+            time.sleep(0.1)
+        _wire.update(server=server, thread=thread, http=httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=300, headers=dict(client.headers)))
+    return _wire["http"]
+
+
+def stop_wire():
+    if "server" in _wire:
+        _wire["http"].close()
+        _wire["server"].should_exit = True
+        _wire["thread"].join(10)
+
+
 def call(method, path, expected=(200, 201), **kw):
     r = client.request(method, path, **kw)
     if r.status_code not in (expected if isinstance(expected, tuple) else (expected,)):
@@ -282,8 +316,20 @@ def submit_and_review(task, text, with_image):
     data = {"github_link": args.repo, "submission_text": text}
     files = [("files", ("mockup.png", tiny_png(), "image/png"))] if with_image else None
     call("POST", f"/tasks/{task['id']}/submit", 200, headers=S["h"], data=data, files=files)
-    r = call("POST", f"/agents/mentor/review/{task['id']}", 201, headers=S["h"])
+    # Over real HTTP so the timing is what a graduate would actually wait: the Mentor's review comes
+    # back first; the specialists' discussion then finishes in the background (docs/BACKGROUND_ROUNDTABLE.md).
+    started = time.time()
+    r = wire().post(f"/agents/mentor/review/{task['id']}", headers=S["h"])
+    mentor_seconds = time.time() - started
+    if r.status_code != 201:
+        raise HardFail(f"POST /agents/mentor/review/... -> HTTP {r.status_code}: {r.text[:300]}")
     review = r.json()
+    detail = wire().get(f"/tasks/{task['id']}", headers=S["h"]).json()
+    while detail["roundtable_running"] and time.time() - started < 300:
+        time.sleep(0.5)
+        detail = wire().get(f"/tasks/{task['id']}", headers=S["h"]).json()
+    S.setdefault("timings", []).append({"task": task["title"], "mentor_seconds": round(mentor_seconds, 1),
+                                        "discussion_done_seconds": round(time.time() - started, 1) if S.get("specialists") else None})
     m = review["metrics_json"] or {}
     expect(m.get("verdict") in ("approved", "needs_changes"), f"unexpected Mentor verdict {m.get('verdict')!r}")
     expect(len(review["content"].strip()) > 30, "the Mentor's review text is empty or tiny")
@@ -414,6 +460,17 @@ def finish():
         print(f"\nMALFORMED model output ({len(watcher.malformed)}) - unusable answers that were retried / failed over:")
         for line in watcher.malformed[:8]:
             print("  " + line)
+    timings = S.get("timings") or []
+    if timings:
+        slowest_wait = max(t["mentor_seconds"] for t in timings)
+        print("\nWHAT A GRADUATE WAITS FOR A REVIEW (real HTTP):")
+        for i, t in enumerate(timings[:6], 1):
+            tail = f", specialists + Manager synthesis done after {t['discussion_done_seconds']}s" if t["discussion_done_seconds"] is not None else ", no specialists on the team"
+            print(f"  review {i}: Mentor's verdict after {t['mentor_seconds']}s{tail}")
+        if any(t["discussion_done_seconds"] for t in timings):
+            avg_total = sum(t["discussion_done_seconds"] for t in timings if t["discussion_done_seconds"]) / len([1 for t in timings if t["discussion_done_seconds"]])
+            avg_mentor = sum(t["mentor_seconds"] for t in timings) / len(timings)
+            print(f"  -> the graduate now waits ~{avg_mentor:.0f}s instead of ~{avg_total:.0f}s; the discussion appears in the thread while they read the review")
     plan = S.get("produced_plan")
     if plan:
         print("\nWHAT THE MANAGER PRODUCED (judge the quality yourself):")
@@ -432,12 +489,13 @@ def finish():
     if args.save_report:
         with open(args.save_report, "w", encoding="utf-8") as fh:
             json.dump({"language": args.language, "steps": [{"step": n, "status": s, "seconds": round(t, 1), "note": nt} for n, s, t, nt in results],
-                       "plan": plan, "reviews": reviews, "llm_calls_by_provider": dict(watcher.calls),
+                       "plan": plan, "reviews": reviews, "review_timings": S.get("timings"), "llm_calls_by_provider": dict(watcher.calls),
                        "failovers": len(watcher.failovers), "repairs": watcher.repairs, "malformed": watcher.malformed},
                       fh, ensure_ascii=False, indent=2)
         print(f"\nFull report saved to {args.save_report}")
     failed = [r for r in results if r[1] == "FAIL"]
     print("\n" + ("RESULT: some checks FAILED" if failed else "RESULT: all hard checks passed"))
+    stop_wire()
     if not args.keep_db:
         client.__exit__(None, None, None)
         for suffix in ("", "-journal"):

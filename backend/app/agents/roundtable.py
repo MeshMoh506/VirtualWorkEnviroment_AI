@@ -19,12 +19,17 @@ synthesis on the main tier (it's the judgment call that ties it
 together). Each agent's turn is best-effort — one failing is skipped, the
 rest of the table carries on.
 """
+import logging
+import threading
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from app.agents import manager
 from app.agents.github_client import fetch_repo_context
 from app.agents.llm_client import call_agentic
 from app.agents.meeting import PERSONA
+from app.database import SessionLocal
 from app.models import (
     AgentCatalog,
     AgentType,
@@ -35,6 +40,8 @@ from app.models import (
     User,
     UserAgent,
 )
+
+logger = logging.getLogger("venv.roundtable")
 
 ROUNDTABLE_AGENTS = {
     AgentType.SECURITY_REVIEWER,
@@ -109,6 +116,77 @@ def _post(db: Session, task: Task, agent_type: AgentType, content: str) -> TaskM
     return message
 
 
+def specialists_for(db: Session, user: User) -> list[AgentType]:
+    """The specialists on this graduate's team who join the roundtable, in the fixed
+    speaking order (by AgentType value). Empty means: no roundtable at all."""
+    return sorted(_roster_agent_types(db, user) & ROUNDTABLE_AGENTS, key=lambda a: a.value)
+
+
+# ---- running it in the background (docs/BACKGROUND_ROUNDTABLE.md) -------------------------
+#
+# The Mentor's review is what the graduate is waiting for; the specialists' discussion
+# (three small-model turns, then the Manager's main-model synthesis) roughly DOUBLES that
+# wait. So the review endpoint returns as soon as the Mentor is done and this runs after it,
+# each message appearing in the thread as it is written (_post commits each one).
+
+_task_locks: dict[str, threading.Lock] = {}
+_task_locks_guard = threading.Lock()
+
+
+def _lock_for(task_id: str) -> threading.Lock:
+    """One lock per task, so two reviews of the same task in quick succession (a fast
+    resubmission) have their discussions one after the other, not interleaved in the
+    thread. Process-local, which is enough: it only orders discussions run by THIS process."""
+    with _task_locks_guard:
+        return _task_locks.setdefault(task_id, threading.Lock())
+
+
+def begin_roundtable(db: Session, task: Task) -> datetime:
+    """Mark a roundtable as running, BEFORE the review response is sent, so that the very
+    first thing the frontend fetches afterwards already says so. Returns a token that
+    identifies this run (see run_roundtable_job)."""
+    started_at = datetime.utcnow()
+    task.roundtable_started_at = started_at
+    task.roundtable_finished_at = None
+    db.commit()
+    return started_at
+
+
+def _mark_finished(task_id: str, started_at: datetime) -> None:
+    db = SessionLocal()
+    try:
+        task = db.get(Task, task_id)
+        # Only the LATEST run may declare the task finished: if a newer review has begun a
+        # discussion since (a resubmission), it is still queued or running - leave it "running".
+        if task is not None and task.roundtable_started_at == started_at:
+            task.roundtable_finished_at = datetime.utcnow()
+            db.commit()
+    except Exception:  # noqa: BLE001
+        logger.exception("Could not record the end of the roundtable for task %s", task_id)
+        db.rollback()
+    finally:
+        db.close()
+
+
+def run_roundtable_job(task_id: str, user_id: str, started_at: datetime) -> None:
+    """The background job. Takes ids, not ORM objects: the request's database session is
+    gone by the time this runs, so it opens its own. Never raises - an error must not take
+    the worker down, and the Mentor's review has already been delivered either way."""
+    with _lock_for(task_id):
+        db = SessionLocal()
+        try:
+            task = db.get(Task, task_id)
+            user = db.get(User, user_id)
+            if task is not None and user is not None:
+                run_roundtable(db, user, task)
+        except Exception:  # noqa: BLE001 - best-effort, like every turn inside run_roundtable
+            logger.exception("Roundtable for task %s failed; the Mentor's review stands", task_id)
+            db.rollback()
+        finally:
+            db.close()
+            _mark_finished(task_id, started_at)
+
+
 def run_roundtable(db: Session, user: User, task: Task) -> list[TaskMessage]:
     """Called right after the Mentor's review. Runs one pass: each
     specialist on the team responds in turn (seeing all prior turns), then
@@ -116,9 +194,7 @@ def run_roundtable(db: Session, user: User, task: Task) -> list[TaskMessage]:
     empty if no specialists are on the roster (then the Manager has
     nothing to synthesize and stays quiet too). Ordering is deterministic
     (by AgentType) so the conversation reads consistently."""
-    active = sorted(
-        _roster_agent_types(db, user) & ROUNDTABLE_AGENTS, key=lambda a: a.value
-    )
+    active = specialists_for(db, user)
     if not active:
         return []
 

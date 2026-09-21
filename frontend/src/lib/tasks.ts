@@ -45,6 +45,9 @@ export interface Task {
   // and how many times that has happened. Drives the "Needs changes" badge.
   needsChanges: boolean;
   revisionCount: number;
+  // The specialists' discussion is still being written in the background: keep refreshing
+  // the task so each comment appears as it lands (see the workspace page).
+  roundtableRunning: boolean;
   createdAt: string;
   updatedAt: string;
   messages: TaskMessage[];
@@ -92,6 +95,7 @@ function toTask(t: TaskApiOut, messages: TaskMessage[] = []): Task {
     isLate: t.is_late,
     needsChanges: t.needs_changes,
     revisionCount: t.revision_count,
+    roundtableRunning: t.roundtable_running,
     createdAt: t.created_at,
     updatedAt: t.updated_at,
     messages,
@@ -105,6 +109,15 @@ export async function fetchTasks(): Promise<Task[]> {
 }
 
 /** Full detail with thread (matches GET /tasks/{id}) — call when a task is opened. */
+/** Combine the messages we already show with a fresh copy from the server, by id, oldest
+ * first — so a refresh can never make a message we have just sent disappear for a moment. */
+export function mergeMessages(local: TaskMessage[], incoming: TaskMessage[]): TaskMessage[] {
+  const byId = new Map<string, TaskMessage>();
+  for (const m of local) byId.set(m.id, m);
+  for (const m of incoming) byId.set(m.id, m);
+  return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
 export async function fetchTaskDetail(id: string): Promise<Task> {
   const raw = await api.tasks.detail(id);
   return toTask(raw, raw.messages.map(toTaskMessage));
