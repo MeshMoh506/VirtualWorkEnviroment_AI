@@ -14,20 +14,46 @@ from sqlalchemy.orm import Session
 
 from app.agents.github_client import fetch_repo_context
 from app.agents.llm_client import call_with_tool
+from app.agents.rubric import RUBRIC_VERSION, apply_rubric_rules, system_prompt
 from app.agents.tools import SUBMIT_REVIEW_TOOL
 from app.models import AgentType, Review, ReviewKind, SenderType, Task, TaskMessage, TaskStatus, User
 from app.storage import read_attachment_base64
 
-SYSTEM_PROMPT = (
-    "You are the Mentor at Venv, reviewing a recent graduate's submitted "
-    "work. Be specific and constructive: point at what's actually in the "
-    "repo, the notes they left, or the images/files they attached — not "
-    "generic advice. Score each rubric category 1-5. Use 'needs_changes' "
-    "only when something genuinely blocks the task's goal — minor gaps "
-    "(missing tests, thin docs) can still be 'approved' with a comment "
-    "about what to improve next time, the way a real early-career review "
-    "would handle it."
-)
+# The rubric, anchors, verdict rule and review style live in agents/rubric.py
+# (docs/MENTOR_RUBRIC.md) so the team can read and tune them in one place.
+SYSTEM_PROMPT = system_prompt()
+
+
+def _previous_feedback(task: Task) -> str | None:
+    """What the Mentor asked for last time, if the task was bounced. Without
+    this a resubmission is reviewed blind: the Mentor can't check its own
+    requests were met, and tends to invent new ones (an endless bounce)."""
+    reviews = sorted(
+        (r for r in task.reviews if r.kind == ReviewKind.TASK_REVIEW),
+        key=lambda r: r.created_at,
+    )
+    if not reviews or (reviews[-1].metrics_json or {}).get("verdict") != "needs_changes":
+        return None
+    last = reviews[-1]
+    lines = [f"Your previous review asked for changes.\nSummary: {last.content}"]
+    for c in (last.metrics_json or {}).get("comments", []):
+        if isinstance(c, dict):
+            lines.append(f"- [{c.get('category')}] {c.get('content')}")
+        else:  # a model that returned plain strings
+            lines.append(f"- {c}")
+    return "\n".join(lines)
+
+
+def _context_line(task: Task, user: User, previous: str | None) -> str:
+    bits = [f"Graduate's track: {user.track.value}."]
+    if task.week is not None:
+        bits.append(f"Program week: {task.week.week_number}.")
+    revisions = sum(
+        1 for r in task.reviews
+        if r.kind == ReviewKind.TASK_REVIEW and (r.metrics_json or {}).get("verdict") == "needs_changes"
+    )
+    bits.append(f"This is revision {revisions + 1} of this task." if previous else "This is the first submission of this task.")
+    return " ".join(bits)
 
 
 def review_task(db: Session, task: Task, user: User) -> Review:
@@ -37,7 +63,10 @@ def review_task(db: Session, task: Task, user: User) -> Review:
     if not task.github_link and not task.submission_text and not task.attachments:
         raise ValueError("Task has no submission to review yet.")
 
-    parts = [f"Task assigned: {task.title}\n{task.description}\n"]
+    previous = _previous_feedback(task)
+    parts = [f"Task assigned: {task.title}\n{task.description}\n", _context_line(task, user, previous) + "\n"]
+    if previous:
+        parts.append(previous + "\n")
     if task.github_link:
         parts.append(f"Submitted repo:\n{fetch_repo_context(task.github_link)}\n")
     if task.submission_text:
@@ -79,7 +108,7 @@ def review_task(db: Session, task: Task, user: User) -> Review:
         force_tool="submit_review",
         max_tokens=2000,
     )
-    data = result["input"]
+    data, verdict_adjusted = apply_rubric_rules(result["input"])
 
     review = Review(
         user_id=user.id,
@@ -92,6 +121,10 @@ def review_task(db: Session, task: Task, user: User) -> Review:
             "verdict": data["verdict"],
             "categories": data["categories"],
             "comments": data["comments"],
+            # Traceability ("how was this decided?"): which rubric produced it,
+            # and whether the verdict had to be brought in line with the scores.
+            "rubric_version": RUBRIC_VERSION,
+            "verdict_adjusted": verdict_adjusted,
         },
     )
     db.add(review)

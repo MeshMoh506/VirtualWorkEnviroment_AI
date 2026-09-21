@@ -280,6 +280,8 @@ def s_week():
                     if attempt == 1 else "I addressed the Mentor's feedback above; please review again.")
             review = submit_and_review(current, text, with_image=(args.with_image and i == 1 and attempt == 1))
             verdict = review["metrics_json"]["verdict"]
+            if review["metrics_json"].get("verdict_adjusted"):
+                notes.append(f"subtask {i}: the model said 'approved' but scored 'meets requirements' below the bar - the rubric rule bounced it")
             if i == 1 and attempt == 1:
                 S["first_review"], S["first_task_id"] = review, current["id"]
             if verdict == "approved":

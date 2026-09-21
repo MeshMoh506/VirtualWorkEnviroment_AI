@@ -11,7 +11,7 @@
 > Manager synthesizing the discussion. On top of that: Arabic (RTL)
 > support and a real light theme, and multi-provider LLM support
 > (Anthropic/OpenAI/DeepSeek/Qwen) with tier-aware routing and automatic
-> failover. 449 backend checks across 19 smoke suites, all passing;
+> failover. 498 backend checks across 20 smoke suites, all passing;
 > frontend eslint clean; full `next build` succeeds. See "Stage 2, in
 > full" below for the doc-by-doc breakdown, and "Frontend polish" /
 > "Handoff" further down for what's recently done vs. still open.
@@ -51,7 +51,7 @@ onboarding flow and the weekly-cycle cascade — see
 - Local file storage for attachments (`app/storage.py`, one module so a
   future cloud-storage swap is contained) — dev-scope, one box, not yet
   cloud.
-- 19 smoke suites, 449 checks, all passing together (mocked LLM, no API
+- 20 smoke suites, 498 checks, all passing together (mocked LLM, no API
   key needed to run them) — see the updated list further down.
 - **Database migrations (Alembic)** — the schema is now built and evolved
   by versioned migrations applied at startup, not `create_all`. Existing
@@ -155,8 +155,10 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
 - **Roundtable specialists don't get vision** — only the Mentor's review
   sees image attachments as real content blocks; specialists just see
   filenames.
-- Task bank content / finalized Mentor rubric — still LLM-improvised,
-  first-pass rubric, unchanged since Stage 1.
+- Task bank content — the Manager's tasks are still improvised. (The Mentor's
+  rubric is now v2 — anchored scores, one enforced verdict rule, memory of its
+  own earlier feedback — as *proposed defaults awaiting team approval*; see
+  `docs/MENTOR_RUBRIC.md`.)
 
 ## Hardening — built after Stage 2's original scope
 
@@ -168,6 +170,8 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
    so (task rail badge, workspace banner, dashboard), derived from the reviews.
 4. `docs/AGENT_LANGUAGE.md` — every agent answers in the language the UI is
    showing (Arabic or English), via one header and two hooks in `llm_client`.
+5. `docs/MENTOR_RUBRIC.md` — the Mentor's rubric v2 (proposed defaults to
+   confirm): anchors, one enforced verdict rule, memory of its own feedback.
 
 ## Frontend polish — completed since the last handoff, no dedicated docs yet
 
@@ -332,6 +336,7 @@ python smoke_test_migrations.py              # Alembic + model-drift guard (19; 
 python smoke_test_stage2_onboarding_resume.py # restart-proof onboarding + CV replacement (54)
 python smoke_test_needs_changes.py            # visible 'needs changes' state (29)
 python smoke_test_agent_language.py           # agents answer in Arabic (29)
+python smoke_test_mentor_rubric.py            # Mentor rubric v2 + enforcement (49)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints
