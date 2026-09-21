@@ -186,6 +186,22 @@ with patch("app.agents.llm_client._anthropic") as mock_anthropic, patch(
     r = client.post("/meeting/mentor", headers=ar, json={"content": "And after that?"})
     check("...and Arabic still works afterwards", r.status_code == 201 and SYSTEMS and all(MARK in s for s in SYSTEMS))
 
+    # ---- the browser's CORS preflight ------------------------------------------------------
+    # Every request now carries X-Venv-Language, a non-standard header, so a BROWSER first asks
+    # the server "may I send it?" (an OPTIONS preflight). The test client never does that, so
+    # without this every test could pass while every browser request was blocked.
+    ORIGIN = "http://localhost:3000"
+    pre = client.options("/tasks", headers={"Origin": ORIGIN, "Access-Control-Request-Method": "GET",
+                                            "Access-Control-Request-Headers": "authorization,x-venv-language,content-type"})
+    allowed = pre.headers.get("access-control-allow-headers", "").lower()
+    check("a browser's preflight for the language header is approved (200)", pre.status_code == 200)
+    check("...the server explicitly allows x-venv-language (else the browser blocks every request)", "x-venv-language" in allowed)
+    check("...alongside authorization and content-type", "authorization" in allowed and "content-type" in allowed)
+    check("...for the methods the app uses", all(m in pre.headers.get("access-control-allow-methods", "") for m in ("GET", "POST", "PATCH")))
+    real = client.post("/auth/login", data={"username": "lang-en@example.com", "password": "hunter2pass"}, headers={"Origin": ORIGIN, "X-Venv-Language": "ar"})
+    check("a real cross-origin request carrying the header succeeds and is answered with CORS headers",
+          real.status_code == 200 and real.headers.get("access-control-allow-origin") in ("*", ORIGIN))
+
     # ---- the header alone decides (it is per request, not per user) -----------------
     SYSTEMS.clear()
     r = client.post("/meeting/mentor", headers={**en, "X-Venv-Language": "ar"}, json={"content": "Switching language mid-session."})

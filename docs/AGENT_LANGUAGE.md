@@ -43,7 +43,7 @@ English. That's the safe default.
 
 ## What was verified
 
-`smoke_test_agent_language.py` (29 checks) runs the **real endpoints and agents**
+`smoke_test_agent_language.py` (34 checks) runs the **real endpoints and agents**
 with only the model SDK faked, recording the system prompt each call actually
 sends: Manager, Mentor, meeting room, HR, the roundtable's specialists and
 synthesis, and the onboarding graph, plus the OpenAI-compatible providers
@@ -56,6 +56,12 @@ onboarding hook each makes it fail.
 `python e2e_real_llm.py --language ar` is the check for **real** models: it sends
 the header and *fails* if the onboarding questions, the task, the Mentor's review or
 a chat reply come back without Arabic text.
+
+**Browsers and CORS.** Every request now carries a non-standard header, so a browser first
+sends a preflight (`OPTIONS`) asking whether it may. The test client never does that, so the
+suite sends one explicitly and checks that `x-venv-language` is allowed, and that a real
+cross-origin request carrying it is answered with CORS headers. If CORS is ever tightened to
+a fixed header list, this fails loudly instead of every browser request being silently blocked.
 
 ## Not covered / worth knowing
 

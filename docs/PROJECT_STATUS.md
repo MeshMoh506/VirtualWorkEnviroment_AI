@@ -11,7 +11,7 @@
 > Manager synthesizing the discussion. On top of that: Arabic (RTL)
 > support and a real light theme, and multi-provider LLM support
 > (Anthropic/OpenAI/DeepSeek/Qwen) with tier-aware routing and automatic
-> failover. 682 backend checks across 24 smoke suites, all passing;
+> failover. 687 backend checks across 24 smoke suites, all passing;
 > frontend eslint clean; full `next build` succeeds. See "Stage 2, in
 > full" below for the doc-by-doc breakdown, and "Frontend polish" /
 > "Handoff" further down for what's recently done vs. still open.
@@ -51,7 +51,7 @@ onboarding flow and the weekly-cycle cascade — see
 - Local file storage for attachments (`app/storage.py`, one module so a
   future cloud-storage swap is contained) — dev-scope, one box, not yet
   cloud.
-- 24 smoke suites, 682 checks, all passing together (mocked LLM, no API
+- 24 smoke suites, 687 checks, all passing together (mocked LLM, no API
   key needed to run them) — see the updated list further down.
 - **Database migrations (Alembic)** — the schema is now built and evolved
   by versioned migrations applied at startup, not `create_all`. Existing
@@ -346,7 +346,7 @@ python smoke_test_stage2_roundtable.py       # the roundtable, end to end (20)
 python smoke_test_migrations.py              # Alembic + model-drift guard (19; +10 with Postgres)
 python smoke_test_stage2_onboarding_resume.py # restart-proof onboarding + CV replacement (54)
 python smoke_test_needs_changes.py            # visible 'needs changes' state (29)
-python smoke_test_agent_language.py           # agents answer in Arabic (29)
+python smoke_test_agent_language.py           # agents answer in Arabic + the browser CORS preflight (34)
 python smoke_test_mentor_rubric.py            # Mentor rubric v2 + enforcement (49)
 python smoke_test_llm_tool_output.py          # repair / retry / fail over on unusable model output (48)
 python smoke_test_task_bank.py                # the Manager's task bank: integrity + wiring (62)
