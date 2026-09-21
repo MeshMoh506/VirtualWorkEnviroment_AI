@@ -182,11 +182,14 @@ export function resolveAgentDisplay(
 
 /** The four task-status labels (To do / In progress / Submitted /
  * Reviewed), translated. */
-export function useStatusLabels(): Record<TaskStatus, string> {
+/** Labels for the four task statuses, plus "needs_changes" — a *display*
+ * state for an in_progress task the Mentor bounced back (see Task.needsChanges),
+ * not a fifth backend status. */
+export function useStatusLabels(): Record<TaskStatus | "needs_changes", string> {
   const { t } = useLocale();
   return Object.fromEntries(
-    STATUS_ORDER.map((s) => [s, t(`taskStatus.${s}`)])
-  ) as Record<TaskStatus, string>;
+    [...STATUS_ORDER, "needs_changes" as const].map((s) => [s, t(`taskStatus.${s}`)])
+  ) as Record<TaskStatus | "needs_changes", string>;
 }
 
 /** The seven track labels, translated, keyed by the backend's ApiTrack

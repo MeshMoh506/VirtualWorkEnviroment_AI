@@ -383,6 +383,34 @@ class Task(Base):
             return None
         return self.completed_at > self.deadline
 
+    def _task_review_verdicts(self) -> list[str | None]:
+        """The Mentor's verdict on each submission of this task, oldest first."""
+        reviews = sorted(
+            (r for r in self.reviews if r.kind == ReviewKind.TASK_REVIEW),
+            key=lambda r: r.created_at,
+        )
+        return [(r.metrics_json or {}).get("verdict") for r in reviews]
+
+    @property
+    def needs_changes(self) -> bool:
+        """True while the Mentor has bounced this task back for changes and the
+        graduate hasn't resubmitted yet. A bounce sets status back to
+        in_progress — the same status as "started, nothing submitted" — so the
+        status alone can't tell the two apart; the latest verdict can. Derived
+        (no column), so it can never disagree with the reviews themselves.
+        Goes false again the moment the graduate resubmits (status leaves
+        in_progress)."""
+        if self.status != TaskStatus.IN_PROGRESS:
+            return False
+        verdicts = self._task_review_verdicts()
+        return bool(verdicts) and verdicts[-1] == "needs_changes"
+
+    @property
+    def revision_count(self) -> int:
+        """How many times the Mentor has asked for changes on this task
+        (kept after approval: 2 means it took three attempts)."""
+        return sum(1 for v in self._task_review_verdicts() if v == "needs_changes")
+
     user: Mapped["User"] = relationship(back_populates="tasks")
     week: Mapped["Week"] = relationship(back_populates="tasks")
     messages: Mapped[list["TaskMessage"]] = relationship(
