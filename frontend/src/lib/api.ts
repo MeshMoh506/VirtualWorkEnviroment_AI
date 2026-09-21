@@ -36,8 +36,19 @@ export class ApiError extends Error {
   }
 }
 
+/** The language the UI is showing right now. Sent with every request so the
+ * agents (Manager, Mentor, HR, meeting room, roundtable, onboarding) answer in
+ * the graduate's language — see docs/AGENT_LANGUAGE.md. Read from <html lang>,
+ * which the LocaleProvider keeps in sync, so it is always current and never
+ * out of step after a toggle. */
+function currentLanguage(): "ar" | "en" {
+  if (typeof document === "undefined") return "en";
+  return document.documentElement.getAttribute("lang") === "ar" ? "ar" : "en";
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
+  headers.set("X-Venv-Language", currentLanguage());
   if (
     !(options.body instanceof URLSearchParams) &&
     !(options.body instanceof FormData) &&

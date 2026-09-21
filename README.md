@@ -104,6 +104,7 @@ python smoke_test_stage2_roundtable.py         # the agent roundtable, end to en
 python smoke_test_migrations.py                # Alembic + model-drift guard (19; +10 with Postgres)
 python smoke_test_stage2_onboarding_resume.py  # restart-proof onboarding + CV replacement (54)
 python smoke_test_needs_changes.py             # visible 'needs changes' state (29)
+python smoke_test_agent_language.py            # agents answer in Arabic (29)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints

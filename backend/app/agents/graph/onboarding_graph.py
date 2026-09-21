@@ -21,6 +21,7 @@ from langgraph.types import interrupt
 from app.agents.graph.models import small_model_chain
 from app.agents.graph.state import OnboardingState
 from app.agents.llm_client import ALL_PROVIDERS_FAILED, FAILOVER_EXCEPTIONS, logger
+from app.language import with_language
 from app.models import TrackEnum
 
 QUESTIONS_TOOL = {
@@ -120,9 +121,11 @@ def generate_questions(state: OnboardingState) -> dict:
         QUESTIONS_TOOL,
         [
             SystemMessage(
-                "You are Venv's onboarding agent. Look at this graduate's "
-                "CV and propose a short, skippable set of follow-up "
-                "questions about whatever it doesn't cover well."
+                with_language(
+                    "You are Venv's onboarding agent. Look at this graduate's "
+                    "CV and propose a short, skippable set of follow-up "
+                    "questions about whatever it doesn't cover well."
+                )
             ),
             HumanMessage(f"CV:\n{state.get('cv_raw_text') or '(no CV provided)'}"),
         ],
@@ -164,9 +167,11 @@ def suggest_track(state: OnboardingState) -> dict:
         TRACK_TOOL,
         [
             SystemMessage(
-                "Suggest which IT track best fits this graduate, using "
-                "their CV, follow-up answers, and anything they added "
-                "about themselves."
+                with_language(
+                    "Suggest which IT track best fits this graduate, using "
+                    "their CV, follow-up answers, and anything they added "
+                    "about themselves."
+                )
             ),
             HumanMessage(
                 f"CV:\n{state.get('cv_raw_text') or '(none)'}\n\n"

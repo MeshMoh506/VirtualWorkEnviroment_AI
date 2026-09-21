@@ -35,6 +35,7 @@ from openai import PermissionDeniedError as OPermErr
 from openai import RateLimitError as ORateErr
 
 from app.config import settings
+from app.language import with_language
 
 # One line per call showing which provider/model actually answered (and
 # a line per provider that got skipped via failover) — visible in the
@@ -193,6 +194,7 @@ def call_with_tool(
     max_tokens: int = 1500,
     tier: str = "main",
 ) -> dict:
+    system = with_language(system)  # answer in the graduate's language (app/language.py)
     chain = resolve_provider_chain(tier)
     if not chain:
         raise LLMConfigError(NO_PROVIDER_CONFIGURED)
@@ -244,6 +246,7 @@ def call_agentic(
     max_tokens: int = 1500,
     tier: str = "main",
 ) -> AgentReply:
+    system = with_language(system)  # answer in the graduate's language (app/language.py)
     chain = resolve_provider_chain(tier)
     if not chain:
         raise LLMConfigError(NO_PROVIDER_CONFIGURED)
