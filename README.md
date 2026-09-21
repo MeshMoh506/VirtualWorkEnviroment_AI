@@ -106,6 +106,7 @@ python smoke_test_stage2_onboarding_resume.py  # restart-proof onboarding + CV r
 python smoke_test_needs_changes.py             # visible 'needs changes' state (29)
 python smoke_test_agent_language.py            # agents answer in Arabic (29)
 python smoke_test_mentor_rubric.py             # Mentor rubric v2 + enforcement (49)
+python smoke_test_llm_tool_output.py           # repair / retry / fail over on unusable model output (48)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints

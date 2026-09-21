@@ -22,6 +22,7 @@ Run (from backend/, with your venv active):
   python e2e_real_llm.py --provider qwen --with-image
   python e2e_real_llm.py --full-week --repo https://github.com/<you>/<repo>
   python e2e_real_llm.py --language ar         # do the agents really answer in Arabic?
+  python e2e_real_llm.py --full-week --force-approve   # exercise the end-of-week cascade even if the Mentor keeps bouncing
 
 Real calls cost real (small) money. The default run makes roughly 10-25 calls.
 
@@ -54,6 +55,10 @@ parser.add_argument("--max-resubmits", type=int, default=2, help="resubmissions 
 parser.add_argument("--with-image", action="store_true", help="attach a small PNG to the first submission (tests vision)")
 parser.add_argument("--no-specialists", action="store_true", help="skip adding the optional agents (skips the roundtable)")
 parser.add_argument("--repo", default="https://github.com/psf/requests", help="GitHub repo to submit")
+parser.add_argument("--force-approve", action="store_true",
+                    help="if the Mentor keeps bouncing a subtask (it will, if the repo is unchanged between attempts), "
+                         "record a synthetic approval so the week can finish and the end-of-week cascade (Manager + HR + "
+                         "Mentor consult, real models) still gets exercised. Clearly marked FORCED in the report.")
 parser.add_argument("--keep-db", action="store_true", help="keep the throwaway database afterwards")
 parser.add_argument("--language", choices=["en", "ar"], default="en",
                     help="send X-Venv-Language, like the frontend does; with 'ar' the check also FAILS if the agents' "
@@ -106,6 +111,7 @@ class LLMWatcher(logging.Handler):
     def __init__(self):
         super().__init__()
         self.calls, self.failovers = Counter(), []
+        self.repairs, self.malformed = [], []  # what real models got wrong (see agents/tool_output.py)
 
     def emit(self, record):
         msg = record.getMessage()
@@ -113,6 +119,10 @@ class LLMWatcher(logging.Handler):
             return
         if "failing over" in msg:
             self.failovers.append(msg)
+        elif "repaired tool output" in msg:
+            self.repairs.append(msg)
+        elif "returned malformed output" in msg:
+            self.malformed.append(msg)
         else:
             parts = msg.split()
             if len(parts) > 1:
@@ -271,13 +281,36 @@ def submit_and_review(task, text, with_image):
     return review
 
 
+def force_approve(task):
+    """Record a synthetic Mentor approval directly in the throwaway database, so a week can
+    finish when the real Mentor won't approve an unchanged submission."""
+    from datetime import datetime
+
+    from app.database import SessionLocal
+    from app.models import AgentType, Review, ReviewKind, Task, TaskStatus
+
+    db = SessionLocal()
+    try:
+        t = db.get(Task, task["id"])
+        t.status, t.completed_at = TaskStatus.REVIEWED, datetime.utcnow()
+        db.add(Review(
+            user_id=t.user_id, task_id=t.id, week_id=t.week_id, agent_type=AgentType.MENTOR, kind=ReviewKind.TASK_REVIEW,
+            content="(Approval recorded by e2e_real_llm.py --force-approve, not by the Mentor.)",
+            metrics_json={"verdict": "approved", "forced": True, "comments": [],
+                          "categories": [{"key": k, "label": k, "score": 4} for k in ("correctness", "code_quality", "testing", "documentation")]},
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+
 def s_week():
     current, notes, approved_count = S["task"], [], 0
     for i in range(1, args.subtasks + 1):
         approved = False
         for attempt in range(1, args.max_resubmits + 2):
             text = ("Here is my implementation, with tests and a short README on how to run it."
-                    if attempt == 1 else "I addressed the Mentor's feedback above; please review again.")
+                    if attempt == 1 else "Resubmitting for another review. (Automated check: nothing was changed.)")
             review = submit_and_review(current, text, with_image=(args.with_image and i == 1 and attempt == 1))
             verdict = review["metrics_json"]["verdict"]
             if review["metrics_json"].get("verdict_adjusted"):
@@ -288,8 +321,13 @@ def s_week():
                 approved = True
                 break
         notes.append(f"subtask {i}: {'approved' if approved else 'needs changes'} after {attempt} submission(s)")
+        if not approved and args.force_approve:
+            force_approve(current)
+            notes.append(f"subtask {i}: FORCED approval (--force-approve) - the Mentor kept asking for changes")
+            approved = True
         if not approved:
-            notes.append("(Mentor kept asking for changes - expected if --repo doesn't fit the task; the pipeline itself worked)")
+            notes.append("(Mentor kept asking for changes - expected if --repo doesn't fit the task or the repo is unchanged between attempts; "
+                         "the pipeline itself worked. Use --force-approve to still exercise the end-of-week cascade.)")
             break
         approved_count += 1
         r = call("POST", "/agents/manager/assign-task", 201, headers=S["h"])
@@ -353,6 +391,14 @@ def finish():
             print("  " + line)
     else:
         print("Failovers: none")
+    if watcher.repairs:
+        print(f"\nREPAIRED model output ({len(watcher.repairs)}) - the model answered oddly and we fixed it (this used to crash):")
+        for line in watcher.repairs[:8]:
+            print("  " + line)
+    if watcher.malformed:
+        print(f"\nMALFORMED model output ({len(watcher.malformed)}) - unusable answers that were retried / failed over:")
+        for line in watcher.malformed[:8]:
+            print("  " + line)
     failed = [r for r in results if r[1] == "FAIL"]
     print("\n" + ("RESULT: some checks FAILED" if failed else "RESULT: all hard checks passed"))
     if not args.keep_db:
@@ -383,5 +429,5 @@ if args.full_week:
         step("end-of-week cascade (Manager + HR)", s_cascade, fatal=False)
     else:
         results.append(("end-of-week cascade (Manager + HR)", "SKIP", 0.0, "not all 5 subtasks were approved"))
-        print("[SKIP] end-of-week cascade - not all 5 subtasks were approved (try --repo with a repo that fits the task)")
+        print("[SKIP] end-of-week cascade - not all 5 subtasks were approved (add --force-approve to run the cascade anyway, or use a --repo that fits the task)")
 finish()

@@ -11,7 +11,7 @@
 > Manager synthesizing the discussion. On top of that: Arabic (RTL)
 > support and a real light theme, and multi-provider LLM support
 > (Anthropic/OpenAI/DeepSeek/Qwen) with tier-aware routing and automatic
-> failover. 498 backend checks across 20 smoke suites, all passing;
+> failover. 546 backend checks across 21 smoke suites, all passing;
 > frontend eslint clean; full `next build` succeeds. See "Stage 2, in
 > full" below for the doc-by-doc breakdown, and "Frontend polish" /
 > "Handoff" further down for what's recently done vs. still open.
@@ -51,7 +51,7 @@ onboarding flow and the weekly-cycle cascade — see
 - Local file storage for attachments (`app/storage.py`, one module so a
   future cloud-storage swap is contained) — dev-scope, one box, not yet
   cloud.
-- 20 smoke suites, 498 checks, all passing together (mocked LLM, no API
+- 21 smoke suites, 546 checks, all passing together (mocked LLM, no API
   key needed to run them) — see the updated list further down.
 - **Database migrations (Alembic)** — the schema is now built and evolved
   by versioned migrations applied at startup, not `create_all`. Existing
@@ -172,6 +172,9 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
    showing (Arabic or English), via one header and two hooks in `llm_client`.
 5. `docs/MENTOR_RUBRIC.md` — the Mentor's rubric v2 (proposed defaults to
    confirm): anchors, one enforced verdict rule, memory of its own feedback.
+6. `docs/LLM_PROVIDER_FAILOVER.md` ("Malformed tool output") — found by the first
+   real-model run: Claude returned a list as a string and crashed the Manager.
+   Now repaired, retried, failed over, and never a 500.
 
 ## Frontend polish — completed since the last handoff, no dedicated docs yet
 
@@ -337,6 +340,7 @@ python smoke_test_stage2_onboarding_resume.py # restart-proof onboarding + CV re
 python smoke_test_needs_changes.py            # visible 'needs changes' state (29)
 python smoke_test_agent_language.py           # agents answer in Arabic (29)
 python smoke_test_mentor_rubric.py            # Mentor rubric v2 + enforcement (49)
+python smoke_test_llm_tool_output.py          # repair / retry / fail over on unusable model output (48)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints
@@ -352,11 +356,13 @@ fail over:
 cd backend
 python e2e_real_llm.py                    # providers as set in .env
 python e2e_real_llm.py --provider qwen    # one provider for every call
-python e2e_real_llm.py --full-week --repo https://github.com/<you>/<repo>
+python e2e_real_llm.py --language ar           # do the agents really answer in Arabic?
+python e2e_real_llm.py --full-week --force-approve   # run the end-of-week cascade even if the Mentor keeps bouncing
 ```
 
 It drives onboarding, the Manager's plan, a submission (optionally with an
 image), the Mentor's review and roundtable, meeting-room chat and the HR
 rollup, then prints per-step timing, calls per provider and every
-failover. Its own logic was verified against a local fake provider; it has
-not yet been run against real keys.
+failover. It reports how often a model's output had to be repaired or retried.
+First real run (DeepSeek and Claude) found the crash above - the script
+earned its keep.

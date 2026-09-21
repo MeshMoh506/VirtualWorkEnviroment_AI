@@ -20,6 +20,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.agents.llm_client import call_agentic, call_with_tool
+from app.agents.tool_output import MalformedToolOutput
 from app.agents.tools import (
     CREATE_PROJECT_TOOL,
     PLAN_WEEK_TOOL,
@@ -63,6 +64,27 @@ def _cv_context(user: User) -> str:
     return "\n\n".join(parts) if parts else "No CV or history yet — this is their first task."
 
 
+def _check_project(data: dict) -> None:
+    for field in ("title", "description"):
+        if not isinstance(data.get(field), str) or not data[field].strip():
+            raise MalformedToolOutput(f"create_project returned no usable '{field}'")
+
+
+def _check_plan(data: dict) -> None:
+    """The plan must be exactly the shape plan_week() indexes into: five subtasks,
+    each an object with a title and a description. Anything else is retried by
+    llm_client instead of crashing (or worse, silently storing a broken plan)."""
+    subtasks = data["subtasks"]
+    if len(subtasks) < 5:
+        raise MalformedToolOutput(f"plan_week returned {len(subtasks)} subtasks, expected 5")
+    for i, item in enumerate(subtasks[:5], start=1):
+        if not isinstance(item, dict):
+            raise MalformedToolOutput(f"subtask {i} is a {type(item).__name__}, not an object")
+        for field in ("title", "description"):
+            if not isinstance(item.get(field), str) or not item[field].strip():
+                raise MalformedToolOutput(f"subtask {i} has no usable '{field}'")
+
+
 def create_project(db: Session, user: User) -> Project:
     """Called once per graduate, the first time weekly_cycle.get_next_task
     finds no active Project yet. Stage 2: a graduate can bring their own
@@ -79,6 +101,7 @@ def create_project(db: Session, user: User) -> Project:
         messages=[{"role": "user", "content": prompt}],
         tools=[CREATE_PROJECT_TOOL],
         force_tool="create_project",
+        validate=_check_project,
     )
     data = result["input"]
 
@@ -118,6 +141,7 @@ def plan_week(db: Session, user: User, project: Project) -> Week:
         tools=[PLAN_WEEK_TOOL],
         force_tool="plan_week",
         max_tokens=2000,
+        validate=_check_plan,
     )
     data = result["input"]
     subtasks = data["subtasks"]
