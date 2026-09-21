@@ -85,8 +85,9 @@ SUBMIT_REVIEW_TOOL = {
                 "type": "string",
                 "enum": ["approved", "needs_changes"],
                 "description": (
-                    "'needs_changes' only when something genuinely blocks "
-                    "the task's goal — minor gaps can still be 'approved'."
+                    "'needs_changes' only when 'Meets requirements' scores below 3 "
+                    "(the task's goal isn't met). Weak tests/docs/code quality alone "
+                    "never block: approve and note them. Must agree with the scores."
                 ),
             },
             "summary": {
@@ -116,7 +117,9 @@ SUBMIT_REVIEW_TOOL = {
                     },
                     "required": ["key", "label", "score"],
                 },
-                "description": "Score all four categories: correctness, code_quality, testing, documentation.",
+                "minItems": 4,
+                "maxItems": 4,
+                "description": "Score all four categories exactly once: correctness, code_quality, testing, documentation.",
             },
             "comments": {
                 "type": "array",
@@ -131,7 +134,11 @@ SUBMIT_REVIEW_TOOL = {
                     },
                     "required": ["category", "content"],
                 },
-                "description": "Specific inline comments, referencing what's actually in the repo.",
+                "maxItems": 4,
+                "description": (
+                    "Specific comments, each pointing at something concrete in the "
+                    "submission. At most 3 when needs_changes, at most 2 when approved."
+                ),
             },
         },
         "required": ["verdict", "summary", "categories", "comments"],

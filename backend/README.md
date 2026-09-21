@@ -52,10 +52,11 @@ python smoke_test.py
 | `app/routers/agents.py` | Endpoints that trigger Manager/Mentor/HR — Mentor's endpoint also runs the roundtable |
 | `app/routers/meeting.py` | `GET`/`POST /meeting/{agent}` — any agent on the graduate's actual team |
 | `alembic/`, `alembic.ini` | Database migrations — the schema's version history (`docs/MIGRATIONS.md`) |
+| `app/agents/rubric.py` | The Mentor's rubric: categories, anchors, the verdict rule and its enforcement (`docs/MENTOR_RUBRIC.md`) |
 | `app/language.py` | Per-request language (`X-Venv-Language`) so every agent answers in Arabic or English (`docs/AGENT_LANGUAGE.md`) |
 | `app/migrations.py` | Runs the migrations at startup; adopts pre-Alembic databases safely |
 | `e2e_real_llm.py` | Run once before a demo: drives the whole demo path with your REAL LLM keys and reports per-step results, provider usage and failovers (`python e2e_real_llm.py --help`) |
-| `smoke_test*.py` (19 files) | Full list + check counts in `docs/PROJECT_STATUS.md`'s "Running the smoke suite" |
+| `smoke_test*.py` (20 files) | Full list + check counts in `docs/PROJECT_STATUS.md`'s "Running the smoke suite" |
 
 ## Schema notes for the rest of the team
 
