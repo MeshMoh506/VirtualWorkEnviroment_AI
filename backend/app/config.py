@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     deepseek_small_model: str = "deepseek-chat"
 
     qwen_api_key: str = ""
+    # Optional. Without it the Mentor reads submitted repos through GitHub's anonymous
+    # API, limited to 60 requests/hour per IP - and each submission costs 3 (repo
+    # info, file tree, README), so ~20 reviews an hour, shared by everyone behind one
+    # IP. A token (no scopes needed for public repos) raises that to 5,000/hour.
+    github_token: str = ""
     qwen_base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
     qwen_model: str = "qwen-max"
     qwen_small_model: str = "qwen-turbo"

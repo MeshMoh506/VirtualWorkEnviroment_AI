@@ -11,7 +11,7 @@
 > Manager synthesizing the discussion. On top of that: Arabic (RTL)
 > support and a real light theme, and multi-provider LLM support
 > (Anthropic/OpenAI/DeepSeek/Qwen) with tier-aware routing and automatic
-> failover. 599 backend checks across 22 smoke suites, all passing;
+> failover. 639 backend checks across 23 smoke suites, all passing;
 > frontend eslint clean; full `next build` succeeds. See "Stage 2, in
 > full" below for the doc-by-doc breakdown, and "Frontend polish" /
 > "Handoff" further down for what's recently done vs. still open.
@@ -51,7 +51,7 @@ onboarding flow and the weekly-cycle cascade — see
 - Local file storage for attachments (`app/storage.py`, one module so a
   future cloud-storage swap is contained) — dev-scope, one box, not yet
   cloud.
-- 22 smoke suites, 599 checks, all passing together (mocked LLM, no API
+- 23 smoke suites, 639 checks, all passing together (mocked LLM, no API
   key needed to run them) — see the updated list further down.
 - **Database migrations (Alembic)** — the schema is now built and evolved
   by versioned migrations applied at startup, not `create_all`. Existing
@@ -175,8 +175,10 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
 6. `docs/LLM_PROVIDER_FAILOVER.md` ("Malformed tool output") — found by the first
    real-model run: Claude returned a list as a string and crashed the Manager.
    Now repaired, retried, failed over, and never a 500.
-7. `docs/TASK_BANK.md` — 12 project seeds (two per track) with four-week arcs; the
-   Manager bases each project on one and plans every week against its arc.
+7. `docs/TASK_BANK.md` — 15 project seeds with four-week arcs and README-visible
+   evidence; the Manager bases each project on one and plans every week against
+   its arc. Also: `GITHUB_TOKEN` support, because each review costs 3 of GitHub's
+   60 anonymous requests per hour.
 
 ## Frontend polish — completed since the last handoff, no dedicated docs yet
 
@@ -343,7 +345,8 @@ python smoke_test_needs_changes.py            # visible 'needs changes' state (2
 python smoke_test_agent_language.py           # agents answer in Arabic (29)
 python smoke_test_mentor_rubric.py            # Mentor rubric v2 + enforcement (49)
 python smoke_test_llm_tool_output.py          # repair / retry / fail over on unusable model output (48)
-python smoke_test_task_bank.py                # the Manager's task bank: integrity + wiring (53)
+python smoke_test_task_bank.py                # the Manager's task bank: integrity + wiring (62)
+python smoke_test_github_client.py            # what the Mentor sees of a repo; token + rate limit (29)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints

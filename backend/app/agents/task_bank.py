@@ -42,6 +42,11 @@ class Seed:
     brief: str
     skills: tuple[str, ...]
     arc: tuple[WeekArc, ...]
+    # What the graduate submits so the Mentor can SEE the work. The Mentor is shown a
+    # repository's file list (first 25 files) and the start of its README (about 2,000
+    # characters), plus any notes or screenshots - not the code itself - so anything to
+    # be judged must be visible there. See github_client.fetch_repo_context.
+    evidence: str
 
 
 T = TrackEnum
@@ -67,6 +72,7 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Ship it: a minimal UI or complete API docs, deployment, and a demo.",
                     "A deployed (or containerised) app, a short demo walkthrough and a list of known limitations."),
         ),
+        evidence='A GitHub repository with the code, tests and a README that says what was done and how to run and test it; screenshots or command output showing it running.',
     ),
     Seed(
         id="se-support-desk",
@@ -87,6 +93,28 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Ship it: metrics view, polish, deployment and a walkthrough.",
                     "A deployed app with a metrics page and a walkthrough of one ticket from open to closed."),
         ),
+        evidence='A GitHub repository with the code, tests and a README that says what was done and how to run and test it; screenshots or command output showing it running.',
+    ),
+    Seed(
+        id="se-bilingual-events",
+        track=T.SOFTWARE_ENGINEERING,
+        title="Bilingual Event Registration App",
+        brief=(
+            "A registration app for community events that works properly in Arabic and English: attendees "
+            "sign up and get a confirmation, organisers manage capacity and a waitlist, and check-in uses a code."
+        ),
+        skills=("REST API design", "internationalisation and right-to-left layouts", "validation and capacity rules", "automated testing", "deployment"),
+        arc=(
+            WeekArc("Foundations: repo, environment, the event and attendee data model, and the first registration endpoint.",
+                    "A running API where an attendee can register for an event, with a README that says how to run it."),
+            WeekArc("Two languages: a simple registration form in Arabic and English, including right-to-left layout.",
+                    "A form that switches between Arabic (right-to-left) and English, with validation messages in both languages."),
+            WeekArc("Rules and quality: capacity limits, a waitlist and automated tests.",
+                    "Capacity and waitlist rules covered by tests, including the last-seat and duplicate-registration cases."),
+            WeekArc("Ship it: check-in with a code, deployment and a demo.",
+                    "A deployed or containerised app, a working check-in flow and a short demo walkthrough."),
+        ),
+        evidence='A GitHub repository with the code, tests and a README that says how to run it; screenshots of the registration form in both Arabic and English.',
     ),
     # ------------------------------------------------------------------ data science / AI
     Seed(
@@ -108,6 +136,7 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Communicate: package the model and explain it to a non-technical reader.",
                     "A prediction script or endpoint and a one-page recommendation for a manager."),
         ),
+        evidence='A GitHub repository or notebook with the code, charts and results, and a README with a short written summary of what was found.',
     ),
     Seed(
         id="ds-document-qa",
@@ -128,6 +157,28 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Ship it: wrap it in a small API or UI and note cost and latency.",
                     "A runnable service, a demo, and a note on cost, speed and limitations."),
         ),
+        evidence='A GitHub repository with the code, the evaluation questions and their scores, and a README that says what works and where it fails.',
+    ),
+    Seed(
+        id="ds-demand-forecast",
+        track=T.DATA_SCIENCE_AI,
+        title="Weekly Demand Forecasting",
+        brief=(
+            "Forecast next week's demand for a product from its sales history: explore the data, build a "
+            "baseline and a better model, measure them honestly, and present a forecast a planner could use."
+        ),
+        skills=("time-series analysis", "baseline and model comparison", "backtesting", "visualisation", "communicating uncertainty"),
+        arc=(
+            WeekArc("Understand the data: load the sales history, clean it and explore trend and seasonality.",
+                    "A clean dataset and a notebook with charts showing the trend, seasonality and any gaps."),
+            WeekArc("Baseline: a simple forecast and a proper backtest to measure it.",
+                    "A baseline forecast (for example last week or a moving average) with backtest errors reported."),
+            WeekArc("Better model: add seasonality or features and compare against the baseline honestly.",
+                    "A comparison of models on the same backtest, with a written explanation of which wins and why."),
+            WeekArc("Communicate: package the forecast and explain its uncertainty to a planner.",
+                    "A script or notebook that produces next week's numbers with a range, and a one-page summary."),
+        ),
+        evidence='A GitHub repository or notebook with the code, charts and backtest results, and a README with a short written summary of the forecast.',
     ),
     # ------------------------------------------------------------------ cybersecurity
     Seed(
@@ -149,6 +200,7 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Report: rate the risk of each finding and write the remediation plan.",
                     "A professional report with risk ratings, a fix plan and a retest summary."),
         ),
+        evidence='A GitHub repository holding the lab notes, each finding with its steps and evidence, the patches and the final report; the README lists the findings.',
     ),
     Seed(
         id="sec-api-hardening",
@@ -169,6 +221,28 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Prove it: a security test suite and a hardening report.",
                     "An automated security test suite and a report of what changed and what risk remains."),
         ),
+        evidence='A GitHub repository with the fixes, the security tests and a hardening report; the README summarises what changed and what risk remains.',
+    ),
+    Seed(
+        id="sec-soc-monitoring",
+        track=T.CYBERSECURITY,
+        title="Security Monitoring and Incident Response Lab",
+        brief=(
+            "Build a small monitoring lab that collects logs from a few systems, write rules that detect "
+            "suspicious behaviour, then investigate a simulated attack and write it up like a security analyst."
+        ),
+        skills=("log collection and analysis", "detection rules", "incident investigation", "timeline reconstruction", "incident reporting"),
+        arc=(
+            WeekArc("Build the lab: a few systems, log collection and a way to search the logs.",
+                    "A working lab with logs from at least two sources searchable in one place, and a diagram of it."),
+            WeekArc("Detect: write detection rules for common suspicious behaviour, such as repeated failed logins.",
+                    "At least four detection rules, each with a test event that triggers it and a note on false positives."),
+            WeekArc("Investigate: run a simulated attack and trace it through the logs.",
+                    "Log evidence of the simulated attack and a reconstructed timeline of what happened."),
+            WeekArc("Report: write the incident report and a response playbook.",
+                    "An incident report with timeline, impact and root cause, and a short playbook for next time."),
+        ),
+        evidence='A GitHub repository with the detection rules, lab configuration and diagram; the README includes log excerpts or screenshots of the investigation and links the incident report.',
     ),
     # ------------------------------------------------------------------ networks & infrastructure
     Seed(
@@ -190,6 +264,7 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Operate it: monitoring, failure tests and a runbook.",
                     "A monitoring plan, evidence of at least two failure tests and an operations runbook."),
         ),
+        evidence='A GitHub repository holding the exported simulator file, device configuration files, the topology diagram and notes; the README shows screenshots of the tests that were run.',
     ),
     Seed(
         id="net-services-lab",
@@ -210,6 +285,7 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Watch it: monitoring, alerting and documentation.",
                     "Monitoring with at least one alert firing on purpose, plus a runbook."),
         ),
+        evidence='A GitHub repository with the configuration files, setup notes and a runbook; the README shows command output or screenshots proving each service works.',
     ),
     # ------------------------------------------------------------------ information systems
     Seed(
@@ -231,6 +307,7 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Prove and roll out: user acceptance tests, documentation and a rollout plan.",
                     "Test results against the acceptance criteria, user documentation and a rollout plan."),
         ),
+        evidence='A GitHub repository with the requirements, process maps and diagrams as files, screenshots of the working system and the test results; the README indexes them.',
     ),
     Seed(
         id="is-inventory-dashboard",
@@ -251,6 +328,7 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Hand over: validation with a stakeholder, documentation and next steps.",
                     "Stakeholder feedback recorded, a user guide and a short list of next improvements."),
         ),
+        evidence='A GitHub repository with the data model diagram, load scripts and documentation, and screenshots of the dashboard in the README.',
     ),
     # ------------------------------------------------------------------ cloud / devops
     Seed(
@@ -272,6 +350,7 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Operate: monitoring, a rollback plan and a runbook.",
                     "Dashboards or alerts for the service, a demonstrated rollback and a runbook."),
         ),
+        evidence='A GitHub repository with the Dockerfile, pipeline configuration and runbook; the README links or shows screenshots of the pipeline run and the running service.',
     ),
     Seed(
         id="cloud-three-tier-iac",
@@ -292,6 +371,7 @@ SEEDS: tuple[Seed, ...] = (
             WeekArc("Cost and resilience: tagging, monitoring, backup and safe teardown.",
                     "A cost estimate, a backup or recovery note and a clean, verified teardown."),
         ),
+        evidence='A GitHub repository with the infrastructure code, architecture diagram and notes; the README includes plan or apply output as proof.',
     ),
 )
 
@@ -305,7 +385,11 @@ SUBTASK_PRINCIPLES = (
     "reviewable on its own: it ends in something concrete a mentor can check (a link, a file, a "
     "test run, a screenshot, a short write-up). Order them so each builds on the one before. Give "
     "each a clear 'done when' in its description. Prefer real engineering habits (a README, a test, "
-    "a commit history) over busywork, and keep the difficulty realistic for a recent graduate."
+    "a commit history) over busywork, and keep the difficulty realistic for a recent graduate. "
+    "IMPORTANT: the Mentor reviews a submitted GitHub repository by reading its file list and the start "
+    "of its README - not the code itself. So every subtask must say what to put in the README (what was "
+    "done, how to run or test it, and proof such as output or a screenshot) and what to commit, so the "
+    "work can actually be seen and judged."
 )
 
 
@@ -341,12 +425,14 @@ def week_arc_block(seed_id: str | None, week_number: int) -> str:
             f"PROJECT ARC ({seed.title}, week {week_number} of {len(seed.arc)}). "
             f"Focus this week: {step.focus} "
             f"By the end of the week this should exist: {step.deliverable} "
-            "Shape the five subtasks so they build toward that."
+            f"Evidence the graduate submits for review: {seed.evidence} "
+            "Shape the five subtasks so they build toward that, and name in each subtask what to submit."
         )
     return (
         f"PROJECT ARC ({seed.title}). The planned {len(seed.arc)}-week arc is complete. Extend the project "
         "in a sensible direction: harden it, add a meaningful feature, improve tests and documentation, "
-        "and prepare something worth presenting - continuing the same thread of work."
+        "and prepare something worth presenting - continuing the same thread of work. "
+        f"Evidence the graduate submits for review: {seed.evidence}"
     )
 
 

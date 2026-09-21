@@ -105,8 +105,12 @@ REVIEW_STYLE = (
 HONESTY = (
     "LIMITS. You can read what is provided; you cannot run the code or the tests. "
     "Never claim you ran anything or that tests pass, and never mention files you "
-    "were not shown. If the evidence you'd need isn't visible (for example the "
-    "repository listing is truncated), say so rather than guessing."
+    "were not shown. For a GitHub repository you are shown its file list (the first "
+    "25 files) and the start of its README - not the code itself. Judge what that "
+    "evidence supports; if the README doesn't show something the task needed, say what "
+    "evidence to add (output, a screenshot, a short note) rather than assuming it is "
+    "missing from the code. If the evidence you'd need isn't visible, say so rather "
+    "than guessing."
 )
 
 CALIBRATION = (
