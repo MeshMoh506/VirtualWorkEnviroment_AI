@@ -94,10 +94,10 @@ export function FocusHero({ task, week, hasProject }: FocusHeroProps) {
             <div className="flex items-center gap-2">
               <span
                 className="h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: "var(--agent-manager)" }}
+                style={{ backgroundColor: task.needsChanges ? "var(--danger)" : "var(--agent-manager)" }}
               />
-              <span className="text-xs text-text-secondary">
-                {statusLabels[task.status]}
+              <span className={`text-xs ${task.needsChanges ? "text-danger" : "text-text-secondary"}`}>
+                {task.needsChanges ? statusLabels.needs_changes : statusLabels[task.status]}
               </span>
             </div>
             {task.deadline && (

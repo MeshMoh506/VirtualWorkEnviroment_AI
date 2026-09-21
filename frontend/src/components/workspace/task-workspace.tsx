@@ -141,6 +141,16 @@ export function TaskWorkspace({ task, busy, onAdvance }: TaskWorkspaceProps) {
               </button>
             </>
           )}
+          {task.status === "in_progress" && task.needsChanges && (
+            <div className="mb-1 rounded border border-danger bg-bg-surface-raised px-4 py-3">
+              <p className="font-mono text-[11px] text-danger">
+                {t("taskWorkspace.needsChangesTitle")} · {t("taskWorkspace.revisionLabel", { n: task.revisionCount })}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-text-secondary">
+                {t("taskWorkspace.needsChangesBody")}
+              </p>
+            </div>
+          )}
           {task.status === "in_progress" && (
             <div className="flex flex-col gap-3">
               <div>

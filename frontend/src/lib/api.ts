@@ -144,6 +144,11 @@ export interface TaskApiOut {
   completed_at: string | null;
   // null until both deadline and completed_at exist.
   is_late: boolean | null;
+  // The Mentor bounced the task back for changes and it hasn't been
+  // resubmitted yet (in_progress alone can't say), and how many times it has
+  // been bounced in total. See docs/NEEDS_CHANGES_VISIBLE.md.
+  needs_changes: boolean;
+  revision_count: number;
   created_at: string;
   updated_at: string;
 }

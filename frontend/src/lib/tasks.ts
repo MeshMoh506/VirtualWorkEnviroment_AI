@@ -41,6 +41,10 @@ export interface Task {
   completedAt: string | null;
   // null until both deadline and completedAt exist.
   isLate: boolean | null;
+  // In progress *because the Mentor asked for changes* (vs. simply started),
+  // and how many times that has happened. Drives the "Needs changes" badge.
+  needsChanges: boolean;
+  revisionCount: number;
   createdAt: string;
   updatedAt: string;
   messages: TaskMessage[];
@@ -86,6 +90,8 @@ function toTask(t: TaskApiOut, messages: TaskMessage[] = []): Task {
     submittedAt: t.submitted_at,
     completedAt: t.completed_at,
     isLate: t.is_late,
+    needsChanges: t.needs_changes,
+    revisionCount: t.revision_count,
     createdAt: t.created_at,
     updatedAt: t.updated_at,
     messages,

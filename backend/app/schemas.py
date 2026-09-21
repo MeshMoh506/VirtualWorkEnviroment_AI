@@ -178,6 +178,11 @@ class TaskOut(BaseModel):
     completed_at: datetime | None
     # None until both deadline and completed_at exist — see Task.is_late.
     is_late: bool | None
+    # The Mentor bounced this back for changes and it hasn't been resubmitted
+    # yet (status alone can't say — see Task.needs_changes), and how many
+    # times it has been bounced in total.
+    needs_changes: bool = False
+    revision_count: int = 0
     created_at: datetime
     updated_at: datetime
 

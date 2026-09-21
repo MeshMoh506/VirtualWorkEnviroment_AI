@@ -353,8 +353,13 @@ const en = {
     noTasksYet: "No tasks yet \u2014 ask your manager for one.",
     due: "due {time}",
     late: "late",
+    revision: "revision {n}",
   },
   taskWorkspace: {
+    needsChangesTitle: "The Mentor asked for changes",
+    needsChangesBody:
+      "Read the Mentor's feedback in the thread below, fix what they flagged, then resubmit.",
+    revisionLabel: "revision {n}",
     assignedBy: "assigned by {name}",
     completedLate: "completed late",
     completedOnTime: "completed on time",
@@ -428,6 +433,7 @@ const en = {
     in_progress: "In progress",
     submitted: "Submitted",
     reviewed: "Reviewed",
+    needs_changes: "Needs changes",
   },
 };
 
