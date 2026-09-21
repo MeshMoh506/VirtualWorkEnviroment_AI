@@ -332,3 +332,21 @@ python smoke_test_stage2_onboarding_resume.py # restart-proof onboarding + CV re
 If the LLM key is missing, wrong, or out of credit, the agent endpoints
 return a clean, actionable error (503/429/502) rather than a 500 stack
 trace — so a missing key never looks like a crash.
+
+**Before a demo, run the real-model check too** — the suites above mock
+every model call, so only this one can catch a slow provider, malformed
+tool output, a provider without image support, or a failover that doesn't
+fail over:
+
+```bash
+cd backend
+python e2e_real_llm.py                    # providers as set in .env
+python e2e_real_llm.py --provider qwen    # one provider for every call
+python e2e_real_llm.py --full-week --repo https://github.com/<you>/<repo>
+```
+
+It drives onboarding, the Manager's plan, a submission (optionally with an
+image), the Mentor's review and roundtable, meeting-room chat and the HR
+rollup, then prints per-step timing, calls per provider and every
+failover. Its own logic was verified against a local fake provider; it has
+not yet been run against real keys.
