@@ -37,11 +37,13 @@ const en = {
     venvWorkspace: "venv / workspace",
     workspace: "Workspace",
     meetingRoom: "Meeting room",
+    settings: "Settings",
     howItWorks: "How it works",
     homeBoardTitle: "Home board",
     growthTitle: "Growth",
     meetingRoomTitle: "Meeting room",
     workspaceTitle: "Workspace",
+    settingsTitle: "Settings",
     mentorReviewTitle: "Mentor's review",
   },
   landing: {
@@ -337,6 +339,14 @@ const en = {
     messagePlaceholder: "Message {name}... (Enter to send)",
     loadError: "Couldn't load the conversation.",
     sendError: "Couldn't send that message.",
+    team: {
+      roomName: "Team room",
+      roomTagline: "Everyone, one thread",
+      emptyTitle: "Meet with your whole team",
+      emptyBody:
+        "One shared thread \u2014 ask anything, and whoever on the team it's actually for will pick it up. Past replies stay visible to everyone, so it reads as one conversation, not separate DMs.",
+      typing: "Your team is typing...",
+    },
   },
   workspace: {
     loadTasksError: "Couldn't load tasks.",

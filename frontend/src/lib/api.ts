@@ -254,6 +254,17 @@ export interface ChatMessageApiOut {
   created_at: string;
 }
 
+/** A turn in the Team Room — agent_type is null for the graduate's own
+ * messages (unlike ChatMessageApiOut, where the thread is always with
+ * one fixed agent so it's never null). */
+export interface TeamMessageApiOut {
+  id: string;
+  agent_type: ApiAgentType | null;
+  sender_type: "user" | "agent";
+  content: string;
+  created_at: string;
+}
+
 // ---- Project & Week (weekly-cycle flow) ----
 
 export type ApiProjectStatus = "active" | "completed";
@@ -520,5 +531,15 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ content }),
       }),
+    /** The Team Room — a shared thread with the whole team at once,
+     * distinct from the 1:1 threads above. See lib/meeting.ts. */
+    team: {
+      history: () => request<TeamMessageApiOut[]>("/meeting/team"),
+      send: (content: string) =>
+        request<TeamMessageApiOut>("/meeting/team", {
+          method: "POST",
+          body: JSON.stringify({ content }),
+        }),
+    },
   },
 };

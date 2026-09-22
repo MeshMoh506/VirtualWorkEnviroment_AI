@@ -185,6 +185,9 @@ class User(Base):
     chat_messages: Mapped[list["ChatMessage"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    team_messages: Mapped[list["TeamMessage"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
     selected_agents: Mapped[list["UserAgent"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
@@ -521,6 +524,31 @@ class ChatMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship(back_populates="chat_messages")
+
+
+class TeamMessage(Base):
+    """A message in the Team Room (the Meeting Room's shared mode,
+    docs/TEAM_ROOM.md) — the whole team and the graduate in one running
+    conversation, unlike ChatMessage's one-thread-per-agent Meeting Room.
+    One thread per user: sender_type says who spoke, agent_type says
+    which agent (None for the graduate's own messages). Only one agent
+    replies per graduate message — meeting.route_team_message picks
+    whichever team member fits best — but every agent's past replies
+    stay visible in the same thread, so it reads as one room, not a
+    grid of separate DMs."""
+
+    __tablename__ = "team_messages"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    sender_type: Mapped[SenderType] = mapped_column(Enum(SenderType), nullable=False)
+    # None for the graduate's own messages.
+    agent_type: Mapped[AgentType | None] = mapped_column(Enum(AgentType), nullable=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="team_messages")
 
 
 class Review(Base):

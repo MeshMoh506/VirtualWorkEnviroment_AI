@@ -321,3 +321,17 @@ class ChatMessageOut(BaseModel):
 
 class ChatSend(BaseModel):
     content: str
+
+
+class TeamMessageOut(BaseModel):
+    """One turn in the Team Room (app/agents/meeting.py's shared mode) —
+    agent_type is None for the graduate's own messages, set to whichever
+    teammate replied otherwise."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    agent_type: AgentType | None
+    sender_type: SenderType
+    content: str
+    created_at: datetime
