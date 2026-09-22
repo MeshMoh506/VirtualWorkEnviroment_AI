@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Users } from "lucide-react";
 import { AGENT_ORDER, type AgentId } from "@/lib/agents";
 import { resolveAgentDisplay, useAgents, useLocale } from "@/lib/i18n/locale";
 import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
@@ -10,12 +11,30 @@ import { useRequireAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import {
   fetchConversation,
+  fetchTeamConversation,
   sendChatMessage,
-  type ChatMessage,
+  sendTeamMessage,
 } from "@/lib/meeting";
 import { timeAgo } from "@/lib/format";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
+
+// A sentinel alongside real agent ids (see lib/agents.ts's AgentId) for
+// the Team Room — a shared thread with the whole team, not one more
+// 1:1 conversation. Kept as a plain string (not part of AgentId) since
+// it never reaches the backend as an agent_type.
+const TEAM_ROOM_ID = "team";
+
+/** The shape both a 1:1 thread's messages (lib/meeting.ts's ChatMessage)
+ * and the Team Room's (TeamMessage) render as — agentType nullable to
+ * cover the Team Room's user turns, which a 1:1 thread never has. */
+interface DisplayMessage {
+  id: string;
+  agentType: string | null;
+  sender: "user" | "agent";
+  content: string;
+  createdAt: string;
+}
 
 function Dot({ colorVar, className = "h-2 w-2" }: { colorVar: string | null; className?: string }) {
   return colorVar ? (
@@ -36,12 +55,14 @@ export default function MeetingPage() {
   };
   const [extraAgents, setExtraAgents] = useState<ExtraAgent[]>([]);
   const [agent, setAgent] = useState<string>("manager");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [loadingThread, setLoadingThread] = useState(true);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const isTeamRoom = agent === TEAM_ROOM_ID;
 
   useEffect(() => {
     if (user) fetchMyExtraAgents().then(setExtraAgents).catch(() => {});
@@ -50,7 +71,7 @@ export default function MeetingPage() {
   const loadThread = useCallback(async (a: string) => {
     setLoadingThread(true);
     try {
-      setMessages(await fetchConversation(a));
+      setMessages(a === TEAM_ROOM_ID ? await fetchTeamConversation() : await fetchConversation(a));
       setError(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("meeting.loadError"));
@@ -75,9 +96,9 @@ export default function MeetingPage() {
     if (!content || sending) return;
     setDraft("");
     // Optimistic: show the user's message immediately with a temp id.
-    const optimistic: ChatMessage = {
+    const optimistic: DisplayMessage = {
       id: `temp-${Date.now()}`,
-      agentType: agent,
+      agentType: null,
       sender: "user",
       content,
       createdAt: new Date().toISOString(),
@@ -85,7 +106,7 @@ export default function MeetingPage() {
     setMessages((prev) => [...prev, optimistic]);
     setSending(true);
     try {
-      const reply = await sendChatMessage(agent, content);
+      const reply = isTeamRoom ? await sendTeamMessage(content) : await sendChatMessage(agent, content);
       setMessages((prev) => [...prev, reply]);
       setError(null);
     } catch (err) {
@@ -109,6 +130,7 @@ export default function MeetingPage() {
   const meta = resolveAgentDisplay(agent, agents, extraAgents);
   const opener = agent in agents ? OPENERS[agent as AgentId] : meta.role;
   const allAgentIds = [...AGENT_ORDER, ...extraAgents.map((a) => a.id)];
+  const composerName = isTeamRoom ? t("meeting.team.roomName") : meta.name;
 
   return (
     <main className="grid h-dvh grid-rows-[auto_1fr]">
@@ -132,6 +154,12 @@ export default function MeetingPage() {
             {t("nav.workspace")}
           </Link>
           <Link
+            href="/settings"
+            className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+          >
+            {t("nav.settings")}
+          </Link>
+          <Link
             href="/logout"
             className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
@@ -152,6 +180,31 @@ export default function MeetingPage() {
           horizontal strip up top. */}
       <div className="grid min-h-0 grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)]">
         <div className="flex gap-2 overflow-x-auto border-b border-border p-3 md:flex-col md:overflow-visible md:border-b-0 md:border-e">
+          {/* The Team Room sits above the 1:1 agents, visually distinct
+              (an icon instead of a colored dot) — it's a different kind
+              of conversation, not one more agent. */}
+          <button
+            type="button"
+            onClick={() => setAgent(TEAM_ROOM_ID)}
+            className={`flex shrink-0 flex-col items-start rounded border px-3 py-2.5 text-start transition-colors md:shrink ${
+              isTeamRoom
+                ? "border-accent bg-bg-surface"
+                : "border-border hover:border-border-strong"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 text-text-secondary" />
+              <span className="text-sm font-medium text-text-primary">
+                {t("meeting.team.roomName")}
+              </span>
+            </span>
+            <span className="mt-0.5 hidden text-xs text-text-secondary md:block">
+              {t("meeting.team.roomTagline")}
+            </span>
+          </button>
+
+          <div className="mx-1 hidden border-t border-border/60 md:block" />
+
           {allAgentIds.map((id) => {
             const m = resolveAgentDisplay(id, agents, extraAgents);
             const active = id === agent;
@@ -189,25 +242,34 @@ export default function MeetingPage() {
               <p className="text-center text-sm text-text-muted">{t("common.loading")}</p>
             ) : messages.length === 0 ? (
               <div className="mx-auto max-w-md pt-10 text-center">
-                <span
-                  className="mx-auto flex h-10 w-10 items-center justify-center rounded-full"
-                  style={
-                    meta.colorVar
-                      ? { backgroundColor: `color-mix(in srgb, var(${meta.colorVar}) 20%, transparent)` }
-                      : { backgroundColor: "color-mix(in srgb, var(--text-muted) 20%, transparent)" }
-                  }
-                >
-                  <Dot colorVar={meta.colorVar} className="h-2.5 w-2.5" />
-                </span>
+                {isTeamRoom ? (
+                  <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-bg-surface-raised">
+                    <Users className="h-4 w-4 text-text-secondary" />
+                  </span>
+                ) : (
+                  <span
+                    className="mx-auto flex h-10 w-10 items-center justify-center rounded-full"
+                    style={
+                      meta.colorVar
+                        ? { backgroundColor: `color-mix(in srgb, var(${meta.colorVar}) 20%, transparent)` }
+                        : { backgroundColor: "color-mix(in srgb, var(--text-muted) 20%, transparent)" }
+                    }
+                  >
+                    <Dot colorVar={meta.colorVar} className="h-2.5 w-2.5" />
+                  </span>
+                )}
                 <h2 className="mt-3 text-lg font-medium text-text-primary">
-                  {t("meeting.meetWith", { name: meta.name })}
+                  {isTeamRoom ? t("meeting.team.emptyTitle") : t("meeting.meetWith", { name: meta.name })}
                 </h2>
-                <p className="mt-1 text-sm text-text-secondary">{opener}</p>
+                <p className="mt-1 text-sm text-text-secondary">
+                  {isTeamRoom ? t("meeting.team.emptyBody") : opener}
+                </p>
               </div>
             ) : (
               <div className="mx-auto flex max-w-2xl flex-col gap-3">
                 {messages.map((m) => {
                   const isUser = m.sender === "user";
+                  const speaker = m.agentType ? resolveAgentDisplay(m.agentType, agents, extraAgents) : null;
                   return (
                     <motion.div
                       key={m.id}
@@ -221,9 +283,9 @@ export default function MeetingPage() {
                       }`}
                     >
                       <div className="flex items-center gap-1.5">
-                        {!isUser && <Dot colorVar={meta.colorVar} className="h-1.5 w-1.5" />}
+                        {!isUser && <Dot colorVar={speaker?.colorVar ?? null} className="h-1.5 w-1.5" />}
                         <span className="font-mono text-[10px] text-text-muted">
-                          {isUser ? t("common.you") : meta.name} · {timeAgo(m.createdAt)}
+                          {isUser ? t("common.you") : speaker?.name ?? meta.name} · {timeAgo(m.createdAt)}
                         </span>
                       </div>
                       <p className="mt-1 whitespace-pre-line text-sm text-text-primary">
@@ -235,7 +297,7 @@ export default function MeetingPage() {
                 {sending && (
                   <div className="max-w-[80%] self-start rounded border border-dashed border-border px-3.5 py-2.5">
                     <p className="font-mono text-[11px] text-text-muted">
-                      {t("meeting.typing", { name: meta.name })}
+                      {isTeamRoom ? t("meeting.team.typing") : t("meeting.typing", { name: meta.name })}
                     </p>
                   </div>
                 )}
@@ -255,7 +317,7 @@ export default function MeetingPage() {
                   }
                 }}
                 rows={2}
-                placeholder={t("meeting.messagePlaceholder", { name: meta.name })}
+                placeholder={t("meeting.messagePlaceholder", { name: composerName })}
                 disabled={sending}
                 className="thin-scrollbar min-h-0 flex-1 resize-none rounded border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none disabled:opacity-50"
               />
