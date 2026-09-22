@@ -9,8 +9,8 @@ track") live here, not in the router or in an individual agent module.
 """
 from sqlalchemy.orm import Session
 
-from app.agents import hr, manager, mentor, roundtable, weekly_cycle
-from app.models import Review, Task, TaskMessage, User
+from app.agents import hr, manager, mentor, roundtable, task_chat, weekly_cycle
+from app.models import AgentType, Review, Task, TaskMessage, User
 
 
 def manager_assign_task(db: Session, user: User) -> Task:
@@ -22,7 +22,18 @@ def manager_assign_task(db: Session, user: User) -> Task:
 
 
 def manager_reply(db: Session, task: Task, user: User) -> TaskMessage:
+    """Kept for the original, Manager-only reply path some callers may
+    still use directly. The app itself now goes through task_chat_reply,
+    which lets the graduate address the Mentor (the default) or a roster
+    agent instead — see docs/TASK_CHAT.md."""
     return manager.respond_in_thread(db, task, user)
+
+
+def task_chat_reply(db: Session, task: Task, user: User, agent_type: AgentType) -> TaskMessage:
+    """Reply in a task's thread from whichever agent the graduate is
+    addressing. Caller (the router) must already have checked
+    task_chat.is_available_for_task."""
+    return task_chat.reply_in_thread(db, task, user, agent_type)
 
 
 def mentor_review(db: Session, task: Task, user: User) -> Review:

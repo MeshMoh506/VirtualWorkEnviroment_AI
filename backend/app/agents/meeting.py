@@ -22,6 +22,7 @@ rather than call_with_tool.
 from sqlalchemy.orm import Session
 
 from app.agents import hr, manager, mentor
+from app.agents.guardrails import MANAGER_DELEGATES_TASK_WORK, ROLE_BOUNDARY
 from app.agents.llm_client import call_agentic
 from app.models import (
     AgentCatalog,
@@ -86,6 +87,7 @@ _MEETING_FRAMING = (
     "conversation, not tied to any specific task. Answer their questions "
     "directly and helpfully in your own voice, staying in character. Keep "
     "replies concise and conversational (a few sentences), not essays."
+    + ROLE_BOUNDARY
 )
 
 
@@ -150,7 +152,11 @@ def send_message(
         }
         for m in history
     ]
-    system = PERSONA[agent] + _MEETING_FRAMING + "\n\n" + _shared_context(db, user)
+    # The Manager redirects hands-on task asks to the Mentor here too, not
+    # just in a task thread — "ask the manager for a small task" is the
+    # same overreach whether it happens in the Meeting Room or on a task.
+    delegate = MANAGER_DELEGATES_TASK_WORK if agent == AgentType.MANAGER else ""
+    system = PERSONA[agent] + _MEETING_FRAMING + delegate + "\n\n" + _shared_context(db, user)
 
     reply_obj = call_agentic(
         system=system,

@@ -133,6 +133,16 @@ class TaskStatusUpdate(BaseModel):
     github_link: str | None = None
 
 
+class TaskChatRequest(BaseModel):
+    """Which agent the graduate is addressing in a task's thread — see
+    agents/task_chat.py. Defaults to the Mentor, the day-to-day agent for
+    task work; POST /agents/task/{id}/reply 403s if this agent isn't
+    available for task chat (not in task_chat.TASK_CHAT_AGENTS) or is an
+    optional agent the graduate hasn't added to their roster."""
+
+    agent_type: AgentType = AgentType.MENTOR
+
+
 class TaskMessageCreate(BaseModel):
     content: str
     # Only set when an agent posts; omitted/None means the human user posted.

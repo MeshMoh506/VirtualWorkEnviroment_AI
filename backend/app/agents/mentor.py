@@ -13,9 +13,10 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.agents.github_client import fetch_repo_context
-from app.agents.llm_client import call_with_tool
+from app.agents.guardrails import MENTOR_TASK_SENIOR_FRAMING, ROLE_BOUNDARY
+from app.agents.llm_client import call_agentic, call_with_tool
 from app.agents.rubric import RUBRIC_VERSION, apply_rubric_rules, system_prompt
-from app.agents.tools import SUBMIT_REVIEW_TOOL
+from app.agents.tools import POST_MESSAGE_TOOL, SUBMIT_REVIEW_TOOL
 from app.models import AgentType, Review, ReviewKind, SenderType, Task, TaskMessage, TaskStatus, User
 from app.storage import read_attachment_base64
 
@@ -151,3 +152,48 @@ def review_task(db: Session, task: Task, user: User) -> Review:
     db.commit()
     db.refresh(review)
     return review
+
+
+def respond_in_thread(db: Session, task: Task, user: User) -> TaskMessage:
+    """Replies in a task's comment thread — the Mentor's day-to-day presence
+    on the task itself, working through it with the graduate the way a
+    senior engineer would (guardrails.MENTOR_TASK_SENIOR_FRAMING). Separate
+    from review_task's formal, structured review once they actually submit.
+    Called after the graduate posts a message via POST /tasks/{id}/messages,
+    when they're addressing the Mentor — the default in-task agent as of
+    docs/TASK_CHAT.md, routed through agents/task_chat.py."""
+    history = [
+        {
+            "role": "assistant" if m.sender_type == SenderType.AGENT else "user",
+            "content": m.content,
+        }
+        for m in task.messages
+    ]
+    system = (
+        SYSTEM_PROMPT
+        + f"\n\nCurrent task: {task.title} — {task.description}\n"
+        + f"Status: {task.status.value}."
+        + MENTOR_TASK_SENIOR_FRAMING
+        + ROLE_BOUNDARY
+    )
+    reply = call_agentic(
+        system=system,
+        messages=history or [{"role": "user", "content": "(no messages yet)"}],
+        tools=[POST_MESSAGE_TOOL],
+    )
+
+    content = next(
+        (c.input["content"] for c in reply.tool_calls if c.name == "post_message"), None
+    )
+    content = content or reply.text or "Tell me a bit more about where you're stuck — happy to work through it with you."
+
+    message = TaskMessage(
+        task_id=task.id,
+        sender_type=SenderType.AGENT,
+        agent_type=AgentType.MENTOR,
+        content=content,
+    )
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return message
