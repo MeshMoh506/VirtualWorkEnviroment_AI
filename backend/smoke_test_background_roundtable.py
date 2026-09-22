@@ -129,6 +129,20 @@ def who(headers, task_id):
     return [m["agent_type"] for m in detail["messages"]], detail
 
 
+def wait_for_roundtable(headers, task_id, timeout=10):
+    """Poll until the background discussion is done, exactly like a real frontend
+    does — TestClient is not guaranteed to block on FastAPI BackgroundTasks until
+    they finish (confirmed to vary by platform/library version), so a check made the
+    instant .post() returns can see the discussion only partway through, or not yet
+    started at all."""
+    deadline = time.time() + timeout
+    detail = client.get(f"/tasks/{task_id}", headers=headers).json()
+    while detail.get("roundtable_running") and time.time() < deadline:
+        time.sleep(0.05)
+        detail = client.get(f"/tasks/{task_id}", headers=headers).json()
+    return detail
+
+
 # ============================ (1) deterministic ==============================================
 with patch("app.agents.llm_client._anthropic") as mock_a:
     mock_a.return_value.messages.create.side_effect = fake_create
@@ -137,6 +151,7 @@ with patch("app.agents.llm_client._anthropic") as mock_a:
     SYSTEMS.clear()
     r = submit_and_review(h, tid)
     check("the Mentor's review is returned (201)", r.status_code == 201 and r.json()["metrics_json"]["verdict"] == "approved")
+    wait_for_roundtable(h, tid)
     agents, detail = who(h, tid)
     check("the specialists' discussion was still written (all three, in order)", [a for a in agents if a in SPECIALISTS] == sorted(SPECIALISTS))
     check("...and the Manager's synthesis came last", agents[-1] == "manager")
@@ -197,6 +212,7 @@ with patch("app.agents.llm_client._anthropic") as mock_a:
     logging.getLogger("venv.roundtable").addHandler(grab)
     with patch("app.agents.roundtable.run_roundtable", side_effect=RuntimeError("provider exploded")):
         r = submit_and_review(h3, tid3)
+        wait_for_roundtable(h3, tid3)
     logging.getLogger("venv.roundtable").removeHandler(grab)
     t = db_task(tid3)
     check("a roundtable that blows up: the review is still delivered (201)", r.status_code == 201)
@@ -264,11 +280,13 @@ with patch("app.agents.llm_client._anthropic") as mock_a:
     h5, _, tid5 = signup("rt-ar@example.com", lang="ar")
     SYSTEMS.clear()
     submit_and_review(h5, tid5)
+    wait_for_roundtable(h5, tid5)
     check(f"Arabic request: every model call carries the language instruction, INCLUDING the background discussion ({len(SYSTEMS)} calls)",
           len(SYSTEMS) >= 5 and all(MARK in s for s in SYSTEMS))
     h6, _, tid6 = signup("rt-en@example.com")
     SYSTEMS.clear()
     submit_and_review(h6, tid6)
+    wait_for_roundtable(h6, tid6)
     check("English request: none of them do (no leak from the Arabic one before it)", len(SYSTEMS) >= 5 and not any(MARK in s for s in SYSTEMS))
 
 # ============================ (2) over a real HTTP server ========================================

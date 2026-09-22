@@ -11,7 +11,7 @@
 > Manager synthesizing the discussion. On top of that: Arabic (RTL)
 > support and a real light theme, and multi-provider LLM support
 > (Anthropic/OpenAI/DeepSeek/Qwen) with tier-aware routing and automatic
-> failover. 717 backend checks across 25 smoke suites, all passing;
+> failover. 733 backend checks across 26 smoke suites, all passing;
 > frontend eslint clean; full `next build` succeeds. See "Stage 2, in
 > full" below for the doc-by-doc breakdown, and "Frontend polish" /
 > "Handoff" further down for what's recently done vs. still open.
@@ -51,7 +51,7 @@ onboarding flow and the weekly-cycle cascade — see
 - Local file storage for attachments (`app/storage.py`, one module so a
   future cloud-storage swap is contained) — dev-scope, one box, not yet
   cloud.
-- 25 smoke suites, 717 checks, all passing together (mocked LLM, no API
+- 26 smoke suites, 733 checks, all passing together (mocked LLM, no API
   key needed to run them) — see the updated list further down.
 - **Database migrations (Alembic)** — the schema is now built and evolved
   by versioned migrations applied at startup, not `create_all`. Existing
@@ -186,6 +186,11 @@ uses. See `frontend/src/lib/use-isomorphic-layout-effect.ts`.
 9. `docs/STAGE2_OWN_PROJECT.md` ("Materials") — a graduate's own project can now
    include pasted notes and/or uploaded files, which the Manager actually plans
    around instead of a one-line description.
+10. `docs/ONBOARDING_GRAPH_HARDENING.md` — found by a real-model run: DeepSeek
+    returned 5 follow-up questions where the schema caps it at 4, and reading the
+    code around it surfaced an uncaught ValueError (-> 500) an invalid track from
+    any model would have triggered. Both fixed; the onboarding graph's tool calls
+    now get the same repair/check/retry protection as the Manager/Mentor/HR path.
 
 ## Frontend polish — completed since the last handoff, no dedicated docs yet
 
@@ -356,6 +361,7 @@ python smoke_test_task_bank.py                # the Manager's task bank: integri
 python smoke_test_github_client.py            # what the Mentor sees of a repo; token + rate limit (29)
 python smoke_test_background_roundtable.py    # the specialists' discussion runs after the review; real HTTP timing (43)
 python smoke_test_own_project_materials.py    # own-project notes/files reach the Manager's plan (29)
+python smoke_test_onboarding_graph_hardening.py # onboarding tool calls: repair/check/retry (16)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints
