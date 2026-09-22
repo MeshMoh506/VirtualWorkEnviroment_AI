@@ -209,13 +209,11 @@ class ProjectOut(BaseModel):
     source: ProjectSource
     # The task-bank seed this project was based on (None for your own project).
     seed_id: str | None = None
+    # Whether real project materials were provided (own project only) — see
+    # app.models.Project.has_materials. Never the text itself.
+    has_materials: bool = False
     created_at: datetime
     updated_at: datetime
-
-
-class OwnProjectCreate(BaseModel):
-    title: str
-    description: str
 
 
 class SubtaskPlanOut(BaseModel):

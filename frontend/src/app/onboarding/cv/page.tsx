@@ -60,6 +60,10 @@ export default function OnboardingPage() {
   const [projectChoice, setProjectChoice] = useState<"manager" | "own" | null>(null);
   const [ownTitle, setOwnTitle] = useState("");
   const [ownDescription, setOwnDescription] = useState("");
+  // Optional real material about the project — pasted notes and/or files — so the
+  // Manager can plan actual subtasks instead of working from the description alone.
+  const [ownMaterialsText, setOwnMaterialsText] = useState("");
+  const [ownMaterialsFiles, setOwnMaterialsFiles] = useState<File[]>([]);
 
   // On load, ask the server where this graduate got to. Complete -> the
   // "already done" screen; a half-finished wizard -> re-draw exactly that
@@ -199,7 +203,12 @@ export default function OnboardingPage() {
           setBusy(false);
           return;
         }
-        await createOwnProject(ownTitle.trim(), ownDescription.trim());
+        await createOwnProject(
+          ownTitle.trim(),
+          ownDescription.trim(),
+          ownMaterialsText.trim() || undefined,
+          ownMaterialsFiles.length > 0 ? ownMaterialsFiles : undefined
+        );
       }
       // "manager" (or no explicit choice) needs nothing here — orientation
       // itself triggers the Manager's assign-task call when it finds no
@@ -236,6 +245,8 @@ export default function OnboardingPage() {
       setProjectChoice(null);
       setOwnTitle("");
       setOwnDescription("");
+      setOwnMaterialsText("");
+      setOwnMaterialsFiles([]);
       setStep("cv");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("onboarding.errors.couldntRestart"));
@@ -509,6 +520,34 @@ export default function OnboardingPage() {
                     placeholder={t("onboarding.whatIsItPlaceholder")}
                     className="mt-1.5 w-full resize-none rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
                   />
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary">
+                    {t("onboarding.materialsLabel")}
+                  </label>
+                  <p className="mt-0.5 text-xs text-text-muted">{t("onboarding.materialsHint")}</p>
+                  <textarea
+                    value={ownMaterialsText}
+                    onChange={(e) => setOwnMaterialsText(e.target.value)}
+                    rows={3}
+                    placeholder={t("onboarding.materialsPlaceholder")}
+                    className="mt-1.5 w-full resize-none rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
+                  />
+                  <label className="mt-2 flex cursor-pointer items-center gap-2 rounded border border-dashed border-border bg-bg-surface-raised px-3 py-2 text-xs text-text-secondary transition-colors hover:border-border-strong">
+                    <Upload className="h-3.5 w-3.5 text-text-muted" />
+                    <span>
+                      {ownMaterialsFiles.length > 0
+                        ? t("onboarding.materialsFilesChosen", { n: ownMaterialsFiles.length })
+                        : t("onboarding.materialsChooseFiles")}
+                    </span>
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.txt"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => setOwnMaterialsFiles(Array.from(e.target.files ?? []).slice(0, 3))}
+                    />
+                  </label>
                 </div>
               </div>
             )}

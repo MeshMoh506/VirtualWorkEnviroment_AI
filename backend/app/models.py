@@ -288,11 +288,23 @@ class Project(Base):
     # on — NULL for a graduate's own project, or if the model named none. It
     # drives each week's place in the project's arc, and answers "why this task?".
     seed_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # For a graduate's own project (source=OWN) only: real material about it —
+    # pasted notes and/or text extracted from uploaded files — so the Manager
+    # can plan real subtasks instead of working from a one-line description.
+    # Combined and capped at task_bank.MAX_MATERIALS_CHARS at write time; see
+    # docs/STAGE2_OWN_PROJECT.md. Never set for a Manager-authored project.
+    materials_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+
+    @property
+    def has_materials(self) -> bool:
+        """Mirrors User.has_cv: lets the API say whether materials exist without
+        shipping the (possibly large) text itself in every /projects/me response."""
+        return bool(self.materials_text)
 
     user: Mapped["User"] = relationship(back_populates="projects")
     weeks: Mapped[list["Week"]] = relationship(
