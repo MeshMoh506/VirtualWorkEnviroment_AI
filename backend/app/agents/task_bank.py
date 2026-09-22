@@ -51,6 +51,12 @@ class Seed:
 
 T = TrackEnum
 
+# A graduate's own-project materials (router) are capped to this many characters
+# combined before being stored, and this is what the Manager's prompt is told the
+# cap is — a few pages, generous for a project brief, small enough to keep every
+# week's prompt a predictable size.
+MAX_MATERIALS_CHARS = 6000
+
 SEEDS: tuple[Seed, ...] = (
     # ------------------------------------------------------------------ software engineering
     Seed(

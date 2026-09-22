@@ -198,7 +198,7 @@ with patch("app.agents.llm_client._anthropic") as mock_a:
 
     # a graduate's own project: no seed, no create_project, planned as before
     h3 = signup("bank-own@example.com", TrackEnum.DATA_SCIENCE_AI)
-    r = client.post("/projects/own", headers=h3, json={"title": "My weather app", "description": "A small app that shows the forecast for my city."})
+    r = client.post("/projects/own", headers=h3, data={"title": "My weather app", "description": "A small app that shows the forecast for my city."})
     CALLS.clear()
     r = client.post("/agents/manager/assign-task", headers=h3)
     project = client.get("/projects/me", headers=h3).json()

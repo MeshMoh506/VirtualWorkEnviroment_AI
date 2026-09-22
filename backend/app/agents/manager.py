@@ -123,6 +123,21 @@ def create_project(db: Session, user: User) -> Project:
     return project
 
 
+def _own_materials_block(project: Project) -> str:
+    """The graduate's own uploaded/pasted project materials (Project.materials_text),
+    for plan_week's prompt. Empty when there are none — a Manager-authored project
+    never has any, and an own project the graduate described with only a title and
+    description (no file, no notes) is planned exactly as before this feature."""
+    if project.source != ProjectSource.OWN or not project.materials_text:
+        return ""
+    return (
+        "OWN PROJECT MATERIALS the graduate provided (notes and/or uploaded files, "
+        f"possibly truncated):\n{project.materials_text}\n\n"
+        "Ground this week's subtasks in these actual materials wherever they say "
+        "something concrete — don't invent details these materials already give you."
+    )
+
+
 def plan_week(db: Session, user: User, project: Project) -> Week:
     """Defines the week's big task + exactly 5 subtasks, with each
     subtask's deadline decided up front (Sun-Thu workdays — see
@@ -140,6 +155,7 @@ def plan_week(db: Session, user: User, project: Project) -> Week:
         f"{_cv_context(user)}\n\n"
         f"Prior weeks:\n{prior_weeks_text}\n\n"
         + (f"{week_arc_block(project.seed_id, week_number)}\n\n" if project.seed_id else "")
+        + (f"{_own_materials_block(project)}\n\n" if _own_materials_block(project) else "")
         + f"{SUBTASK_PRINCIPLES}\n\n"
         f"Plan week {week_number} now via the plan_week tool."
     )

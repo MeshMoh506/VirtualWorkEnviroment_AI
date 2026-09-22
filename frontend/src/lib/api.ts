@@ -284,6 +284,9 @@ export interface ProjectApiOut {
   title: string;
   description: string;
   status: ApiProjectStatus;
+  // Whether real project materials (pasted notes and/or uploaded files) were
+  // given for this own project — never the text itself. See lib/projects.ts.
+  has_materials: boolean;
   created_at: string;
   updated_at: string;
   weeks: WeekApiOut[];
@@ -353,6 +356,7 @@ export interface ProjectOwnApiOut {
   description: string;
   status: ApiProjectStatus;
   source: "manager" | "own";
+  has_materials: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -486,11 +490,17 @@ export const api = {
     /** Stage 2: bring your own project instead of the Manager improvising
      * one. Only works before the first assign-task call — 400s if the
      * graduate already has an active project. */
-    createOwn: (title: string, description: string) =>
-      request<ProjectOwnApiOut>("/projects/own", {
-        method: "POST",
-        body: JSON.stringify({ title, description }),
-      }),
+    /** Materials are optional: pasted notes and/or up to a few files (PDF/Word/
+     * text) giving the Manager real material to plan around instead of a
+     * one-line description. See docs/STAGE2_OWN_PROJECT.md. */
+    createOwn: (title: string, description: string, materialsText?: string, files?: File[]) => {
+      const form = new FormData();
+      form.append("title", title);
+      form.append("description", description);
+      if (materialsText) form.append("materials_text", materialsText);
+      for (const file of files ?? []) form.append("files", file);
+      return request<ProjectOwnApiOut>("/projects/own", { method: "POST", body: form });
+    },
   },
 
   meeting: {

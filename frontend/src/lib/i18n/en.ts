@@ -178,6 +178,11 @@ const en = {
     whatIsItPlaceholder: "What you're building, and the stack you're using.",
     settingUp: "Setting up...",
     titleDescRequired: "Give your project a title and a short description.",
+    materialsLabel: "Project materials (optional)",
+    materialsHint: "Notes, a spec, or files — real material helps the Manager plan real tasks.",
+    materialsPlaceholder: "Paste any notes about the project...",
+    materialsChooseFiles: "Attach up to 3 files (PDF, Word, text)",
+    materialsFilesChosen: "{n} file(s) attached",
     errors: {
       couldntReadFile: "Couldn't read that file.",
       couldntSaveAnswers: "Couldn't save your answers.",
