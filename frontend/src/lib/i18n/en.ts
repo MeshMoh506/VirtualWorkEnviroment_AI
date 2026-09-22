@@ -344,7 +344,7 @@ const en = {
     assignError: "The manager couldn't assign a task.",
     reviewError: "The mentor couldn't review this yet.",
     updateError: "Couldn't update the task.",
-    replyError: "The manager couldn't reply yet.",
+    replyError: "Couldn't get a reply just now.",
     sendMessageError: "Couldn't send that message.",
     loadingWorkspace: "Loading workspace...",
     noTaskSelected: "No task selected.",
@@ -361,6 +361,7 @@ const en = {
     revision: "revision {n}",
   },
   taskWorkspace: {
+    newTaskBanner: "New task from {name}",
     teamStillDiscussing: "Your specialists are still weighing in. Their comments will appear in the thread.",
     needsChangesTitle: "The Mentor asked for changes",
     needsChangesBody:
@@ -389,11 +390,12 @@ const en = {
   },
   agentsMeeting: {
     eyebrow: "agents_meeting",
+    workingWith: "working with",
     noDiscussion:
-      "No discussion yet. Ask a question or share where you're at \u2014 your manager replies here, and once you submit, your team reviews the work together in this thread.",
-    managerTyping: "Manager is typing...",
+      "No discussion yet. Ask a question or share where you're at \u2014 {name} replies here, and once you submit, your team reviews the work together in this thread.",
+    agentTyping: "{name} is typing...",
     teamDiscussing: "Your team is discussing this submission...",
-    messagePlaceholder: "Message the team... (Enter to send)",
+    messagePlaceholder: "Message {name}... (Enter to send)",
   },
   review: {
     taskLabel: "task",

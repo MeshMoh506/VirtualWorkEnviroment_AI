@@ -3,17 +3,18 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRequireAuth } from "@/lib/auth-context";
-import { ApiError } from "@/lib/api";
+import { ApiError, type ApiAgentType } from "@/lib/api";
 import {
   assignNextTask,
+  DEFAULT_TASK_CHAT_AGENT,
   fetchTaskDetail,
   mergeMessages,
   fetchTasks,
-  managerReply,
   postUserMessage,
   requestMentorReview,
   startTask,
   submitTask,
+  taskChatReply,
   type Task,
 } from "@/lib/tasks";
 import { TaskRail } from "@/components/workspace/task-rail";
@@ -42,6 +43,11 @@ export default function WorkspacePage() {
   const [busy, setBusy] = useState<{ taskId: string; kind: "review" | "reply" } | null>(
     null
   );
+  // Who the graduate is currently addressing in the selected task's
+  // thread — defaults to the Mentor (see lib/tasks.ts's
+  // DEFAULT_TASK_CHAT_AGENT) every time a different task is opened, so
+  // switching tasks never leaves you "still talking to DevOps" by accident.
+  const [chatAgent, setChatAgent] = useState<ApiAgentType>(DEFAULT_TASK_CHAT_AGENT);
 
   const refresh = useCallback(async () => {
     try {
@@ -107,6 +113,7 @@ export default function WorkspacePage() {
 
   async function openTask(id: string) {
     setSelectedId(id);
+    setChatAgent(DEFAULT_TASK_CHAT_AGENT);
     try {
       const detail = await fetchTaskDetail(id);
       setTasks((prev) => prev.map((t) => (t.id === id ? detail : t)));
@@ -122,6 +129,7 @@ export default function WorkspacePage() {
       const task = await assignNextTask();
       setTasks((prev) => [task, ...prev]);
       setSelectedId(task.id);
+      setChatAgent(DEFAULT_TASK_CHAT_AGENT);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("workspace.assignError"));
     } finally {
@@ -153,7 +161,7 @@ export default function WorkspacePage() {
     }
   }
 
-  async function handleSendMessage(content: string) {
+  async function handleSendMessage(content: string, agent: ApiAgentType) {
     if (!selected) return;
     const taskId = selected.id;
     try {
@@ -165,7 +173,7 @@ export default function WorkspacePage() {
       );
       setBusy({ taskId, kind: "reply" });
       try {
-        const reply = await managerReply(taskId);
+        const reply = await taskChatReply(taskId, agent);
         setTasks((prev) =>
           prev.map((t) =>
             t.id === taskId ? { ...t, messages: [...t.messages, reply] } : t
@@ -258,6 +266,8 @@ export default function WorkspacePage() {
                   task={selected}
                   busy={taskBusy}
                   extraAgents={extraAgents}
+                  chatAgent={chatAgent}
+                  onChangeChatAgent={setChatAgent}
                   onSendMessage={handleSendMessage}
                 />
               </div>

@@ -470,6 +470,15 @@ export const api = {
       request<TaskMessageApiOut>(`/agents/manager/reply/${taskId}`, {
         method: "POST",
       }),
+    /** Reply in a task's thread from whichever agent the graduate is
+     * addressing — Mentor (the default), Manager, or a technical roster
+     * agent (security_reviewer/data_reviewer/devops). See lib/tasks.ts's
+     * TASK_CHAT_AGENTS and docs/TASK_CHAT.md. */
+    taskChatReply: (taskId: string, agentType: ApiAgentType) =>
+      request<TaskMessageApiOut>(`/agents/task/${taskId}/reply`, {
+        method: "POST",
+        body: JSON.stringify({ agent_type: agentType }),
+      }),
     mentorReview: (taskId: string) =>
       request<ReviewApiOut>(`/agents/mentor/review/${taskId}`, {
         method: "POST",

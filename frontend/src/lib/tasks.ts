@@ -1,5 +1,21 @@
-import { api, type ApiTaskStatus, type TaskApiOut, type TaskDetailApiOut } from "./api";
+import { api, type ApiAgentType, type ApiTaskStatus, type TaskApiOut, type TaskDetailApiOut } from "./api";
 import type { AgentId } from "./agents";
+
+/** Agents a graduate can address directly in a task's thread — mirrors
+ * the backend's agents/task_chat.py TASK_CHAT_AGENTS exactly. Mentor is
+ * the default (day-to-day task work); Manager only handles the big
+ * picture; the three technical roster agents can weigh in on a task
+ * directly if the graduate has added them. HR and Career Coach are
+ * deliberately not here — task-level chat isn't their job (see
+ * docs/TASK_CHAT.md) — they're still reachable in the Meeting Room. */
+export const TASK_CHAT_AGENTS: ApiAgentType[] = [
+  "mentor",
+  "manager",
+  "security_reviewer",
+  "data_reviewer",
+  "devops",
+];
+export const DEFAULT_TASK_CHAT_AGENT: ApiAgentType = "mentor";
 
 export type TaskStatus = ApiTaskStatus;
 export type SenderType = "user" | "agent";
@@ -151,9 +167,22 @@ export async function assignNextTask(): Promise<Task> {
   return toTask(raw);
 }
 
-/** Manager replies in a task's thread after the graduate posts a message. */
+/** Manager replies in a task's thread after the graduate posts a message.
+ * Kept for any direct caller; the workspace itself now uses
+ * taskChatReply so the graduate can address the Mentor or a roster
+ * agent instead. */
 export async function managerReply(taskId: string): Promise<TaskMessage> {
   const raw = await api.agents.managerReply(taskId);
+  return toTaskMessage(raw);
+}
+
+/** Reply in a task's thread from whichever agent the graduate is
+ * addressing (see TASK_CHAT_AGENTS above) — Mentor by default. */
+export async function taskChatReply(
+  taskId: string,
+  agentType: ApiAgentType
+): Promise<TaskMessage> {
+  const raw = await api.agents.taskChatReply(taskId, agentType);
   return toTaskMessage(raw);
 }
 

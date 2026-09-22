@@ -52,6 +52,26 @@ export function TaskWorkspace({ task, busy, onAdvance }: TaskWorkspaceProps) {
   return (
     <div className="thin-scrollbar h-full overflow-y-auto">
       <div className="mx-auto max-w-2xl px-8 py-8">
+        {/* A fresh, unstarted task gets a clear banner naming who it came
+            from — so a new task never just quietly appears in the rail. */}
+        {task.status === "todo" && (
+          <div
+            className="mb-6 flex items-center gap-2 rounded border px-4 py-2.5"
+            style={{
+              borderColor: `color-mix(in srgb, var(${agent.colorVar}) 40%, var(--border))`,
+              backgroundColor: `color-mix(in srgb, var(${agent.colorVar}) 8%, transparent)`,
+            }}
+          >
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: `var(${agent.colorVar})` }}
+            />
+            <p className="font-mono text-[11px] text-text-primary">
+              {t("taskWorkspace.newTaskBanner", { name: agent.name })}
+            </p>
+          </div>
+        )}
+
         {/* meta line */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <span className="flex items-center gap-1.5">
