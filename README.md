@@ -111,6 +111,7 @@ python smoke_test_task_bank.py                 # the Manager's task bank: integr
 python smoke_test_github_client.py             # what the Mentor sees of a repo; token + rate limit (29)
 python smoke_test_background_roundtable.py     # the specialists' discussion runs after the review; real HTTP timing (43)
 python smoke_test_own_project_materials.py     # own-project notes/files reach the Manager's plan (29)
+python smoke_test_onboarding_graph_hardening.py # onboarding tool calls: repair/check/retry (16)
 ```
 
 If the LLM key is missing, wrong, or out of credit, the agent endpoints

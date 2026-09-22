@@ -16,6 +16,7 @@ instruction is added exactly once per call.
 Run: python smoke_test_agent_language.py
 """
 import os
+import time
 from unittest.mock import MagicMock, patch
 
 os.environ["DATABASE_URL"] = os.environ.get("DATABASE_URL", "sqlite:///./smoke_test_agent_language.db")
@@ -133,6 +134,21 @@ def register(email, lang=None):
     return {"Authorization": f"Bearer {r.json()['access_token']}", **h}
 
 
+def wait_for_roundtable(headers, task_id, timeout=10):
+    """The specialists' discussion now runs in the BACKGROUND after the Mentor's
+    review (docs/BACKGROUND_ROUNDTABLE.md) — its calls may not have happened yet the
+    instant client.post(...) returns (TestClient is not guaranteed to block on
+    FastAPI BackgroundTasks; confirmed to vary by platform/library version). Poll the
+    task's roundtable_running flag, exactly like a real frontend does, instead of
+    assuming synchronous completion."""
+    deadline = time.time() + timeout
+    detail = client.get(f"/tasks/{task_id}", headers=headers).json()
+    while detail.get("roundtable_running") and time.time() < deadline:
+        time.sleep(0.05)
+        detail = client.get(f"/tasks/{task_id}", headers=headers).json()
+    return detail
+
+
 def run_demo_path(headers):
     """Manager plan -> submit -> Mentor review (+ roundtable if the roster has
     specialists) -> meeting-room chat -> HR rollup. Returns the system prompts sent."""
@@ -144,6 +160,8 @@ def run_demo_path(headers):
     assert r.status_code == 200, r.text
     r = client.post(f"/agents/mentor/review/{task_id}", headers=headers)
     assert r.status_code == 201, r.text
+    detail = wait_for_roundtable(headers, task_id)
+    assert not detail.get("roundtable_running"), f"roundtable for {task_id} did not finish in time"
     r = client.post("/meeting/mentor", headers=headers, json={"content": "What should I focus on next?"})
     assert r.status_code == 201, r.text
     r = client.post("/agents/hr/rollup", headers=headers)

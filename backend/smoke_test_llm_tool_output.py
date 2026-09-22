@@ -243,7 +243,14 @@ def signup(email):
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
-with patch("app.agents.llm_client._anthropic") as mock_a:
+# Pinned to a single provider throughout this section: without this, a real
+# backend/.env with other providers' keys set (a normal developer machine) would
+# let a failed/exhausted "anthropic" fall over to a REAL, unmocked second provider
+# call, silently changing what this section is actually testing (retry/failover
+# logic in isolation) — found running this suite on a machine with real keys.
+with patch("app.agents.llm_client._anthropic") as mock_a, patch(
+    "app.agents.llm_client.resolve_provider_chain", return_value=["anthropic"]
+):
     mock_a.return_value.messages.create.side_effect = fake_create
 
     h = signup("tool-a@example.com")
