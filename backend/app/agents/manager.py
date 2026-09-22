@@ -19,6 +19,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from app.agents.guardrails import MANAGER_DELEGATES_TASK_WORK, ROLE_BOUNDARY
 from app.agents.llm_client import call_agentic, call_with_tool
 from app.agents.task_bank import SUBTASK_PRINCIPLES, create_project_tool_for, seeds_for, seeds_prompt_block, week_arc_block
 from app.agents.tool_output import MalformedToolOutput
@@ -288,7 +289,12 @@ def submit_week_progress(db: Session, user: User, week: Week, mentor_consult: st
 
 def respond_in_thread(db: Session, task: Task, user: User) -> TaskMessage:
     """Reads the task's thread and posts a reply. Called after the graduate
-    posts a message via POST /tasks/{id}/messages."""
+    posts a message via POST /tasks/{id}/messages, when they're addressing
+    the Manager specifically rather than the Mentor (the default in-task
+    agent — see agents/task_chat.py and docs/TASK_CHAT.md). The Manager's
+    own job in a task thread is narrow (big-picture only) and its prompt
+    says so: MANAGER_DELEGATES_TASK_WORK steers hands-on task help back to
+    the Mentor instead of answering it here."""
     history = [
         {
             "role": "assistant" if m.sender_type == SenderType.AGENT else "user",
@@ -300,6 +306,8 @@ def respond_in_thread(db: Session, task: Task, user: User) -> TaskMessage:
         SYSTEM_PROMPT
         + f"\n\nCurrent task: {task.title} — {task.description}\n"
         + f"Status: {task.status.value}.\n{_cv_context(user)}"
+        + MANAGER_DELEGATES_TASK_WORK
+        + ROLE_BOUNDARY
     )
     reply = call_agentic(
         system=system,

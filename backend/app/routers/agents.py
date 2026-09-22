@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
-from app.agents import orchestrator
+from app.agents import orchestrator, task_chat
 from app.auth import get_current_user
 from app.database import get_db
 from app.models import Task, TaskStatus, User
-from app.schemas import ReviewOut, TaskMessageOut, TaskOut
+from app.schemas import ReviewOut, TaskChatRequest, TaskMessageOut, TaskOut
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -39,6 +39,29 @@ def manager_reply(
     posts a message via POST /tasks/{id}/messages."""
     task = _get_owned_task(task_id, current_user, db)
     return orchestrator.manager_reply(db, task, current_user)
+
+
+@router.post("/task/{task_id}/reply", response_model=TaskMessageOut, status_code=201)
+def task_chat_reply(
+    task_id: str,
+    payload: TaskChatRequest = TaskChatRequest(),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Reply in a task's thread from whichever team member the graduate is
+    addressing (docs/TASK_CHAT.md) — the Mentor by default, or the
+    Manager / a technical roster agent (Security Reviewer, Data Reviewer,
+    DevOps) if the graduate picked one in the workspace's agent switcher.
+    Call after POST /tasks/{id}/messages. This is the endpoint the app
+    itself now uses; /agents/manager/reply/{task_id} above still works
+    unchanged for anything still calling it directly."""
+    task = _get_owned_task(task_id, current_user, db)
+    if not task_chat.is_available_for_task(db, current_user, payload.agent_type):
+        raise HTTPException(
+            status_code=403,
+            detail="That agent isn't available for this task yet.",
+        )
+    return orchestrator.task_chat_reply(db, task, current_user, payload.agent_type)
 
 
 @router.post("/mentor/review/{task_id}", response_model=ReviewOut, status_code=201)
