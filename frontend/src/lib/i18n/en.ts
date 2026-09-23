@@ -348,6 +348,39 @@ const en = {
       typing: "Your team is typing...",
     },
   },
+  settings: {
+    saved: "Saved.",
+    profile: {
+      title: "Profile",
+      body: "Your name and account details.",
+      emailLabel: "Email",
+      nameLabel: "Full name",
+      trackLabel: "Track",
+      save: "Save name",
+    },
+    password: {
+      title: "Password",
+      body: "Change your password. You'll need your current one.",
+      currentLabel: "Current password",
+      newLabel: "New password",
+      save: "Update password",
+    },
+    cv: {
+      title: "CV",
+      body: "Replace the CV your Manager plans your tasks around.",
+      cta: "Update CV",
+    },
+    preferences: {
+      title: "Preferences",
+      body: "Language and appearance, same toggles as everywhere else.",
+      language: "Language",
+      theme: "Theme",
+    },
+    errors: {
+      couldntSaveName: "Couldn't save your name.",
+      couldntSavePassword: "Couldn't update your password.",
+    },
+  },
   workspace: {
     loadTasksError: "Couldn't load tasks.",
     loadTaskError: "Couldn't load that task.",

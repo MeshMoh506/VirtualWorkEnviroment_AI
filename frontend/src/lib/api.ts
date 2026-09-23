@@ -390,6 +390,14 @@ export const api = {
 
   me: () => request<UserApiOut>("/users/me"),
 
+  /** The settings page's profile form — rename, change password, or
+   * both. See app/schemas.py's UserUpdate. */
+  updateMe: (payload: { full_name?: string; current_password?: string; new_password?: string }) =>
+    request<UserApiOut>("/users/me", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+
   cv: {
     submit: (cvRawText: string) =>
       request<UserApiOut>("/users/me/cv", {

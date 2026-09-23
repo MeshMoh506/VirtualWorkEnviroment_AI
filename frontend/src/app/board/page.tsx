@@ -105,6 +105,12 @@ export default function BoardPage() {
           >
             {t("nav.howItWorks")}
           </Link>
+          <Link
+            href="/settings"
+            className="rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+          >
+            {t("nav.settings")}
+          </Link>
           <span dir="ltr" className="hidden font-mono text-xs text-text-muted lg:inline">
             {user.email}
           </span>

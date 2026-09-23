@@ -216,6 +216,12 @@ export default function WorkspacePage() {
             {user.email}
           </span>
           <Link
+            href="/settings"
+            className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+          >
+            {t("nav.settings")}
+          </Link>
+          <Link
             href="/logout"
             className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
