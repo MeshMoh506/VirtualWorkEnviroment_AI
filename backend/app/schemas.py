@@ -47,6 +47,18 @@ class UserOut(BaseModel):
     has_cv: bool
 
 
+class UserUpdate(BaseModel):
+    """PATCH /users/me — the settings page's profile form. Every field is
+    optional so the same endpoint covers "just rename me" and "just
+    change my password"; a password change needs current_password to
+    match what's on file (see routers/users.py), same as any ordinary
+    settings page."""
+
+    full_name: str | None = None
+    current_password: str | None = None
+    new_password: str | None = None
+
+
 class CVIntake(BaseModel):
     cv_raw_text: str
 
