@@ -1,6 +1,7 @@
 # Project Status — Venv
 
-_Last updated: Sep 2026 — end of Stage 2 plus a full hardening pass._
+_Last updated: Sep 2026 — Stage 2 plus a full hardening pass, plus a
+task-chat/Team Room/settings enhancement pass on top of that._
 
 > **One-paragraph summary.** Stage 1 (Manager/Mentor/HR, the weekly cycle, one
 > track) and all of Stage 2 (CV-file intake with agent Q&A, six IT tracks, a
@@ -11,11 +12,21 @@ _Last updated: Sep 2026 — end of Stage 2 plus a full hardening pass._
 > migrations, resumable onboarding, a visible "needs changes" state, Arabic agent
 > replies, a Mentor rubric v2, a 15-seed task bank, a background roundtable (the
 > graduate waits ~10s instead of ~25s), and protection against malformed model
-> output on **every** agent tool call — found and fixed by actually running real
-> models, not just mocked tests. **26 smoke suites, 733 checks, all passing** on
-> SQLite and PostgreSQL 16; frontend eslint clean, `next build` passes.
-> **Nobody has clicked through the app in a browser yet** — see "What's genuinely
-> unverified" below before treating this as demo-ready.
+> output on **every** agent tool call. Most recently, a task-chat/collaboration
+> pass: the Mentor (not the Manager) is now the default day-to-day agent in a
+> task thread, with a switcher to address the Manager or a technical roster
+> agent directly (`docs/TASK_CHAT.md`); every agent conversation surface now
+> declines off-topic requests instead of acting as a generic assistant
+> (`agents/guardrails.py`); a Team Room gives the graduate one shared thread
+> with their whole team, not just 1:1 chats (`docs/TEAM_ROOM.md`); and a new
+> `/settings` page covers profile, password, CV, and preferences
+> (`docs/SETTINGS_PAGE.md`). **29 smoke suites, 779 checks, all passing** on
+> SQLite; PostgreSQL 16 was verified through the hardening pass but **not
+> re-verified for this latest pass's migration** (0006, `team_messages`) — no
+> Postgres instance was reachable in the sandbox that built it, see
+> `docs/TEAM_ROOM.md`'s "Not done" section. Frontend eslint clean, `next build`
+> passes (15 routes). **Nobody has clicked through the app in a browser yet** —
+> see "What's genuinely unverified" below before treating this as demo-ready.
 
 ## What's built
 
@@ -67,6 +78,29 @@ onboarding and the weekly-cycle cascade):
   path with **real** LLM keys (everything above is mocked-model tested only),
   reports what a graduate actually waits for, what got repaired/retried, and can
   save a full report of what the models produced (`--save-report`).
+- **Task chat now has an agent switcher, and the Manager is scoped to the big
+  picture.** The Mentor (`agents/mentor.py`'s new `respond_in_thread`) is the
+  default agent in a task thread — framed as a senior engineer working the
+  task day to day — rather than the Manager fielding every message. The
+  graduate can also address the Manager (now redirects hands-on task asks to
+  the Mentor instead of answering them) or a technical roster agent (Security
+  Reviewer/Data Reviewer/DevOps) directly. New `agents/task_chat.py` routes
+  `POST /agents/task/{id}/reply` by `agent_type`; the old
+  `POST /agents/manager/reply/{id}` is unchanged for any other caller
+  (`docs/TASK_CHAT.md`).
+- **Every agent conversation surface has a shared behavioral floor**
+  (`agents/guardrails.py`): declines requests outside its role at Venv instead
+  of acting as a generic assistant, on top of whichever persona/task
+  instructions it already had (`docs/TASK_CHAT.md`).
+- **Team Room**: one shared thread per graduate (`TeamMessage`,
+  `alembic/versions/0006_team_messages.py`) with their whole team, distinct
+  from the Meeting Room's one-thread-per-agent chats. Each message is routed
+  to whichever single teammate fits (a small-tier tool call), but the whole
+  thread — everyone's past turns — stays visible to whoever replies next.
+  `GET/POST /meeting/team` (`docs/TEAM_ROOM.md`).
+- **Settings**: `PATCH /users/me` — rename yourself and/or change your
+  password in one call, with current-password verification and a minimum
+  length on the new one (`docs/SETTINGS_PAGE.md`).
 
 **Frontend** (Next.js + React Flow, dark-by-default "blueprint" design system,
 light theme, Arabic/RTL — `frontend/DESIGN.md`):
@@ -80,19 +114,27 @@ light theme, Arabic/RTL — `frontend/DESIGN.md`):
 - `/board` — the agents graph, renders any extra agents dynamically.
 - `/workspace` — task rail (with a "needs changes" badge) + the full roundtable
   thread, refreshing live while the specialists' discussion is still being
-  written.
+  written. The task-chat panel now shows a "working with" switcher (Mentor by
+  default) and a "new task from {agent}" banner on a fresh task
+  (`docs/TASK_CHAT.md`).
 - `/profile/cv` — replace the CV after onboarding without touching track/team/tasks.
-- `/meeting` — open to any agent on the graduate's actual roster.
+- `/meeting` — open to any agent on the graduate's actual roster, plus a "Team
+  room" tab for a shared thread with the whole team at once (`docs/TEAM_ROOM.md`).
+- `/settings` — profile (name), password change, a CV section linking to
+  `/profile/cv`, and the language/theme toggles in one place
+  (`docs/SETTINGS_PAGE.md`).
 - `/growth`, `/tasks/[id]/review` — unchanged in shape.
-- Verified: eslint clean, full `next build` succeeds (14 routes).
+- Verified: eslint clean, full `next build` succeeds (15 routes).
 
 ## What's genuinely unverified
 
 Be honest with yourself about this list before calling anything demo-ready:
 
-- **Nobody has used the app in a browser since the hardening pass began.** Every
-  check above is an automated test or a scripted real-model run — real clicking,
-  real screens, real Arabic RTL layout, has not happened.
+- **Nobody has used the app in a browser since the hardening pass began** —
+  and that now includes this latest task-chat/Team Room/settings pass, built
+  entirely against automated tests. Every check above is an automated test or
+  a scripted real-model run — real clicking, real screens, real Arabic RTL
+  layout, has not happened.
 - **The task bank and Mentor rubric are drafts awaiting team sign-off**, not
   team-approved content (`docs/TASK_BANK.md`, `docs/MENTOR_RUBRIC.md` both have a
   "Decisions for the team" section).
@@ -105,6 +147,15 @@ Be honest with yourself about this list before calling anything demo-ready:
   fallback provider.
 - **The roundtable's real-model timing** (background vs. the old inline ~25s) has
   not been measured with real keys, only proven correct in automated tests.
+- **This latest pass (task chat, guardrails, Team Room, settings) is mocked-LLM
+  tested only, same as everything else above** — the Manager's redirect
+  behavior, every agent's off-topic decline, and the Team Room's routing
+  quality have not been checked against a real model, only against a mock that
+  returns exactly what the test expects.
+- **The `0006_team_messages` migration was verified against SQLite's
+  model-drift guard only** — no Postgres instance was reachable in the sandbox
+  that built it. Run `smoke_test_migrations.py`'s Postgres section
+  (`MIGRATIONS_TEST_POSTGRES_URL`) before trusting it beyond SQLite/dev.
 
 ## Setup notes for whoever runs this next
 
@@ -134,6 +185,12 @@ fallback, `co_reviewers.py`) · `STAGE2_ROUNDTABLE.md`.
 `ONBOARDING_RESUME.md` · `NEEDS_CHANGES_VISIBLE.md` · `AGENT_LANGUAGE.md` ·
 `MENTOR_RUBRIC.md` · `LLM_PROVIDER_FAILOVER.md` (incl. "Malformed tool output")
 · `TASK_BANK.md` · `BACKGROUND_ROUNDTABLE.md` · `ONBOARDING_GRAPH_HARDENING.md`.
+
+**Task chat / Team Room / settings** (this session, most recent):
+`TASK_CHAT.md` (Mentor as the default in-task agent, the Manager scoped to
+the big picture, the shared `agents/guardrails.py` role-boundary) ·
+`TEAM_ROOM.md` (one shared thread with the whole team, routed replies) ·
+`SETTINGS_PAGE.md` (`PATCH /users/me`, the new `/settings` page).
 
 **Frontend-only work with no dedicated doc** (orientation rework, Arabic i18n,
 light mode — built in a separate pass, documented only in their own PR/commit
@@ -189,18 +246,19 @@ answered as of this doc):
 │   ├── e2e_real_llm.py   real-key end-to-end check (docs above; --help for flags)
 │   └── app/
 │       ├── agents/        Manager/Mentor/HR/Meeting/roundtable/task_bank/rubric/
-│       │                  tool_output — see app/agents/README.md
+│       │                  task_chat/guardrails/tool_output — see app/agents/README.md
 │       │   └── graph/     LangGraph: onboarding_graph, weekly_cycle_graph,
 │       │                  collaboration, models, catalog, cv_parsing
 │       ├── routers/       onboarding, projects, tasks, meeting, agents, users, auth
 │       ├── migrations.py  startup migration runner (adopt / refuse / upgrade)
 │       ├── language.py    per-request agent language (X-Venv-Language)
 │       └── storage.py     local-disk attachment storage
-│   └── alembic/versions/  0001 baseline … 0005 project materials text
+│   └── alembic/versions/  0001 baseline … 0006 team_messages
 ├── frontend/
 │   └── src/
 │       ├── app/            landing, login, board, orientation, onboarding/cv,
-│       │                   workspace, meeting, growth, tasks/[id]/review, profile/cv
+│       │                   workspace, meeting, growth, tasks/[id]/review,
+│       │                   profile/cv, settings
 │       ├── components/     board/, dashboard/, workspace/
 │       └── lib/            api.ts (wire format), one file per domain, i18n/
 └── .vscode/               shared editor config
@@ -253,7 +311,8 @@ Backend base URL in dev: `http://localhost:8000`. Interactive schema for every
 endpoint at `/docs`.
 
 - **Auth**: `POST /auth/register`, `POST /auth/login` (form-encoded).
-- **Users**: `GET /users/me` (`has_cv`, `track`), `GET /users/me/agents`,
+- **Users**: `GET /users/me` (`has_cv`, `track`), `PATCH /users/me` (rename
+  and/or change password — the settings page), `GET /users/me/agents`,
   `GET /users/me/dashboard`, `/users/me/employee-file`, `/users/me/reviews`,
   `POST /users/me/cv` (paste), `POST /users/me/cv/file` (replace after
   onboarding — 409 while mid-wizard).
@@ -271,11 +330,15 @@ endpoint at `/docs`.
   the frontend uses), `GET /tasks/{id}/attachments/{attachment_id}`,
   `POST /tasks/{id}/messages`, `GET /tasks/{id}/review`.
 - **Agents**: `POST /agents/manager/assign-task` (bootstraps/advances the
-  weekly cycle), `POST /agents/manager/reply/{task_id}`,
+  weekly cycle), `POST /agents/manager/reply/{task_id}` (unchanged, still
+  Manager-only), `POST /agents/task/{task_id}/reply` (body
+  `{"agent_type": ...}`, defaults to `mentor` — the endpoint the app itself
+  uses now; 403s an agent not available for task chat, `docs/TASK_CHAT.md`),
   `POST /agents/mentor/review/{task_id}` (schedules the roundtable in the
   background), `POST /agents/hr/rollup`.
 - **Meeting**: `GET/POST /meeting/{agent}` — any `AgentType`; 403s an optional
-  agent the graduate hasn't added.
+  agent the graduate hasn't added. `GET/POST /meeting/team` — the Team Room's
+  shared thread, routed to whichever teammate fits (`docs/TEAM_ROOM.md`).
 - Every request should carry `X-Venv-Language: en|ar` (the frontend does this
   automatically) so agent replies match the UI language.
 - All of the above is wired into `frontend/src/lib/api.ts` and the per-domain
@@ -312,6 +375,9 @@ python smoke_test_github_client.py             # what the Mentor sees of a repo;
 python smoke_test_background_roundtable.py     # roundtable runs after the review; real HTTP timing (43)
 python smoke_test_own_project_materials.py     # own-project notes/files reach the Manager's plan (29)
 python smoke_test_onboarding_graph_hardening.py # onboarding tool calls: repair/check/retry (16)
+python smoke_test_task_chat.py                 # task-thread agent switcher: Mentor default, Manager/roster agents, HR refused (14)
+python smoke_test_team_room.py                 # Team Room: routing, fallback, isolation between users (17)
+python smoke_test_settings.py                  # PATCH /users/me: rename, password change, validation (15)
 ```
 
 If the LLM key is missing, wrong, or out of credit, agent endpoints return a
