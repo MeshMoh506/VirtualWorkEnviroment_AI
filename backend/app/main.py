@@ -7,7 +7,7 @@ from app.agents.llm_client import ALL_PROVIDERS_FAILED, LLMConfigError
 from app.database import SessionLocal, engine
 from app.language import LanguageMiddleware
 from app.migrations import upgrade_database
-from app.routers import agents, auth, meeting, onboarding, projects, tasks, users
+from app.routers import agents, auth, company, meeting, onboarding, projects, tasks, users
 
 app = FastAPI(title="Venv API", version="0.1.0")
 
@@ -48,6 +48,7 @@ app.include_router(agents.router)
 app.include_router(projects.router)
 app.include_router(meeting.router)
 app.include_router(onboarding.router)
+app.include_router(company.router)
 
 
 @app.on_event("startup")
