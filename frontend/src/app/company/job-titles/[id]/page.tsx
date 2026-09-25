@@ -5,10 +5,16 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useRequireAuth, ApiError } from "@/lib/auth-context";
 import {
+  createCompanyProject,
+  createInvitation,
+  fetchCompanyInvitations,
+  fetchCompanyProjects,
   fetchJobTitle,
   fetchMaterials,
   queryKnowledgeBase,
   uploadMaterial,
+  type CompanyProjectSummary,
+  type Invitation,
   type JobTitle,
   type KnowledgeMaterial,
   type RAGChunk,
@@ -29,6 +35,8 @@ export default function JobTitleDetailPage() {
 
   const [jobTitle, setJobTitle] = useState<JobTitle | null>(null);
   const [materials, setMaterials] = useState<KnowledgeMaterial[]>([]);
+  const [projects, setProjects] = useState<CompanyProjectSummary[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,15 +48,71 @@ export default function JobTitleDetailPage() {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<RAGChunk[] | null>(null);
 
+  const [projectTitle, setProjectTitle] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
+  const [projectMaterials, setProjectMaterials] = useState("");
+  const [creatingProject, setCreatingProject] = useState(false);
+
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteProjectId, setInviteProjectId] = useState("");
+  const [inviting, setInviting] = useState(false);
+
   function load() {
-    Promise.all([fetchJobTitle(jobTitleId), fetchMaterials(jobTitleId)])
-      .then(([jt, mats]) => {
+    Promise.all([
+      fetchJobTitle(jobTitleId),
+      fetchMaterials(jobTitleId),
+      fetchCompanyProjects(jobTitleId),
+      fetchCompanyInvitations(),
+    ])
+      .then(([jt, mats, projs, invs]) => {
         setJobTitle(jt);
         setMaterials(mats);
+        setProjects(projs);
+        setInvitations(invs.filter((inv) => inv.jobTitleId === jobTitleId));
         setError(null);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t("common.genericError")))
       .finally(() => setLoading(false));
+  }
+
+  async function handleCreateProject(e: React.FormEvent) {
+    e.preventDefault();
+    if (!projectTitle.trim() || !projectDescription.trim()) return;
+    setCreatingProject(true);
+    setError(null);
+    try {
+      const created = await createCompanyProject(
+        jobTitleId,
+        projectTitle.trim(),
+        projectDescription.trim(),
+        projectMaterials.trim() || undefined
+      );
+      setProjects((prev) => [created, ...prev]);
+      setProjectTitle("");
+      setProjectDescription("");
+      setProjectMaterials("");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("company.projectCreateError"));
+    } finally {
+      setCreatingProject(false);
+    }
+  }
+
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setInviting(true);
+    setError(null);
+    try {
+      const created = await createInvitation(jobTitleId, inviteEmail.trim(), inviteProjectId || undefined);
+      setInvitations((prev) => [created, ...prev]);
+      setInviteEmail("");
+      setInviteProjectId("");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("company.inviteError"));
+    } finally {
+      setInviting(false);
+    }
   }
 
   useEffect(() => {
@@ -180,6 +244,117 @@ export default function JobTitleDetailPage() {
               ))
             )}
           </div>
+
+          {/* Company's own real projects — distinct from a graduate's own
+              project; a template an invited student's actual Project gets
+              created from once they accept. */}
+          <form onSubmit={handleCreateProject} className="rounded border border-border bg-bg-surface p-5">
+            <h2 className="text-base font-medium text-text-primary">{t("company.projectsTitle")}</h2>
+            <p className="mt-1 text-sm text-text-secondary">{t("company.projectsBody")}</p>
+            <div className="mt-3 flex flex-col gap-2">
+              <input
+                value={projectTitle}
+                onChange={(e) => setProjectTitle(e.target.value)}
+                placeholder={t("company.projectTitlePlaceholder")}
+                className="rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
+              />
+              <textarea
+                value={projectDescription}
+                onChange={(e) => setProjectDescription(e.target.value)}
+                rows={2}
+                placeholder={t("company.projectDescriptionPlaceholder")}
+                className="thin-scrollbar resize-none rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
+              />
+              <textarea
+                value={projectMaterials}
+                onChange={(e) => setProjectMaterials(e.target.value)}
+                rows={3}
+                placeholder={t("company.projectMaterialsPlaceholder")}
+                className="thin-scrollbar resize-none rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
+              />
+              <div>
+                <button
+                  type="submit"
+                  disabled={creatingProject || !projectTitle.trim() || !projectDescription.trim()}
+                  className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {creatingProject ? t("common.working") : t("company.addProject")}
+                </button>
+              </div>
+            </div>
+
+            {projects.length > 0 && (
+              <div className="mt-4 flex flex-col gap-2">
+                {projects.map((p) => (
+                  <div key={p.id} className="rounded border border-border bg-bg-surface-raised px-3 py-2">
+                    <p className="text-sm font-medium text-text-primary">{p.title}</p>
+                    <p className="mt-0.5 text-xs text-text-secondary">{p.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </form>
+
+          {/* Invite a candidate to this job title, with or without one of
+              the real projects above. */}
+          <form onSubmit={handleInvite} className="rounded border border-border bg-bg-surface p-5">
+            <h2 className="text-base font-medium text-text-primary">{t("company.inviteTitle")}</h2>
+            <p className="mt-1 text-sm text-text-secondary">{t("company.inviteBody")}</p>
+            <div className="mt-3 flex flex-col gap-2">
+              <input
+                type="email"
+                dir="ltr"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder={t("company.inviteEmailPlaceholder")}
+                className="rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
+              />
+              <select
+                value={inviteProjectId}
+                onChange={(e) => setInviteProjectId(e.target.value)}
+                className="rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary focus:border-border-strong focus:outline-none"
+              >
+                <option value="">{t("company.invitePlatformTrack")}</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </select>
+              <div>
+                <button
+                  type="submit"
+                  disabled={inviting || !inviteEmail.trim()}
+                  className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {inviting ? t("common.working") : t("company.sendInvite")}
+                </button>
+              </div>
+            </div>
+
+            {invitations.length > 0 && (
+              <div className="mt-4 flex flex-col gap-2">
+                {invitations.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="flex items-center justify-between rounded border border-border bg-bg-surface-raised px-3 py-2"
+                  >
+                    <div>
+                      <p dir="ltr" className="text-start text-sm text-text-primary">
+                        {inv.invitedEmail}
+                      </p>
+                      {inv.companyProjectTitle && (
+                        <p className="text-xs text-text-secondary">{inv.companyProjectTitle}</p>
+                      )}
+                    </div>
+                    <span className="font-mono text-[11px] text-text-muted">
+                      {t(`company.invitationStatus.${inv.status}`)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </form>
 
           {/* RAG query tester */}
           <form onSubmit={handleSearch} className="rounded border border-border bg-bg-surface p-5">

@@ -1,6 +1,8 @@
 import {
   api,
+  type CompanyProjectApiOut,
   type CompanyRegisterPayload,
+  type InvitationApiOut,
   type JobTitleApiOut,
   type KnowledgeMaterialApiOut,
   type OrganizationApiOut,
@@ -39,6 +41,27 @@ export interface RAGChunk {
   score: number;
 }
 
+export interface CompanyProjectSummary {
+  id: string;
+  jobTitleId: string;
+  title: string;
+  description: string;
+  hasMaterials: boolean;
+  createdAt: string;
+}
+
+export interface Invitation {
+  id: string;
+  jobTitleId: string;
+  jobTitle: string;
+  companyProjectId: string | null;
+  companyProjectTitle: string | null;
+  invitedEmail: string;
+  status: "pending" | "accepted" | "declined";
+  createdAt: string;
+  respondedAt: string | null;
+}
+
 function toOrganization(o: OrganizationApiOut): Organization {
   return { id: o.id, name: o.name, field: o.field, joinCode: o.join_code };
 }
@@ -62,6 +85,31 @@ function toMaterial(m: KnowledgeMaterialApiOut): KnowledgeMaterial {
     chunkCount: m.chunk_count,
     createdAt: m.created_at,
     preview: m.preview,
+  };
+}
+
+function toCompanyProject(p: CompanyProjectApiOut): CompanyProjectSummary {
+  return {
+    id: p.id,
+    jobTitleId: p.job_title_id,
+    title: p.title,
+    description: p.description,
+    hasMaterials: p.has_materials,
+    createdAt: p.created_at,
+  };
+}
+
+function toInvitation(i: InvitationApiOut): Invitation {
+  return {
+    id: i.id,
+    jobTitleId: i.job_title_id,
+    jobTitle: i.job_title,
+    companyProjectId: i.company_project_id,
+    companyProjectTitle: i.company_project_title,
+    invitedEmail: i.invited_email,
+    status: i.status,
+    createdAt: i.created_at,
+    respondedAt: i.responded_at,
   };
 }
 
@@ -119,4 +167,34 @@ export async function queryKnowledgeBase(
       score: c.score,
     })),
   };
+}
+
+export async function createCompanyProject(
+  jobTitleId: string,
+  title: string,
+  description: string,
+  materialsText?: string,
+  files?: File[]
+): Promise<CompanyProjectSummary> {
+  return toCompanyProject(
+    await api.company.createProject(jobTitleId, title, description, materialsText, files)
+  );
+}
+
+export async function fetchCompanyProjects(jobTitleId: string): Promise<CompanyProjectSummary[]> {
+  const raw = await api.company.listProjects(jobTitleId);
+  return raw.map(toCompanyProject);
+}
+
+export async function createInvitation(
+  jobTitleId: string,
+  invitedEmail: string,
+  companyProjectId?: string
+): Promise<Invitation> {
+  return toInvitation(await api.company.createInvitation(jobTitleId, invitedEmail, companyProjectId));
+}
+
+export async function fetchCompanyInvitations(): Promise<Invitation[]> {
+  const raw = await api.company.listInvitations();
+  return raw.map(toInvitation);
 }

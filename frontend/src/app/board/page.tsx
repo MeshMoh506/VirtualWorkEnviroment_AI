@@ -8,6 +8,7 @@ import { fetchMyProject, currentWeek, type Project } from "@/lib/projects";
 import { fetchDashboard, type Dashboard } from "@/lib/dashboard";
 import { fetchMyReviews, type Review } from "@/lib/reviews";
 import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
+import { fetchMyInvitations } from "@/lib/invitations";
 import { DetailPanel, type BoardSelection } from "@/components/board/detail-panel";
 import { FocusHero } from "@/components/dashboard/focus-hero";
 import { WeekStrip } from "@/components/dashboard/week-strip";
@@ -39,6 +40,7 @@ export default function BoardPage() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [extraAgents, setExtraAgents] = useState<ExtraAgent[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -49,13 +51,17 @@ export default function BoardPage() {
       fetchDashboard(),
       fetchMyReviews(),
       fetchMyExtraAgents(),
+      fetchMyInvitations(),
     ])
-      .then(([t, p, d, r, a]) => {
+      .then(([t, p, d, r, a, inv]) => {
         if (t.status === "fulfilled") setTasks(t.value);
         if (p.status === "fulfilled") setProject(p.value);
         if (d.status === "fulfilled") setDashboard(d.value);
         if (r.status === "fulfilled") setReviews(r.value);
         if (a.status === "fulfilled") setExtraAgents(a.value);
+        if (inv.status === "fulfilled") {
+          setPendingInvitations(inv.value.filter((i) => i.status === "pending").length);
+        }
       })
       .finally(() => setDataLoading(false));
   }, [user]);
@@ -110,6 +116,17 @@ export default function BoardPage() {
             className="rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
             {t("nav.settings")}
+          </Link>
+          <Link
+            href="/invitations"
+            className="flex items-center gap-1.5 rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+          >
+            {t("invitations.title")}
+            {pendingInvitations > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-mono text-[10px] text-accent-text">
+                {pendingInvitations}
+              </span>
+            )}
           </Link>
           <span dir="ltr" className="hidden font-mono text-xs text-text-muted lg:inline">
             {user.email}
