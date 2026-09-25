@@ -163,6 +163,8 @@ const en = {
     invitePlatformTrack: "Platform track (no specific project)",
     sendInvite: "Send invite",
     inviteError: "Couldn't send that invite.",
+    emailSent: "Email sent",
+    emailNotSent: "No email sent (check SMTP config)",
     invitationStatus: {
       pending: "pending",
       accepted: "accepted",

@@ -486,6 +486,10 @@ class InvitationOut(BaseModel):
     company_project_title: str | None
     invited_email: str
     status: InvitationStatus
+    # Whether app/email.py actually sent a real email — False if SMTP
+    # isn't configured or a real send failed. Either way the invitation
+    # itself exists regardless; this is informational only.
+    email_sent: bool
     created_at: datetime
     responded_at: datetime | None
 

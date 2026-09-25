@@ -448,6 +448,7 @@ export interface InvitationApiOut {
   company_project_title: string | null;
   invited_email: string;
   status: "pending" | "accepted" | "declined";
+  email_sent: boolean;
   created_at: string;
   responded_at: string | null;
 }

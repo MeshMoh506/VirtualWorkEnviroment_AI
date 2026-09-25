@@ -346,6 +346,9 @@ export default function JobTitleDetailPage() {
                       {inv.companyProjectTitle && (
                         <p className="text-xs text-text-secondary">{inv.companyProjectTitle}</p>
                       )}
+                      <p className="text-xs text-text-muted">
+                        {inv.emailSent ? t("company.emailSent") : t("company.emailNotSent")}
+                      </p>
                     </div>
                     <span className="font-mono text-[11px] text-text-muted">
                       {t(`company.invitationStatus.${inv.status}`)}

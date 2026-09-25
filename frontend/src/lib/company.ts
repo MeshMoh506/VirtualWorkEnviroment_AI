@@ -60,6 +60,7 @@ export interface Invitation {
   companyProjectTitle: string | null;
   invitedEmail: string;
   status: "pending" | "accepted" | "declined";
+  emailSent: boolean;
   createdAt: string;
   respondedAt: string | null;
 }
@@ -157,6 +158,7 @@ function toInvitation(i: InvitationApiOut): Invitation {
     companyProjectTitle: i.company_project_title,
     invitedEmail: i.invited_email,
     status: i.status,
+    emailSent: i.email_sent,
     createdAt: i.created_at,
     respondedAt: i.responded_at,
   };
