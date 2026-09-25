@@ -153,6 +153,22 @@ def _openai_compatible(provider: str) -> OpenAI:
     return _openai_clients[provider]
 
 
+def openai_client_for_embeddings() -> OpenAI:
+    """The one client app/rag.py uses — embeddings are OpenAI-specific
+    (Anthropic doesn't offer an embeddings endpoint, and DeepSeek/Qwen
+    aren't wired up for one here), so there's no failover chain the way
+    call_agentic/call_with_tool have. Shares the same cached client/base
+    URL construction as the chat-completion path above rather than
+    reimplementing it. Raises LLMConfigError (already a clean 503 via
+    main.py) if OPENAI_API_KEY isn't set."""
+    if not settings.openai_api_key:
+        raise LLMConfigError(
+            "Set OPENAI_API_KEY to enable the RAG knowledge base — embeddings "
+            "require OpenAI specifically (see app/rag.py)."
+        )
+    return _openai_compatible("openai")
+
+
 def _to_openai_tool(tool: dict) -> dict:
     """tools.py defines tools in Anthropic's native shape (name/description/
     input_schema). This is a pure key rename to OpenAI's function-calling

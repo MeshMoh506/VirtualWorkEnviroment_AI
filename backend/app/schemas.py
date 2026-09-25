@@ -3,7 +3,9 @@ from datetime import datetime
 from pydantic import BaseModel, EmailStr, ConfigDict
 
 from app.models import (
+    AccountType,
     AgentType,
+    CompanyRole,
     OnboardingStage,
     ProjectStatus,
     ProjectSource,
@@ -45,6 +47,11 @@ class UserOut(BaseModel):
     is_active: bool
     created_at: datetime
     has_cv: bool
+    # Stage 3: always present, "student" for every pre-Stage-3 user and
+    # every ordinary graduate going forward. See docs/STAGE3_COMPANY_RAG.md.
+    account_type: AccountType
+    company_role: CompanyRole | None
+    organization_id: str | None
 
 
 class UserUpdate(BaseModel):
@@ -347,3 +354,100 @@ class TeamMessageOut(BaseModel):
     sender_type: SenderType
     content: str
     created_at: datetime
+
+
+# ---- Stage 3: company accounts + RAG knowledge base ----
+# See docs/STAGE3_COMPANY_RAG.md.
+
+
+class OrganizationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    field: str | None
+    join_code: str
+
+
+class CompanyRegister(BaseModel):
+    """POST /company/register. Two shapes in one schema: found a new
+    company (company_name required, becomes the org's first ADMIN), or
+    join an existing one via its join_code (role required — see
+    routers/company.py for which fields are needed for which shape)."""
+
+    email: EmailStr
+    password: str
+    full_name: str
+
+    # Founding a new company:
+    company_name: str | None = None
+    field: str | None = None
+
+    # Joining an existing one:
+    join_code: str | None = None
+    role: CompanyRole | None = None
+
+
+class CompanyRegisterOut(BaseModel):
+    user: UserOut
+    organization: OrganizationOut
+
+
+class JobTitleCreate(BaseModel):
+    title: str
+    description: str | None = None
+
+
+class JobTitleOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    title: str
+    description: str | None
+    created_at: datetime
+    material_count: int
+    chunk_count: int
+
+
+class KnowledgeMaterialOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    job_title_id: str
+    filename: str | None
+    chunk_count: int
+    created_at: datetime
+    # A preview, not the whole document — company-facing list views don't
+    # need the full text, and a large upload's full text is a lot to ship
+    # on every list call.
+    preview: str
+
+    @staticmethod
+    def from_material(material) -> "KnowledgeMaterialOut":
+        text = material.extracted_text
+        preview = text if len(text) <= 400 else text[:400] + "..."
+        return KnowledgeMaterialOut(
+            id=material.id,
+            job_title_id=material.job_title_id,
+            filename=material.filename,
+            chunk_count=material.chunk_count,
+            created_at=material.created_at,
+            preview=preview,
+        )
+
+
+class RAGQueryRequest(BaseModel):
+    query: str
+    k: int = 5
+
+
+class RAGChunkOut(BaseModel):
+    id: str
+    material_id: str
+    content: str
+    score: float
+
+
+class RAGQueryResult(BaseModel):
+    query: str
+    chunks: list[RAGChunkOut]

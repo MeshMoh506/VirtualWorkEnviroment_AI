@@ -1,4 +1,5 @@
 import enum
+import secrets
 import uuid
 from datetime import datetime, timedelta
 
@@ -106,17 +107,53 @@ class ReviewKind(str, enum.Enum):
     SKILLS_ROLLUP = "skills_rollup"    # HR, periodic Employee File rollup (existing)
 
 
+class AccountType(str, enum.Enum):
+    """Stage 3 (docs/STAGE3_COMPANY_RAG.md): the login split the spec
+    asked for. A STUDENT is everything this app already was; a COMPANY
+    account belongs to an Organization and has a CompanyRole. Existing
+    users are all STUDENT by default — this is purely additive."""
+    STUDENT = "student"
+    COMPANY = "company"
+
+
+class CompanyRole(str, enum.Enum):
+    """Only meaningful when User.account_type == COMPANY. Not yet used to
+    gate any endpoint (every company role can create job titles and
+    upload materials today) — stored and returned so the UI can label
+    people correctly, and so per-role permissions are a small follow-up
+    change rather than a schema change, if that's wanted later."""
+    ADMIN = "admin"
+    HR = "hr"
+    TECH_LEAD = "tech_lead"
+
+
 # ---------------------------------------------------------------------------
 # Organization — not used in Stage 1, exists now so Stage 3 (companies build
 # their own Venvs) is additive instead of a schema rewrite. Every core table
 # below carries a nullable organization_id for the same reason.
 # ---------------------------------------------------------------------------
 
+def gen_join_code() -> str:
+    # Short and typeable (no 0/O/1/I ambiguity) — a rep shares this with
+    # teammates to join their company's account instead of creating a new
+    # Organization by accident. Not a security boundary (see
+    # docs/STAGE3_COMPANY_RAG.md's "Decisions worth knowing about") —
+    # good enough for who can join a bootcamp-demo company account.
+    alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+    return "".join(secrets.choice(alphabet) for _ in range(7))
+
+
 class Organization(Base):
     __tablename__ = "organizations"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    # Free text ("field of business") — Stage 3's spec explicitly wants
+    # this open to any industry, not just IT (see docs/STAGE3_COMPANY_RAG.md).
+    field: Mapped[str | None] = mapped_column(String, nullable=True)
+    join_code: Mapped[str] = mapped_column(
+        String, unique=True, nullable=False, default=gen_join_code
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
@@ -131,6 +168,16 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     full_name: Mapped[str] = mapped_column(String, nullable=False)
+
+    # Stage 3 (docs/STAGE3_COMPANY_RAG.md): STUDENT is everything this app
+    # already was — the default, for every existing row. A COMPANY user
+    # always has organization_id set and a company_role; a STUDENT's
+    # organization_id stays None (Stage 1/2 had no use for it, kept
+    # nullable from day one for exactly this later addition).
+    account_type: Mapped[AccountType] = mapped_column(
+        Enum(AccountType), default=AccountType.STUDENT, nullable=False
+    )
+    company_role: Mapped[CompanyRole | None] = mapped_column(Enum(CompanyRole), nullable=True)
 
     track: Mapped[TrackEnum] = mapped_column(
         Enum(TrackEnum), default=TrackEnum.JUNIOR_DEV, nullable=False
@@ -549,6 +596,76 @@ class TeamMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship(back_populates="team_messages")
+
+
+# ---------------------------------------------------------------------------
+# Stage 3 — company knowledge base + RAG (docs/STAGE3_COMPANY_RAG.md). A
+# company's job titles are free text (JobTitle); each job title has its own
+# knowledge base built from uploaded/pasted materials (KnowledgeMaterial —
+# the raw source, one row per upload) chunked and embedded for retrieval
+# (KnowledgeChunk — what app/rag.py actually searches over).
+# ---------------------------------------------------------------------------
+
+
+class JobTitle(Base):
+    __tablename__ = "job_titles"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    materials: Mapped[list["KnowledgeMaterial"]] = relationship(
+        back_populates="job_title", cascade="all, delete-orphan"
+    )
+
+    @property
+    def material_count(self) -> int:
+        return len(self.materials)
+
+    @property
+    def chunk_count(self) -> int:
+        return sum(m.chunk_count for m in self.materials)
+
+
+class KnowledgeMaterial(Base):
+    """One uploaded file or pasted block of text, before chunking — kept
+    around so the company can see what they've uploaded and so a chunk can
+    always be traced back to its source (filename is None for pasted text)."""
+
+    __tablename__ = "knowledge_materials"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    job_title_id: Mapped[str] = mapped_column(ForeignKey("job_titles.id"), nullable=False)
+    filename: Mapped[str | None] = mapped_column(String, nullable=True)
+    extracted_text: Mapped[str] = mapped_column(Text, nullable=False)
+    uploaded_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    chunk_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    job_title: Mapped["JobTitle"] = relationship(back_populates="materials")
+
+
+class KnowledgeChunk(Base):
+    """What app/rag.py actually retrieves over: one embedded piece of a
+    KnowledgeMaterial. embedding_json is a plain list[float] — no vector
+    extension, see docs/STAGE3_COMPANY_RAG.md for why — ranked by
+    in-Python cosine similarity against a query embedding at retrieval
+    time (app/rag.py's retrieve())."""
+
+    __tablename__ = "knowledge_chunks"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    job_title_id: Mapped[str] = mapped_column(ForeignKey("job_titles.id"), nullable=False)
+    material_id: Mapped[str] = mapped_column(ForeignKey("knowledge_materials.id"), nullable=False)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding_json: Mapped[list] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class Review(Base):
