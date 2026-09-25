@@ -23,7 +23,7 @@ task-chat/Team Room/settings pass, and now all of Stage 3 (companies)._
 > consent flow, and a company roster with per-week reports built from the
 > weekly cycle's existing reviews — see `docs/STAGE3_COMPANY_RAG.md` for the
 > full write-up, including the confirmed answers to all four scoping questions
-> that were open before it started. **33 smoke suites, 885 checks, all
+> that were open before it started. **34 smoke suites, 900 checks, all
 > passing** — and, for the first time this session, genuinely **confirmed on a
 > real PostgreSQL 16 instance**, not just SQLite: doing so surfaced and fixed
 > two real deploy-breaking migration bugs that SQLite's lack of enum
@@ -449,6 +449,7 @@ python smoke_test_company_rag.py               # company accounts, job titles, R
 python smoke_test_company_invitations.py       # company projects, invite/consent flow, double-response prevention (36)
 python smoke_test_company_students.py          # company roster + per-week reports, real assign-task integration (22)
 python smoke_test_company_roles.py             # company role permissions: invitations ADMIN/HR, projects ADMIN/TECH_LEAD (13)
+python smoke_test_invitation_emails.py         # real invitation emails: graceful degradation + a genuine local SMTP server (15)
 ```
 
 If the LLM key is missing, wrong, or out of credit, agent endpoints return a

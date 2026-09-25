@@ -118,6 +118,15 @@ answered and reflected in what follows:
 - `POST /invitations/{id}/decline` — no side effects.
 - A company account can't accept its own invitation (403); only a
   `STUDENT` account can accept/decline.
+- **Real email** (`app/email.py`): sending an invitation now also sends
+  an actual email over SMTP (any provider — Gmail, SendGrid, Mailgun,
+  AWS SES, Postmark's relay, a real mail server), with the company/job-
+  title/project named and a link back to the frontend's `/invitations`
+  page. Optional by design, same spirit as `OPENAI_API_KEY` for RAG: no
+  `SMTP_HOST` configured, or a real send failure, never blocks creating
+  the invitation — `Invitation.email_sent` (migration 0009) tracks
+  honestly whether it actually went out, and the student can always
+  find the invitation via `GET /invitations/mine` regardless.
 
 ### The company's roster + "end-of-week report" (`GET /company/students`, `GET /company/students/{invitation_id}`)
 
@@ -277,9 +286,16 @@ every other suite in this repo already uses:
   for its allowed roles and 403s (naming the allowed roles) for the
   disallowed one; confirms the unrestricted actions still work for
   every role.
+- **`smoke_test_invitation_emails.py`** — graceful degradation (no SMTP
+  configured, and a real send failure) never blocks creating the
+  invitation, plus the one that matters most: a genuine local SMTP
+  server (`aiosmtpd`, not a mock) actually receiving a correctly-
+  addressed, correctly-worded email through the real HTTP endpoint —
+  envelope from/to, company/job-title/project content, the accept link,
+  and both MIME parts all checked against what the server really got.
 - **`smoke_test_migrations.py`**'s Postgres section — see above.
 
-Full suite: **33 files, 885 checks, all passing** — on SQLite always,
+Full suite: **34 files, 900 checks, all passing** — on SQLite always,
 and confirmed identically on real Postgres 16 as of the pass that added
 migrations 0007/0008 (re-run that section against your actual
 deployment target before trusting it there too — the sandbox instance
@@ -313,8 +329,6 @@ before this stage).
 
 ## Not built / worth knowing
 
-- No email/invite-delivery system — see "Decisions worth knowing about"
-  above.
 - A student can't yet see their own view of what a company has actually
   seen about them (transparency beyond the upfront consent notice) —
   not required by the confirmed decisions above, but worth considering.
