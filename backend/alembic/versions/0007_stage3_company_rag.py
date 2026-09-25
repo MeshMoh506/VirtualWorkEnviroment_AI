@@ -19,6 +19,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision: str = '0007'
@@ -51,19 +52,41 @@ def upgrade() -> None:
         )
         batch_op.create_unique_constraint('uq_organizations_join_code', ['join_code'])
 
+    # Postgres enum types must exist before a column can reference them.
+    # op.create_table's DDL compiler emits CREATE TYPE automatically for a
+    # brand-new table, but ADD COLUMN inside batch_alter_table does not —
+    # confirmed the hard way (this migration originally 500'd against a
+    # real Postgres 16 instance with "type accounttype does not exist"
+    # before this explicit create was added). SQLite has no such
+    # statement or need, hence the dialect guard. Below, the columns use
+    # postgresql.ENUM(create_type=False) rather than generic sa.Enum —
+    # also confirmed the hard way (see 0006's docstring) that generic
+    # sa.Enum does not reliably honor create_type=False.
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        postgresql.ENUM('STUDENT', 'COMPANY', name='accounttype').create(bind, checkfirst=True)
+        postgresql.ENUM('ADMIN', 'HR', 'TECH_LEAD', name='companyrole').create(bind, checkfirst=True)
+
     with op.batch_alter_table('users', schema=None) as batch_op:
         batch_op.add_column(
             sa.Column(
                 'account_type',
-                sa.Enum('STUDENT', 'COMPANY', name='accounttype'),
+                postgresql.ENUM('STUDENT', 'COMPANY', name='accounttype', create_type=False),
                 nullable=False,
-                server_default='student',
+                # Must match the enum's actual label spelling exactly — this
+                # codebase's Enum columns store the Python member NAME
+                # ('STUDENT'), not .value ('student'). Confirmed the hard
+                # way: a real Postgres 16 run rejected 'student' with
+                # "invalid input value for enum accounttype" the first
+                # time, since native enum validation (unlike SQLite, which
+                # has none) actually checks this.
+                server_default='STUDENT',
             )
         )
         batch_op.add_column(
             sa.Column(
                 'company_role',
-                sa.Enum('ADMIN', 'HR', 'TECH_LEAD', name='companyrole'),
+                postgresql.ENUM('ADMIN', 'HR', 'TECH_LEAD', name='companyrole', create_type=False),
                 nullable=True,
             )
         )
