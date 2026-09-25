@@ -49,6 +49,23 @@ class Settings(BaseSettings):
 
     upload_dir: str = "uploads"
 
+    # Real invitation emails (docs/STAGE3_COMPANY_RAG.md, app/email.py) —
+    # plain smtplib, works with any SMTP provider (Gmail, SendGrid,
+    # Mailgun, AWS SES, Postmark's SMTP relay, or a real mail server).
+    # Optional: leaving smtp_host blank means send_invitation_email is a
+    # documented no-op rather than an error — an invitation always still
+    # exists and is findable via GET /invitations/mine regardless of
+    # whether an email goes out.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "no-reply@venv.dev"
+    smtp_use_tls: bool = True
+    # Where an invitation email's link points — the frontend's own origin,
+    # not this API's.
+    frontend_base_url: str = "http://localhost:3000"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

@@ -9,10 +9,12 @@ carries the same bearer token. Nothing here is a parallel auth stack.
 """
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
+import smtplib
 
 from app.agents.graph.cv_parsing import CVReadError, read_cv_upload
 from app.auth import get_current_user, hash_password
 from app.database import get_db
+from app.email import EmailNotConfigured, send_invitation_email
 from app.materials import MAX_MATERIALS_FILES, combine_materials
 from app.models import (
     AccountType,
@@ -376,12 +378,13 @@ def create_invitation(
     current_user: User = Depends(require_company_role(CompanyRole.ADMIN, CompanyRole.HR)),
     db: Session = Depends(get_db),
 ):
-    """Invite invited_email to work under this job title. No email/invite
-    delivery system exists in this app (see docs/STAGE3_COMPANY_RAG.md) —
-    the student sees it themselves once they register or log in with a
-    matching email and check GET /invitations/mine. Limited to
-    ADMIN/HR — who to bring on is a hiring decision, not a technical
-    one."""
+    """Invite invited_email to work under this job title. Sends a real
+    email if SMTP is configured (app/email.py); if it isn't, or the send
+    fails for any reason, the invitation is still created — the student
+    can always find it via GET /invitations/mine regardless, and
+    response.email_sent tells the company honestly whether it went out.
+    Limited to ADMIN/HR — who to bring on is a hiring decision, not a
+    technical one."""
     job_title = _get_org_job_title(db, current_user, job_title_id)
     company_project = None
     if payload.company_project_id:
@@ -400,6 +403,23 @@ def create_invitation(
     db.add(invitation)
     db.commit()
     db.refresh(invitation)
+
+    org = db.get(Organization, job_title.organization_id)
+    try:
+        send_invitation_email(
+            to_email=invitation.invited_email,
+            company_name=org.name if org else "A company",
+            job_title=job_title.title,
+            project_title=company_project.title if company_project else None,
+        )
+        invitation.email_sent = True
+        db.commit()
+        db.refresh(invitation)
+    except EmailNotConfigured:
+        pass  # no SMTP set up — the invitation itself still exists
+    except (smtplib.SMTPException, OSError, TimeoutError):
+        pass  # a real send failure never blocks the invitation itself
+
     return InvitationOut(
         id=invitation.id,
         job_title_id=job_title.id,
@@ -408,6 +428,7 @@ def create_invitation(
         company_project_title=company_project.title if company_project else None,
         invited_email=invitation.invited_email,
         status=invitation.status,
+        email_sent=invitation.email_sent,
         created_at=invitation.created_at,
         responded_at=invitation.responded_at,
     )
@@ -444,6 +465,7 @@ def list_invitations(
             company_project_title=projects.get(inv.company_project_id) if inv.company_project_id else None,
             invited_email=inv.invited_email,
             status=inv.status,
+            email_sent=inv.email_sent,
             created_at=inv.created_at,
             responded_at=inv.responded_at,
         )

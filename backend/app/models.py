@@ -723,6 +723,13 @@ class Invitation(Base):
     status: Mapped[InvitationStatus] = mapped_column(
         Enum(InvitationStatus), default=InvitationStatus.PENDING, nullable=False
     )
+    # Whether app/email.py actually sent a real email for this invitation
+    # — False whether SMTP just isn't configured or a real send failed;
+    # either way the invitation itself still exists and is findable via
+    # GET /invitations/mine, so this is informational for the company
+    # (routers/company.py surfaces it), never something that blocks
+    # anything.
+    email_sent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     responded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
