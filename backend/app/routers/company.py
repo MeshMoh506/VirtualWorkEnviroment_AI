@@ -23,13 +23,21 @@ from app.models import (
     JobTitle,
     KnowledgeMaterial,
     Organization,
+    Project,
+    ProjectStatus,
+    Review,
+    ReviewKind,
     User,
+    WeekStatus,
 )
 from app.rag import ingest_material, retrieve
 from app.schemas import (
     CompanyProjectOut,
     CompanyRegister,
     CompanyRegisterOut,
+    CompanyStudentDetailOut,
+    CompanyStudentOut,
+    CompanyStudentWeekOut,
     InvitationCreate,
     InvitationOut,
     JobTitleCreate,
@@ -414,3 +422,139 @@ def list_invitations(
         )
         for inv in rows
     ]
+
+
+# ---------------------------------------------------------------------------
+# The company's view into a student they've hired: a live roster
+# (GET /students) and, per student, the same week-by-week reviews the
+# Manager/HR weekly cycle already produces (GET /students/{id}) — this IS
+# the "end-of-week report", not a second reporting pipeline. Reached via
+# accepted invitations: an invited student's account (User.organization_id,
+# set in routers/invitations.py's accept()) is the join key, not
+# Project.organization_id — a platform-track invitation (no named company
+# project) still produces a real Project once the student calls
+# assign-task, and that path has no reason to know about organizations.
+# Scope is exactly what INVITATION_DATA_NOTICE promised: this project's
+# tasks/submissions and reviews, nothing about the student beyond that.
+# ---------------------------------------------------------------------------
+
+
+def _student_project(db: Session, student: User) -> Project | None:
+    return (
+        db.query(Project)
+        .filter(Project.user_id == student.id, Project.status == ProjectStatus.ACTIVE)
+        .order_by(Project.created_at.desc())
+        .first()
+    )
+
+
+def _task_counts(project: Project | None) -> dict[str, int]:
+    counts = {"todo": 0, "in_progress": 0, "submitted": 0, "reviewed": 0}
+    if not project:
+        return counts
+    for week in project.weeks:
+        for task in week.tasks:
+            counts[task.status.value] += 1
+    return counts
+
+
+def _current_week_number(project: Project | None) -> int | None:
+    if not project or not project.weeks:
+        return None
+    active = next((w for w in project.weeks if w.status == WeekStatus.ACTIVE), None)
+    if active:
+        return active.week_number
+    return max(w.week_number for w in project.weeks)
+
+
+def _student_summary(
+    db: Session, invitation: Invitation, student: User
+) -> CompanyStudentOut:
+    job_title = db.get(JobTitle, invitation.job_title_id)
+    company_project = (
+        db.get(CompanyProject, invitation.company_project_id)
+        if invitation.company_project_id
+        else None
+    )
+    project = _student_project(db, student)
+    return CompanyStudentOut(
+        invitation_id=invitation.id,
+        student_name=student.full_name,
+        student_email=student.email,
+        job_title=job_title.title if job_title else "",
+        company_project_title=company_project.title if company_project else None,
+        project_title=project.title if project else None,
+        project_status=project.status if project else None,
+        current_week_number=_current_week_number(project),
+        task_counts=_task_counts(project),
+    )
+
+
+@router.get("/students", response_model=list[CompanyStudentOut])
+def list_students(
+    current_user: User = Depends(get_current_company_user), db: Session = Depends(get_db)
+):
+    """Everyone who has actually accepted an invitation from this
+    company — a pending or declined invitation isn't a student yet."""
+    invitations = (
+        db.query(Invitation)
+        .filter(
+            Invitation.organization_id == current_user.organization_id,
+            Invitation.status == InvitationStatus.ACCEPTED,
+        )
+        .order_by(Invitation.responded_at.desc())
+        .all()
+    )
+    out = []
+    for invitation in invitations:
+        student = db.query(User).filter(User.email == invitation.invited_email).first()
+        if student:
+            out.append(_student_summary(db, invitation, student))
+    return out
+
+
+@router.get("/students/{invitation_id}", response_model=CompanyStudentDetailOut)
+def get_student_detail(
+    invitation_id: str,
+    current_user: User = Depends(get_current_company_user),
+    db: Session = Depends(get_db),
+):
+    """The week-by-week detail behind one roster entry — each week's tasks
+    and whichever end-of-week reviews (Manager's WEEK_PROGRESS, HR's
+    BEHAVIORAL) exist for it so far."""
+    invitation = db.get(Invitation, invitation_id)
+    if not invitation or invitation.organization_id != current_user.organization_id:
+        raise HTTPException(status_code=404, detail="Student not found.")
+    if invitation.status != InvitationStatus.ACCEPTED:
+        raise HTTPException(status_code=404, detail="This invitation hasn't been accepted yet.")
+    student = db.query(User).filter(User.email == invitation.invited_email).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found.")
+
+    summary = _student_summary(db, invitation, student)
+    project = _student_project(db, student)
+    weeks_out: list[CompanyStudentWeekOut] = []
+    if project:
+        for week in sorted(project.weeks, key=lambda w: w.week_number):
+            week_reviews = (
+                db.query(Review)
+                .filter(
+                    Review.week_id == week.id,
+                    Review.kind.in_([ReviewKind.WEEK_PROGRESS, ReviewKind.BEHAVIORAL]),
+                )
+                .order_by(Review.created_at)
+                .all()
+            )
+            weeks_out.append(
+                CompanyStudentWeekOut(
+                    week_number=week.week_number,
+                    status=week.status,
+                    started_at=week.started_at,
+                    target_end_at=week.target_end_at,
+                    ended_at=week.ended_at,
+                    tasks=week.tasks,
+                    reviews=week_reviews,
+                )
+            )
+
+    return CompanyStudentDetailOut(**summary.model_dump(), weeks=weeks_out)

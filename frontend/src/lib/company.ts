@@ -2,6 +2,8 @@ import {
   api,
   type CompanyProjectApiOut,
   type CompanyRegisterPayload,
+  type CompanyStudentApiOut,
+  type CompanyStudentDetailApiOut,
   type InvitationApiOut,
   type JobTitleApiOut,
   type KnowledgeMaterialApiOut,
@@ -60,6 +62,53 @@ export interface Invitation {
   status: "pending" | "accepted" | "declined";
   createdAt: string;
   respondedAt: string | null;
+}
+
+export interface CompanyStudent {
+  invitationId: string;
+  studentName: string;
+  studentEmail: string;
+  jobTitle: string;
+  companyProjectTitle: string | null;
+  projectTitle: string | null;
+  projectStatus: "active" | "completed" | null;
+  currentWeekNumber: number | null;
+  taskCounts: Record<string, number>;
+}
+
+export interface CompanyTask {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  githubLink: string | null;
+  submissionText: string | null;
+  deadline: string | null;
+  submittedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface CompanyReview {
+  id: string;
+  agentType: string;
+  kind: string;
+  content: string;
+  metrics: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface CompanyStudentWeek {
+  weekNumber: number;
+  status: "active" | "completed";
+  startedAt: string;
+  targetEndAt: string;
+  endedAt: string | null;
+  tasks: CompanyTask[];
+  reviews: CompanyReview[];
+}
+
+export interface CompanyStudentDetail extends CompanyStudent {
+  weeks: CompanyStudentWeek[];
 }
 
 function toOrganization(o: OrganizationApiOut): Organization {
@@ -197,4 +246,59 @@ export async function createInvitation(
 export async function fetchCompanyInvitations(): Promise<Invitation[]> {
   const raw = await api.company.listInvitations();
   return raw.map(toInvitation);
+}
+
+function toStudent(s: CompanyStudentApiOut): CompanyStudent {
+  return {
+    invitationId: s.invitation_id,
+    studentName: s.student_name,
+    studentEmail: s.student_email,
+    jobTitle: s.job_title,
+    companyProjectTitle: s.company_project_title,
+    projectTitle: s.project_title,
+    projectStatus: s.project_status,
+    currentWeekNumber: s.current_week_number,
+    taskCounts: s.task_counts,
+  };
+}
+
+function toStudentDetail(s: CompanyStudentDetailApiOut): CompanyStudentDetail {
+  return {
+    ...toStudent(s),
+    weeks: s.weeks.map((w) => ({
+      weekNumber: w.week_number,
+      status: w.status,
+      startedAt: w.started_at,
+      targetEndAt: w.target_end_at,
+      endedAt: w.ended_at,
+      tasks: w.tasks.map((t) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        status: t.status,
+        githubLink: t.github_link,
+        submissionText: t.submission_text,
+        deadline: t.deadline,
+        submittedAt: t.submitted_at,
+        completedAt: t.completed_at,
+      })),
+      reviews: w.reviews.map((r) => ({
+        id: r.id,
+        agentType: r.agent_type,
+        kind: r.kind,
+        content: r.content,
+        metrics: r.metrics_json,
+        createdAt: r.created_at,
+      })),
+    })),
+  };
+}
+
+export async function fetchCompanyStudents(): Promise<CompanyStudent[]> {
+  const raw = await api.company.listStudents();
+  return raw.map(toStudent);
+}
+
+export async function fetchCompanyStudentDetail(invitationId: string): Promise<CompanyStudentDetail> {
+  return toStudentDetail(await api.company.getStudent(invitationId));
 }

@@ -463,6 +463,53 @@ export interface InvitationDetailApiOut {
   data_shared_notice: string;
 }
 
+export interface CompanyStudentApiOut {
+  invitation_id: string;
+  student_name: string;
+  student_email: string;
+  job_title: string;
+  company_project_title: string | null;
+  project_title: string | null;
+  project_status: "active" | "completed" | null;
+  current_week_number: number | null;
+  task_counts: Record<string, number>;
+}
+
+export interface CompanyTaskApiOut {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  github_link: string | null;
+  submission_text: string | null;
+  deadline: string | null;
+  submitted_at: string | null;
+  completed_at: string | null;
+}
+
+export interface CompanyReviewApiOut {
+  id: string;
+  agent_type: string;
+  kind: string;
+  content: string;
+  metrics_json: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface CompanyStudentWeekApiOut {
+  week_number: number;
+  status: "active" | "completed";
+  started_at: string;
+  target_end_at: string;
+  ended_at: string | null;
+  tasks: CompanyTaskApiOut[];
+  reviews: CompanyReviewApiOut[];
+}
+
+export interface CompanyStudentDetailApiOut extends CompanyStudentApiOut {
+  weeks: CompanyStudentWeekApiOut[];
+}
+
 export const api = {
   auth: {
     register: (email: string, password: string, fullName: string) =>
@@ -690,6 +737,9 @@ export const api = {
         body: JSON.stringify({ invited_email: invitedEmail, company_project_id: companyProjectId || null }),
       }),
     listInvitations: () => request<InvitationApiOut[]>("/company/invitations"),
+    listStudents: () => request<CompanyStudentApiOut[]>("/company/students"),
+    getStudent: (invitationId: string) =>
+      request<CompanyStudentDetailApiOut>(`/company/students/${invitationId}`),
   },
 
   /** The student's side of an invitation — see lib/invitations.ts. */
