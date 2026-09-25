@@ -70,6 +70,29 @@ def get_current_company_user(current_user: User = Depends(get_current_user)) -> 
     return current_user
 
 
+def require_company_role(*roles: CompanyRole):
+    """Gate for the handful of company actions that carry real
+    organizational weight — everything else in this router stays open to
+    any company role (see get_current_company_user) since over-
+    restricting a small company's day-to-day use adds friction without
+    much real benefit. Two things are scoped: sending an invitation
+    (ADMIN/HR — a hiring decision) and defining a real company project
+    (ADMIN/TECH_LEAD — a technical/scope decision). Factory, not a plain
+    dependency, so one function covers both role sets:
+    Depends(require_company_role(CompanyRole.ADMIN, CompanyRole.HR))."""
+
+    def dependency(current_user: User = Depends(get_current_company_user)) -> User:
+        if current_user.company_role not in roles:
+            allowed = ", ".join(r.value for r in roles)
+            raise HTTPException(
+                status_code=403,
+                detail=f"This action is limited to these roles: {allowed}.",
+            )
+        return current_user
+
+    return dependency
+
+
 def _get_org_job_title(db: Session, user: User, job_title_id: str) -> JobTitle:
     job_title = db.get(JobTitle, job_title_id)
     if not job_title or job_title.organization_id != user.organization_id:
@@ -280,14 +303,16 @@ def create_company_project(
     description: str = Form(...),
     materials_text: str | None = Form(None),
     files: list[UploadFile] = File(default=[]),
-    current_user: User = Depends(get_current_company_user),
+    current_user: User = Depends(require_company_role(CompanyRole.ADMIN, CompanyRole.TECH_LEAD)),
     db: Session = Depends(get_db),
 ):
     """A real project this company actually uses for this role — pasted
     notes and/or uploaded files (same combine_materials helper and cap as
     a graduate's own project, since this becomes a Project's
     materials_text verbatim once a student accepts an invitation naming
-    it, and that field feeds plan_week's prompt directly)."""
+    it, and that field feeds plan_week's prompt directly). Limited to
+    ADMIN/TECH_LEAD — defining the real work a student will be graded
+    against is a technical/scope call, not a hiring one."""
     job_title = _get_org_job_title(db, current_user, job_title_id)
     materials = combine_materials(materials_text, files)
     project = CompanyProject(
@@ -348,13 +373,15 @@ def get_company_project(
 def create_invitation(
     job_title_id: str,
     payload: InvitationCreate,
-    current_user: User = Depends(get_current_company_user),
+    current_user: User = Depends(require_company_role(CompanyRole.ADMIN, CompanyRole.HR)),
     db: Session = Depends(get_db),
 ):
     """Invite invited_email to work under this job title. No email/invite
     delivery system exists in this app (see docs/STAGE3_COMPANY_RAG.md) —
     the student sees it themselves once they register or log in with a
-    matching email and check GET /invitations/mine."""
+    matching email and check GET /invitations/mine. Limited to
+    ADMIN/HR — who to bring on is a hiring decision, not a technical
+    one."""
     job_title = _get_org_job_title(db, current_user, job_title_id)
     company_project = None
     if payload.company_project_id:
