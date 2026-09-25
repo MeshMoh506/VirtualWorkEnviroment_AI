@@ -13,9 +13,13 @@ from sqlalchemy.orm import Session
 from app.agents.graph.cv_parsing import CVReadError, read_cv_upload
 from app.auth import get_current_user, hash_password
 from app.database import get_db
+from app.materials import MAX_MATERIALS_FILES, combine_materials
 from app.models import (
     AccountType,
+    CompanyProject,
     CompanyRole,
+    Invitation,
+    InvitationStatus,
     JobTitle,
     KnowledgeMaterial,
     Organization,
@@ -23,8 +27,11 @@ from app.models import (
 )
 from app.rag import ingest_material, retrieve
 from app.schemas import (
+    CompanyProjectOut,
     CompanyRegister,
     CompanyRegisterOut,
+    InvitationCreate,
+    InvitationOut,
     JobTitleCreate,
     JobTitleOut,
     KnowledgeMaterialOut,
@@ -238,3 +245,172 @@ def query_knowledge_base(
             for score, c in scored
         ],
     )
+
+
+# ---------------------------------------------------------------------------
+# Company projects — a company's own REAL project, distinct from a
+# graduate's own project (Project, source=OWN). This is a template, not
+# yet any one student's working project: see routers/invitations.py's
+# accept(), which copies title/description/materials_text into an actual
+# Project the moment a student accepts an invitation naming it.
+# ---------------------------------------------------------------------------
+
+
+def _get_org_company_project(db: Session, user: User, project_id: str) -> CompanyProject:
+    project = db.get(CompanyProject, project_id)
+    if not project or project.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return project
+
+
+@router.post(
+    "/job-titles/{job_title_id}/projects", response_model=CompanyProjectOut, status_code=201
+)
+def create_company_project(
+    job_title_id: str,
+    title: str = Form(...),
+    description: str = Form(...),
+    materials_text: str | None = Form(None),
+    files: list[UploadFile] = File(default=[]),
+    current_user: User = Depends(get_current_company_user),
+    db: Session = Depends(get_db),
+):
+    """A real project this company actually uses for this role — pasted
+    notes and/or uploaded files (same combine_materials helper and cap as
+    a graduate's own project, since this becomes a Project's
+    materials_text verbatim once a student accepts an invitation naming
+    it, and that field feeds plan_week's prompt directly)."""
+    job_title = _get_org_job_title(db, current_user, job_title_id)
+    materials = combine_materials(materials_text, files)
+    project = CompanyProject(
+        organization_id=job_title.organization_id,
+        job_title_id=job_title.id,
+        title=title,
+        description=description,
+        materials_text=materials,
+        created_by_user_id=current_user.id,
+    )
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+@router.get("/job-titles/{job_title_id}/projects", response_model=list[CompanyProjectOut])
+def list_company_projects(
+    job_title_id: str,
+    current_user: User = Depends(get_current_company_user),
+    db: Session = Depends(get_db),
+):
+    job_title = _get_org_job_title(db, current_user, job_title_id)
+    return (
+        db.query(CompanyProject)
+        .filter(CompanyProject.job_title_id == job_title.id)
+        .order_by(CompanyProject.created_at.desc())
+        .all()
+    )
+
+
+@router.get(
+    "/job-titles/{job_title_id}/projects/{project_id}", response_model=CompanyProjectOut
+)
+def get_company_project(
+    job_title_id: str,
+    project_id: str,
+    current_user: User = Depends(get_current_company_user),
+    db: Session = Depends(get_db),
+):
+    project = _get_org_company_project(db, current_user, project_id)
+    if project.job_title_id != job_title_id:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return project
+
+
+# ---------------------------------------------------------------------------
+# Invitations — a company inviting a specific email to a job title, with a
+# real company project (company_project_id set) or the ordinary
+# Manager-improvised platform track (left None). The student-facing half
+# (seeing, consenting to, accepting/declining) lives in routers/invitations.py.
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/job-titles/{job_title_id}/invitations", response_model=InvitationOut, status_code=201
+)
+def create_invitation(
+    job_title_id: str,
+    payload: InvitationCreate,
+    current_user: User = Depends(get_current_company_user),
+    db: Session = Depends(get_db),
+):
+    """Invite invited_email to work under this job title. No email/invite
+    delivery system exists in this app (see docs/STAGE3_COMPANY_RAG.md) —
+    the student sees it themselves once they register or log in with a
+    matching email and check GET /invitations/mine."""
+    job_title = _get_org_job_title(db, current_user, job_title_id)
+    company_project = None
+    if payload.company_project_id:
+        company_project = _get_org_company_project(db, current_user, payload.company_project_id)
+        if company_project.job_title_id != job_title.id:
+            raise HTTPException(
+                status_code=400, detail="That project belongs to a different job title."
+            )
+    invitation = Invitation(
+        organization_id=job_title.organization_id,
+        job_title_id=job_title.id,
+        company_project_id=company_project.id if company_project else None,
+        invited_email=payload.invited_email.lower(),
+        invited_by_user_id=current_user.id,
+    )
+    db.add(invitation)
+    db.commit()
+    db.refresh(invitation)
+    return InvitationOut(
+        id=invitation.id,
+        job_title_id=job_title.id,
+        job_title=job_title.title,
+        company_project_id=company_project.id if company_project else None,
+        company_project_title=company_project.title if company_project else None,
+        invited_email=invitation.invited_email,
+        status=invitation.status,
+        created_at=invitation.created_at,
+        responded_at=invitation.responded_at,
+    )
+
+
+@router.get("/invitations", response_model=list[InvitationOut])
+def list_invitations(
+    current_user: User = Depends(get_current_company_user), db: Session = Depends(get_db)
+):
+    """Every invitation this company has sent, across all job titles, with
+    its current status — pending, accepted, or declined."""
+    rows = (
+        db.query(Invitation)
+        .filter(Invitation.organization_id == current_user.organization_id)
+        .order_by(Invitation.created_at.desc())
+        .all()
+    )
+    job_titles = {
+        jt.id: jt.title
+        for jt in db.query(JobTitle).filter(JobTitle.organization_id == current_user.organization_id)
+    }
+    projects = {
+        cp.id: cp.title
+        for cp in db.query(CompanyProject).filter(
+            CompanyProject.organization_id == current_user.organization_id
+        )
+    }
+    return [
+        InvitationOut(
+            id=inv.id,
+            job_title_id=inv.job_title_id,
+            job_title=job_titles.get(inv.job_title_id, ""),
+            company_project_id=inv.company_project_id,
+            company_project_title=projects.get(inv.company_project_id) if inv.company_project_id else None,
+            invited_email=inv.invited_email,
+            status=inv.status,
+            created_at=inv.created_at,
+            responded_at=inv.responded_at,
+        )
+        for inv in rows
+    ]

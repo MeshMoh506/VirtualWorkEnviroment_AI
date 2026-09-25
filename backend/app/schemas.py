@@ -6,6 +6,7 @@ from app.models import (
     AccountType,
     AgentType,
     CompanyRole,
+    InvitationStatus,
     OnboardingStage,
     ProjectStatus,
     ProjectSource,
@@ -451,3 +452,73 @@ class RAGChunkOut(BaseModel):
 class RAGQueryResult(BaseModel):
     query: str
     chunks: list[RAGChunkOut]
+
+
+class CompanyProjectOut(BaseModel):
+    """A company's own real project template (distinct from a graduate's
+    own project) — see models.CompanyProject."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    job_title_id: str
+    title: str
+    description: str
+    has_materials: bool
+    created_at: datetime
+
+
+class InvitationCreate(BaseModel):
+    invited_email: EmailStr
+    # None -> the ordinary Manager-improvised platform track once
+    # accepted; set -> the student's Project is created straight from
+    # this CompanyProject instead.
+    company_project_id: str | None = None
+
+
+class InvitationOut(BaseModel):
+    """The company's own view of an invitation it sent."""
+
+    id: str
+    job_title_id: str
+    job_title: str
+    company_project_id: str | None
+    company_project_title: str | None
+    invited_email: str
+    status: InvitationStatus
+    created_at: datetime
+    responded_at: datetime | None
+
+
+# Shown to the student before they can accept — confirmed with Meshari as
+# a requirement (docs/STAGE3_COMPANY_RAG.md), not optional UX polish.
+# Plain and specific on purpose: exactly what's shared, and, just as
+# important, what stays private.
+INVITATION_DATA_NOTICE = (
+    "If you accept, {company} will be able to see your task submissions "
+    "and progress on this project, and your Mentor's reviews and feedback "
+    "for it. They will not see your CV, any other project or task you "
+    "work on, your other agents, or your conversations with them."
+)
+
+
+class InvitationDetailOut(BaseModel):
+    """The student's own view of one invitation — everything they need to
+    give informed consent before accepting. See routers/invitations.py."""
+
+    id: str
+    organization_name: str
+    job_title: str
+    company_project_title: str | None
+    status: InvitationStatus
+    created_at: datetime
+    responded_at: datetime | None
+    data_shared_notice: str
+
+
+class InvitationAccept(BaseModel):
+    # Required, not just present — see routers/invitations.py's accept():
+    # false or omitted is refused with a 400, the same way a password
+    # change requires current_password rather than assuming consent from
+    # the act of calling the endpoint.
+    consent: bool = False

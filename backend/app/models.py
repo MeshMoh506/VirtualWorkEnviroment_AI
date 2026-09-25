@@ -127,6 +127,12 @@ class CompanyRole(str, enum.Enum):
     TECH_LEAD = "tech_lead"
 
 
+class InvitationStatus(str, enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+
+
 # ---------------------------------------------------------------------------
 # Organization — not used in Stage 1, exists now so Stage 3 (companies build
 # their own Venvs) is additive instead of a schema rewrite. Every core table
@@ -666,6 +672,59 @@ class KnowledgeChunk(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding_json: Mapped[list] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class CompanyProject(Base):
+    """A company's own REAL project (docs/STAGE3_COMPANY_RAG.md) — not a
+    graduate's own project (Project, source=OWN). This one belongs to the
+    company/job title, not to any one student yet: it's a template a
+    student's actual Project gets created from once they accept an
+    Invitation naming it (see Invitation.company_project_id and
+    routers/invitations.py's accept()). Same materials_text shape and cap
+    as Project's (task_bank.MAX_MATERIALS_CHARS) — it feeds plan_week the
+    same way once copied over."""
+
+    __tablename__ = "company_projects"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    job_title_id: Mapped[str] = mapped_column(ForeignKey("job_titles.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    materials_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    @property
+    def has_materials(self) -> bool:
+        return bool(self.materials_text)
+
+
+class Invitation(Base):
+    """A company inviting a specific person, by email, to work under a
+    given job title — with real company-authored tasks
+    (company_project_id set) or the ordinary Manager-improvised platform
+    track (company_project_id None). invited_email doesn't have to belong
+    to an existing account yet; a student sees it once they register or
+    log in with a matching email (routers/invitations.py's mine()).
+    Accepting requires explicit consent (see INVITATION_DATA_NOTICE) —
+    confirmed with Meshari as a requirement, not optional UX."""
+
+    __tablename__ = "invitations"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    job_title_id: Mapped[str] = mapped_column(ForeignKey("job_titles.id"), nullable=False)
+    company_project_id: Mapped[str | None] = mapped_column(
+        ForeignKey("company_projects.id"), nullable=True
+    )
+    invited_email: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    invited_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    status: Mapped[InvitationStatus] = mapped_column(
+        Enum(InvitationStatus), default=InvitationStatus.PENDING, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class Review(Base):
