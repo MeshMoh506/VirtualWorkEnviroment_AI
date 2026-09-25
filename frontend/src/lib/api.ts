@@ -431,6 +431,38 @@ export interface CompanyRegisterApiOut {
   organization: OrganizationApiOut;
 }
 
+export interface CompanyProjectApiOut {
+  id: string;
+  job_title_id: string;
+  title: string;
+  description: string;
+  has_materials: boolean;
+  created_at: string;
+}
+
+export interface InvitationApiOut {
+  id: string;
+  job_title_id: string;
+  job_title: string;
+  company_project_id: string | null;
+  company_project_title: string | null;
+  invited_email: string;
+  status: "pending" | "accepted" | "declined";
+  created_at: string;
+  responded_at: string | null;
+}
+
+export interface InvitationDetailApiOut {
+  id: string;
+  organization_name: string;
+  job_title: string;
+  company_project_title: string | null;
+  status: "pending" | "accepted" | "declined";
+  created_at: string;
+  responded_at: string | null;
+  data_shared_notice: string;
+}
+
 export const api = {
   auth: {
     register: (email: string, password: string, fullName: string) =>
@@ -639,5 +671,36 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ query, k }),
       }),
+    createProject: (jobTitleId: string, title: string, description: string, materialsText?: string, files?: File[]) => {
+      const form = new FormData();
+      form.append("title", title);
+      form.append("description", description);
+      if (materialsText) form.append("materials_text", materialsText);
+      for (const file of files ?? []) form.append("files", file);
+      return request<CompanyProjectApiOut>(`/company/job-titles/${jobTitleId}/projects`, {
+        method: "POST",
+        body: form,
+      });
+    },
+    listProjects: (jobTitleId: string) =>
+      request<CompanyProjectApiOut[]>(`/company/job-titles/${jobTitleId}/projects`),
+    createInvitation: (jobTitleId: string, invitedEmail: string, companyProjectId?: string) =>
+      request<InvitationApiOut>(`/company/job-titles/${jobTitleId}/invitations`, {
+        method: "POST",
+        body: JSON.stringify({ invited_email: invitedEmail, company_project_id: companyProjectId || null }),
+      }),
+    listInvitations: () => request<InvitationApiOut[]>("/company/invitations"),
+  },
+
+  /** The student's side of an invitation — see lib/invitations.ts. */
+  invitations: {
+    mine: () => request<InvitationDetailApiOut[]>("/invitations/mine"),
+    accept: (id: string, consent: boolean) =>
+      request<InvitationDetailApiOut>(`/invitations/${id}/accept`, {
+        method: "POST",
+        body: JSON.stringify({ consent }),
+      }),
+    decline: (id: string) =>
+      request<InvitationDetailApiOut>(`/invitations/${id}/decline`, { method: "POST" }),
   },
 };
