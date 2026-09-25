@@ -522,3 +522,41 @@ class InvitationAccept(BaseModel):
     # change requires current_password rather than assuming consent from
     # the act of calling the endpoint.
     consent: bool = False
+
+
+class CompanyStudentOut(BaseModel):
+    """A company's roster view of one accepted invitation — exactly what
+    INVITATION_DATA_NOTICE promised (task submissions/progress and Mentor
+    reviews for this project), nothing about the student beyond that plus
+    their name/email (already known — the company addressed the original
+    invite to this person)."""
+
+    invitation_id: str
+    student_name: str
+    student_email: str
+    job_title: str
+    company_project_title: str | None
+    project_title: str | None
+    project_status: ProjectStatus | None
+    current_week_number: int | None
+    task_counts: dict[str, int]
+
+
+class CompanyStudentWeekOut(BaseModel):
+    """One week of the student's project — the Manager's WEEK_PROGRESS
+    review and HR's BEHAVIORAL review here, if either has been written
+    yet, ARE the 'end-of-week report': the same reviews the weekly cycle
+    already produces, just surfaced to the company that invited this
+    student instead of building a second reporting pipeline."""
+
+    week_number: int
+    status: WeekStatus
+    started_at: datetime
+    target_end_at: datetime
+    ended_at: datetime | None
+    tasks: list[TaskOut]
+    reviews: list[ReviewOut]
+
+
+class CompanyStudentDetailOut(CompanyStudentOut):
+    weeks: list[CompanyStudentWeekOut]

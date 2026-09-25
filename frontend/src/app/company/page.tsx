@@ -81,6 +81,12 @@ export default function CompanyDashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
+            href="/company/students"
+            className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+          >
+            {t("company.studentsTitle")}
+          </Link>
+          <Link
             href="/logout"
             className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
