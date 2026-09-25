@@ -166,6 +166,25 @@ covers both restrictions (the allowed roles succeed, the disallowed one
 gets a 403 naming which roles are allowed) and confirms the unrestricted
 actions still work for every role.
 
+### A student's own visibility (`GET /invitations/{id}/visibility`, `app/company_roster.py`)
+
+The consent notice at accept time says what the company *will* see;
+this is the live, checkable answer to whether that's still true —
+reachable any time after accepting, not just taken on faith once.
+Extracted the roster-building logic (`student_project`, `task_counts`,
+`current_week_number`, `student_summary`, `student_detail`) out of
+`routers/company.py` into a shared module, `app/company_roster.py`, so
+both the company's `GET /company/students/{id}` and the student's
+`GET /invitations/{id}/visibility` call the **literal same functions**
+— a transparency feature that reused nothing would risk quietly
+drifting out of sync with what the company actually sees; this one
+architecturally can't. `smoke_test_student_visibility.py` proves it
+directly: after a real task/submission/review cycle (mocked LLM), the
+student's response and the company's response for the same invitation
+are asserted **byte-for-byte identical**
+(`r_student.json() == r_company.json()`), not just similar-looking.
+404s until the invitation is accepted ("nothing has been shared yet").
+
 ## Decisions worth knowing about
 
 - **Why `ProjectSource` was never touched.** A company-sourced project
@@ -293,9 +312,14 @@ every other suite in this repo already uses:
   addressed, correctly-worded email through the real HTTP endpoint —
   envelope from/to, company/job-title/project content, the accept link,
   and both MIME parts all checked against what the server really got.
+- **`smoke_test_student_visibility.py`** — 404 before accepting, cross-
+  student isolation, a declined invitation still refused, and a real
+  end-to-end run (task assignment, submission, a mocked Mentor review)
+  proving the student's and the company's responses for the same
+  invitation come back byte-for-byte identical.
 - **`smoke_test_migrations.py`**'s Postgres section — see above.
 
-Full suite: **34 files, 900 checks, all passing** — on SQLite always,
+Full suite: **35 files, 911 checks, all passing** — on SQLite always,
 and confirmed identically on real Postgres 16 as of the pass that added
 migrations 0007/0008 (re-run that section against your actual
 deployment target before trusting it there too — the sandbox instance
@@ -319,19 +343,21 @@ this was checked against doesn't persist between sessions).
   shows the company, job title, and the named project (or "platform
   track"), plus the exact data-sharing notice in its own block. Accept
   is disabled until an explicit checkbox is ticked, mirroring the
-  server-side rule rather than just trusting the click.
+  server-side rule rather than just trusting the click. An accepted
+  invitation gets a **"See what they see"** link.
+- `/invitations/[id]/visibility` — the promise checked live: the exact
+  same week/task/review data the company's own roster detail page
+  shows them, reusing the same layout so the two are visibly the same
+  view, not just described as equivalent.
 - `/login` now branches post-login on `account_type` (company → `/company`,
   student → `/board`); `/board` gained a discoverable "Invitations" nav
   link with a pending-count badge.
 
-`next build` and `eslint` both clean — 19 routes total (up from 14
+`next build` and `eslint` both clean — 20 routes total (up from 14
 before this stage).
 
 ## Not built / worth knowing
 
-- A student can't yet see their own view of what a company has actually
-  seen about them (transparency beyond the upfront consent notice) —
-  not required by the confirmed decisions above, but worth considering.
 - Nobody has clicked through any of this in an actual browser yet — same
   caveat every other stage's docs in this repo carry, still true here.
 - The guardrail/agent-behavior pieces from the task-chat/Team Room work

@@ -23,12 +23,12 @@ task-chat/Team Room/settings pass, and now all of Stage 3 (companies)._
 > consent flow, and a company roster with per-week reports built from the
 > weekly cycle's existing reviews — see `docs/STAGE3_COMPANY_RAG.md` for the
 > full write-up, including the confirmed answers to all four scoping questions
-> that were open before it started. **34 smoke suites, 900 checks, all
+> that were open before it started. **35 smoke suites, 911 checks, all
 > passing** — and, for the first time this session, genuinely **confirmed on a
 > real PostgreSQL 16 instance**, not just SQLite: doing so surfaced and fixed
 > two real deploy-breaking migration bugs that SQLite's lack of enum
 > enforcement had hidden (see `docs/STAGE3_COMPANY_RAG.md`'s "The PostgreSQL
-> story"). Frontend eslint clean, `next build` passes (19 routes).
+> story"). Frontend eslint clean, `next build` passes (20 routes).
 > **Nobody has clicked through the app in a browser yet** — see "What's
 > genuinely unverified" below before treating this as demo-ready.
 
@@ -107,17 +107,23 @@ onboarding and the weekly-cycle cascade):
   length on the new one (`docs/SETTINGS_PAGE.md`).
 - **Stage 3: companies on Venv** (`docs/STAGE3_COMPANY_RAG.md`) — company
   accounts (`AccountType`/`CompanyRole`, free-text job titles, per-rep
-  logins reusing the exact same auth as students), a real RAG knowledge
-  base (`app/rag.py`: chunking + OpenAI embeddings + in-Python
-  cosine-similarity retrieval, no vector database), a company's own real
-  projects (`CompanyProject`, distinct from a graduate's own project),
-  an invite-by-email flow requiring explicit student consent before
-  acceptance (`app/routers/invitations.py`, `INVITATION_DATA_NOTICE`),
-  and a company roster with per-week reports built entirely from the
-  weekly cycle's existing Manager/HR reviews — no new report-generation
-  pipeline. Migrations 0007/0008, both now genuinely verified against a
-  real PostgreSQL 16 instance (see that doc's "The PostgreSQL story" for
-  two real bugs this caught and fixed).
+  logins reusing the exact same auth as students, and role-gated
+  permissions — sending an invitation needs ADMIN/HR, a company project
+  needs ADMIN/TECH_LEAD), a real RAG knowledge base (`app/rag.py`:
+  chunking + OpenAI embeddings + in-Python cosine-similarity retrieval,
+  no vector database), a company's own real projects (`CompanyProject`,
+  distinct from a graduate's own project), an invite-by-email flow
+  requiring explicit student consent before acceptance
+  (`app/routers/invitations.py`, `INVITATION_DATA_NOTICE`) with a real
+  email actually sent over SMTP (`app/email.py`, gracefully optional), a
+  company roster with per-week reports built entirely from the weekly
+  cycle's existing Manager/HR reviews — no new report-generation
+  pipeline — and a student's own live view of exactly what the company
+  sees (`GET /invitations/{id}/visibility`, `app/company_roster.py`,
+  proven byte-for-byte identical to the company's own view in
+  `smoke_test_student_visibility.py`). Migrations 0007/0008, both
+  genuinely verified against a real PostgreSQL 16 instance (see that
+  doc's "The PostgreSQL story" for two real bugs this caught and fixed).
 
 **Frontend** (Next.js + React Flow, dark-by-default "blueprint" design system,
 light theme, Arabic/RTL — `frontend/DESIGN.md`):
@@ -148,10 +154,12 @@ light theme, Arabic/RTL — `frontend/DESIGN.md`):
   RAG search box with real scores), `/company/students` (roster) and
   `/company/students/[invitationId]` (week-by-week detail + reviews),
   `/invitations` (the student's consent screen — accept is disabled
-  until an explicit checkbox is ticked). `/login` now branches
-  post-login on account type; `/board` gained an "Invitations" nav link
-  with a pending-count badge.
-- Verified: eslint clean, full `next build` succeeds (19 routes).
+  until an explicit checkbox is ticked; an accepted invitation gets a
+  "See what they see" link) and `/invitations/[id]/visibility` (that
+  same week-by-week data, from the student's side). `/login` now
+  branches post-login on account type; `/board` gained an "Invitations"
+  nav link with a pending-count badge.
+- Verified: eslint clean, full `next build` succeeds (20 routes).
 
 ## What's genuinely unverified
 
@@ -450,6 +458,7 @@ python smoke_test_company_invitations.py       # company projects, invite/consen
 python smoke_test_company_students.py          # company roster + per-week reports, real assign-task integration (22)
 python smoke_test_company_roles.py             # company role permissions: invitations ADMIN/HR, projects ADMIN/TECH_LEAD (13)
 python smoke_test_invitation_emails.py         # real invitation emails: graceful degradation + a genuine local SMTP server (15)
+python smoke_test_student_visibility.py        # student's own view matches the company's, byte-for-byte, after a real task cycle (11)
 ```
 
 If the LLM key is missing, wrong, or out of credit, agent endpoints return a
