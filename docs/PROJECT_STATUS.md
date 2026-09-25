@@ -1,32 +1,36 @@
 # Project Status — Venv
 
-_Last updated: Sep 2026 — Stage 2 plus a full hardening pass, plus a
-task-chat/Team Room/settings enhancement pass on top of that._
+_Last updated: Sep 2026 — Stage 2 plus a full hardening pass, a
+task-chat/Team Room/settings pass, and now all of Stage 3 (companies)._
 
 > **One-paragraph summary.** Stage 1 (Manager/Mentor/HR, the weekly cycle, one
 > track) and all of Stage 2 (CV-file intake with agent Q&A, six IT tracks, a
 > selectable optional-agent roster, an own-project path — now with real uploaded
 > materials, a guided orientation walkthrough, the Meeting Room open to any agent
 > on your team, multi-modal submissions with vision review, and the agent
-> roundtable) are built and merged. On top of that, a full hardening pass: Alembic
+> roundtable) are built and merged. A full hardening pass followed: Alembic
 > migrations, resumable onboarding, a visible "needs changes" state, Arabic agent
-> replies, a Mentor rubric v2, a 15-seed task bank, a background roundtable (the
-> graduate waits ~10s instead of ~25s), and protection against malformed model
-> output on **every** agent tool call. Most recently, a task-chat/collaboration
-> pass: the Mentor (not the Manager) is now the default day-to-day agent in a
-> task thread, with a switcher to address the Manager or a technical roster
-> agent directly (`docs/TASK_CHAT.md`); every agent conversation surface now
-> declines off-topic requests instead of acting as a generic assistant
-> (`agents/guardrails.py`); a Team Room gives the graduate one shared thread
-> with their whole team, not just 1:1 chats (`docs/TEAM_ROOM.md`); and a new
-> `/settings` page covers profile, password, CV, and preferences
-> (`docs/SETTINGS_PAGE.md`). **29 smoke suites, 779 checks, all passing** on
-> SQLite; PostgreSQL 16 was verified through the hardening pass but **not
-> re-verified for this latest pass's migration** (0006, `team_messages`) — no
-> Postgres instance was reachable in the sandbox that built it, see
-> `docs/TEAM_ROOM.md`'s "Not done" section. Frontend eslint clean, `next build`
-> passes (15 routes). **Nobody has clicked through the app in a browser yet** —
-> see "What's genuinely unverified" below before treating this as demo-ready.
+> replies, a Mentor rubric v2, a 15-seed task bank, a background roundtable, and
+> protection against malformed model output on every agent tool call. Then a
+> task-chat/collaboration pass: the Mentor is now the default day-to-day agent in
+> a task thread (`docs/TASK_CHAT.md`); every agent conversation surface declines
+> off-topic requests (`agents/guardrails.py`); a Team Room gives a shared thread
+> with the whole team (`docs/TEAM_ROOM.md`); a `/settings` page
+> (`docs/SETTINGS_PAGE.md`). **Most recently, all of Stage 3**: company accounts
+> (free-text job titles, per-rep logins with roles), a real RAG knowledge base
+> (embeddings + cosine-similarity retrieval, no vector DB), a company's own real
+> projects (distinct from a graduate's own project), an invite-with-enforced-
+> consent flow, and a company roster with per-week reports built from the
+> weekly cycle's existing reviews — see `docs/STAGE3_COMPANY_RAG.md` for the
+> full write-up, including the confirmed answers to all four scoping questions
+> that were open before it started. **32 smoke suites, 872 checks, all
+> passing** — and, for the first time this session, genuinely **confirmed on a
+> real PostgreSQL 16 instance**, not just SQLite: doing so surfaced and fixed
+> two real deploy-breaking migration bugs that SQLite's lack of enum
+> enforcement had hidden (see `docs/STAGE3_COMPANY_RAG.md`'s "The PostgreSQL
+> story"). Frontend eslint clean, `next build` passes (19 routes).
+> **Nobody has clicked through the app in a browser yet** — see "What's
+> genuinely unverified" below before treating this as demo-ready.
 
 ## What's built
 
@@ -101,6 +105,19 @@ onboarding and the weekly-cycle cascade):
 - **Settings**: `PATCH /users/me` — rename yourself and/or change your
   password in one call, with current-password verification and a minimum
   length on the new one (`docs/SETTINGS_PAGE.md`).
+- **Stage 3: companies on Venv** (`docs/STAGE3_COMPANY_RAG.md`) — company
+  accounts (`AccountType`/`CompanyRole`, free-text job titles, per-rep
+  logins reusing the exact same auth as students), a real RAG knowledge
+  base (`app/rag.py`: chunking + OpenAI embeddings + in-Python
+  cosine-similarity retrieval, no vector database), a company's own real
+  projects (`CompanyProject`, distinct from a graduate's own project),
+  an invite-by-email flow requiring explicit student consent before
+  acceptance (`app/routers/invitations.py`, `INVITATION_DATA_NOTICE`),
+  and a company roster with per-week reports built entirely from the
+  weekly cycle's existing Manager/HR reviews — no new report-generation
+  pipeline. Migrations 0007/0008, both now genuinely verified against a
+  real PostgreSQL 16 instance (see that doc's "The PostgreSQL story" for
+  two real bugs this caught and fixed).
 
 **Frontend** (Next.js + React Flow, dark-by-default "blueprint" design system,
 light theme, Arabic/RTL — `frontend/DESIGN.md`):
@@ -124,17 +141,27 @@ light theme, Arabic/RTL — `frontend/DESIGN.md`):
   `/profile/cv`, and the language/theme toggles in one place
   (`docs/SETTINGS_PAGE.md`).
 - `/growth`, `/tasks/[id]/review` — unchanged in shape.
-- Verified: eslint clean, full `next build` succeeds (15 routes).
+- **Stage 3** (`docs/STAGE3_COMPANY_RAG.md`): `/company/register` (found
+  a company or join via code + role), `/company` (org card with a
+  copyable join code, job titles), `/company/job-titles/[id]` (material
+  upload, real projects, invite a candidate, a "test the knowledge base"
+  RAG search box with real scores), `/company/students` (roster) and
+  `/company/students/[invitationId]` (week-by-week detail + reviews),
+  `/invitations` (the student's consent screen — accept is disabled
+  until an explicit checkbox is ticked). `/login` now branches
+  post-login on account type; `/board` gained an "Invitations" nav link
+  with a pending-count badge.
+- Verified: eslint clean, full `next build` succeeds (19 routes).
 
 ## What's genuinely unverified
 
 Be honest with yourself about this list before calling anything demo-ready:
 
 - **Nobody has used the app in a browser since the hardening pass began** —
-  and that now includes this latest task-chat/Team Room/settings pass, built
-  entirely against automated tests. Every check above is an automated test or
-  a scripted real-model run — real clicking, real screens, real Arabic RTL
-  layout, has not happened.
+  and that now includes the task-chat/Team Room/settings pass and all of
+  Stage 3, all built entirely against automated tests. Every check above
+  is an automated test or a scripted real-model run — real clicking,
+  real screens, real Arabic RTL layout, has not happened.
 - **The task bank and Mentor rubric are drafts awaiting team sign-off**, not
   team-approved content (`docs/TASK_BANK.md`, `docs/MENTOR_RUBRIC.md` both have a
   "Decisions for the team" section).
@@ -147,15 +174,25 @@ Be honest with yourself about this list before calling anything demo-ready:
   fallback provider.
 - **The roundtable's real-model timing** (background vs. the old inline ~25s) has
   not been measured with real keys, only proven correct in automated tests.
-- **This latest pass (task chat, guardrails, Team Room, settings) is mocked-LLM
-  tested only, same as everything else above** — the Manager's redirect
-  behavior, every agent's off-topic decline, and the Team Room's routing
-  quality have not been checked against a real model, only against a mock that
-  returns exactly what the test expects.
-- **The `0006_team_messages` migration was verified against SQLite's
-  model-drift guard only** — no Postgres instance was reachable in the sandbox
-  that built it. Run `smoke_test_migrations.py`'s Postgres section
-  (`MIGRATIONS_TEST_POSTGRES_URL`) before trusting it beyond SQLite/dev.
+- **This latest pass (task chat, guardrails, Team Room, settings, and all of
+  Stage 3) is mocked-LLM tested only, same as everything else above** — the
+  Manager's redirect behavior, every agent's off-topic decline, the Team
+  Room's routing quality, and RAG retrieval ranking (real cosine-similarity
+  math, but against a mocked embedding fake, not real OpenAI embeddings)
+  have not been checked against real models, only against mocks that
+  return exactly what each test expects.
+- **The Postgres verification that ran this session was against a
+  throwaway instance in the sandbox itself, not the project's actual
+  deployment target** — genuinely fixed real bugs (see
+  `docs/STAGE3_COMPANY_RAG.md`'s "The PostgreSQL story"), but that
+  sandbox instance is gone between sessions; re-run
+  `smoke_test_migrations.py`'s Postgres section against whatever's
+  actually used for deployment before fully trusting it there too.
+- **Nobody has clicked through any of Stage 3 in an actual browser** —
+  same "automated tests only" caveat as everything else, but worth
+  calling out specifically since Stage 3 adds a second full account type
+  (company) with its own login branch, nav, and pages that have never
+  been visually checked.
 
 ## Setup notes for whoever runs this next
 
@@ -192,6 +229,11 @@ the big picture, the shared `agents/guardrails.py` role-boundary) ·
 `TEAM_ROOM.md` (one shared thread with the whole team, routed replies) ·
 `SETTINGS_PAGE.md` (`PATCH /users/me`, the new `/settings` page).
 
+**Stage 3 — companies** (most recent): `STAGE3_COMPANY_RAG.md` — company
+accounts, the RAG knowledge base, a company's own real projects, the
+invite-with-consent flow, the roster/report view, and the real-Postgres
+bug-hunt that verified all of it.
+
 **Frontend-only work with no dedicated doc** (orientation rework, Arabic i18n,
 light mode — built in a separate pass, documented only in their own PR/commit
 messages): still true, still worth a proper writeup at some point, not urgent.
@@ -203,39 +245,32 @@ messages): still true, still worth a proper writeup at some point, not urgent.
 - **No cloud file storage** — `app/storage.py` is local-disk, one box.
 - **The doc-writing gap** above (orientation/Arabic/light-mode).
 
-## Where this leaves Stage 3
+## Stage 3 (companies) — done
 
-Stage 3 ("companies build their own Venv") has a written spec from Meshari
-(student/company account split, a company knowledge base per job title with a
-RAG system in front of it, HR invites a student choosing company-tasks or
-platform-tasks, company monitors submissions live and can add human judgment, an
-end-of-week report split for the technical lead and HR) but **no code and no
-finalized scope**. The pre-Stage-3 checklist Meshari asked for is now done: own-
-project uploads, the task bank, resumable onboarding, Arabic, migrations, the
-background roundtable.
+Stage 3 ("companies build their own Venv") is built and merged — full
+write-up at `docs/STAGE3_COMPANY_RAG.md`. All four scoping questions
+that were open before it started are answered there: job titles are
+free text, company accounts are separate per-rep logins with roles, a
+company's own uploaded projects are distinct from a student's
+own-project feature, and a student must see and explicitly consent to
+what a company will see before accepting an invitation.
 
-**Open questions for Meshari before writing any Stage 3 code** (asked, not yet
-answered as of this doc):
-1. Are job titles company-defined free text, or drawn from the existing six
-   tracks?
-2. Is one shared company login enough for the demo (reports labeled per
-   department, no separate per-department auth)?
-3. Does "own project" already cover what Meshari meant by an uploaded
-   project (it now does: `docs/STAGE2_OWN_PROJECT.md`'s materials feature), or
-   is a repo-link-only variant also wanted?
-4. Should a student see and explicitly consent to what a company will see
-   before starting?
+**What's still open, per that doc's "Not built" section:** no
+per-role permission gating yet (any company role can do anything a
+company account can do today), no email/invite-delivery system (joining
+a company or seeing an invitation is self-serve/email-match, not a real
+sent email), a student can't yet see their own view of what a company
+has seen about them, and — as with everything else in this doc — nobody
+has clicked through any of it in a browser yet.
 
-**Groundwork already in place, useful for Stage 3:**
-- Every core table already carries a nullable `organization_id`.
-- Own-project materials (`docs/STAGE2_OWN_PROJECT.md`) is the same shape a
-  company's knowledge base will need — extracted document text in a planning
-  prompt, capped, no retrieval yet — a straight-line precedent for the later RAG
-  work, not a replacement for it.
-- The task bank's seed → arc → evidence pattern is a plausible shape for
-  "a company's own task set", if that's the direction chosen.
-- Agents are a catalog (`AgentCatalog`/`UserAgent`), not hard-coded — adding a
-  company-specific agent type is a data change, not new always-on code.
+**Groundwork that made this straightforward:** every core table already
+carried a nullable `organization_id` from the original schema design,
+long before Stage 3 started — Project, Week, Task, Review all had it
+sitting unused. Own-project materials
+(`docs/STAGE2_OWN_PROJECT.md`) turned out to be the exact same shape a
+company's own real project needed (pasted notes + uploaded files,
+extracted and capped) — that helper was pulled out into
+`app/materials.py` so both features share it rather than duplicate it.
 
 ## Repo map
 
@@ -249,16 +284,20 @@ answered as of this doc):
 │       │                  task_chat/guardrails/tool_output — see app/agents/README.md
 │       │   └── graph/     LangGraph: onboarding_graph, weekly_cycle_graph,
 │       │                  collaboration, models, catalog, cv_parsing
-│       ├── routers/       onboarding, projects, tasks, meeting, agents, users, auth
+│       ├── routers/       onboarding, projects, tasks, meeting, agents, users,
+│       │                  auth, company, invitations
 │       ├── migrations.py  startup migration runner (adopt / refuse / upgrade)
 │       ├── language.py    per-request agent language (X-Venv-Language)
+│       ├── materials.py   shared upload→text helper (own-project + company projects)
+│       ├── rag.py         chunking + embeddings + cosine-similarity retrieval
 │       └── storage.py     local-disk attachment storage
-│   └── alembic/versions/  0001 baseline … 0006 team_messages
+│   └── alembic/versions/  0001 baseline … 0008 company projects/invitations
 ├── frontend/
 │   └── src/
 │       ├── app/            landing, login, board, orientation, onboarding/cv,
 │       │                   workspace, meeting, growth, tasks/[id]/review,
-│       │                   profile/cv, settings
+│       │                   profile/cv, settings, invitations, company/
+│       │                   (register, job-titles/[id], students/[invitationId])
 │       ├── components/     board/, dashboard/, workspace/
 │       └── lib/            api.ts (wire format), one file per domain, i18n/
 └── .vscode/               shared editor config
@@ -304,6 +343,18 @@ answered as of this doc):
   being unconfigured in `.env` — a real developer's `.env` usually has every
   key set). A background task's effect should be polled for
   (`roundtable_running`), never assumed complete the instant a request returns.
+- **A migration that adds or reuses a Postgres enum type must use
+  `sqlalchemy.dialects.postgresql.ENUM`, never generic `sa.Enum`** — the
+  generic type does not reliably honor `create_type=False` inside
+  `op.create_table` (confirmed against real Postgres 16; see
+  `docs/STAGE3_COMPANY_RAG.md`'s "The PostgreSQL story"). `postgresql.ENUM`
+  degrades cleanly to an ordinary column on SQLite, so this is safe to use
+  unconditionally, no dialect branching needed at the column-definition
+  level. Also: a new NOT NULL column's `server_default` on an existing
+  Enum-typed column must match the enum's stored label exactly — this
+  codebase's Enum columns store the Python member's **name**
+  (`'STUDENT'`), not its `.value` (`'student'`); SQLite won't catch a
+  mismatch there, Postgres will refuse it outright.
 
 ## Reference: full API surface
 
@@ -339,6 +390,22 @@ endpoint at `/docs`.
 - **Meeting**: `GET/POST /meeting/{agent}` — any `AgentType`; 403s an optional
   agent the graduate hasn't added. `GET/POST /meeting/team` — the Team Room's
   shared thread, routed to whichever teammate fits (`docs/TEAM_ROOM.md`).
+- **Company** (`docs/STAGE3_COMPANY_RAG.md`): `POST /company/register`
+  (found a new company or join one via `join_code` + `role`),
+  `GET /company/me`, `POST/GET /company/job-titles`,
+  `GET /company/job-titles/{id}`,
+  `POST/GET /company/job-titles/{id}/materials` (RAG knowledge base
+  upload/list), `POST /company/job-titles/{id}/query` (real retrieval,
+  real scores), `POST/GET /company/job-titles/{id}/projects` (a
+  company's own real projects, distinct from a graduate's own project),
+  `POST /company/job-titles/{id}/invitations`, `GET /company/invitations`,
+  `GET /company/students` (roster), `GET /company/students/{invitation_id}`
+  (week-by-week detail + reviews — the "end-of-week report").
+- **Invitations** (student-facing, `docs/STAGE3_COMPANY_RAG.md`):
+  `GET /invitations/mine` (matched by email — no account needs to exist
+  when the invite is sent), `POST /invitations/{id}/accept` (body
+  `{"consent": true}`, required — 400 without it),
+  `POST /invitations/{id}/decline`.
 - Every request should carry `X-Venv-Language: en|ar` (the frontend does this
   automatically) so agent replies match the UI language.
 - All of the above is wired into `frontend/src/lib/api.ts` and the per-domain
@@ -364,7 +431,7 @@ python smoke_test_stage2_meeting.py            # Meeting Room roster gating (9)
 python smoke_test_stage2_submissions.py        # multi-modal submission + vision (41)
 python smoke_test_stage2_co_reviews.py         # co_reviewers.py unit tests (11)
 python smoke_test_stage2_roundtable.py         # the roundtable, end to end (20)
-python smoke_test_migrations.py                # Alembic + model-drift guard (19; +10 with Postgres)
+python smoke_test_migrations.py                # Alembic + model-drift guard (19; +10 with Postgres — both dialects genuinely verified, docs/STAGE3_COMPANY_RAG.md)
 python smoke_test_stage2_onboarding_resume.py  # restart-proof onboarding + CV replacement (54)
 python smoke_test_needs_changes.py             # visible 'needs changes' state (29)
 python smoke_test_agent_language.py            # agents answer in Arabic + browser CORS preflight (34)
@@ -378,6 +445,9 @@ python smoke_test_onboarding_graph_hardening.py # onboarding tool calls: repair/
 python smoke_test_task_chat.py                 # task-thread agent switcher: Mentor default, Manager/roster agents, HR refused (14)
 python smoke_test_team_room.py                 # Team Room: routing, fallback, isolation between users (17)
 python smoke_test_settings.py                  # PATCH /users/me: rename, password change, validation (15)
+python smoke_test_company_rag.py               # company accounts, job titles, RAG upload + real retrieval ranking (35)
+python smoke_test_company_invitations.py       # company projects, invite/consent flow, double-response prevention (36)
+python smoke_test_company_students.py          # company roster + per-week reports, real assign-task integration (22)
 ```
 
 If the LLM key is missing, wrong, or out of credit, agent endpoints return a
