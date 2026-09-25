@@ -161,13 +161,21 @@ export default function InvitationsPage() {
                 {inv.status === "accepted" && (
                   <div className="mt-3 flex items-center justify-between">
                     <p className="text-sm text-text-secondary">{t("invitations.accepted")}</p>
-                    <button
-                      type="button"
-                      onClick={() => router.push("/workspace")}
-                      className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
-                    >
-                      {t("nav.workspace")}
-                    </button>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/invitations/${inv.id}/visibility`}
+                        className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+                      >
+                        {t("invitations.seeWhatTheySee")}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => router.push("/workspace")}
+                        className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+                      >
+                        {t("nav.workspace")}
+                      </button>
+                    </div>
                   </div>
                 )}
 

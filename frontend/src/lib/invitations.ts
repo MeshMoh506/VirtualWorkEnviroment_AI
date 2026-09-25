@@ -1,4 +1,5 @@
 import { api, type InvitationDetailApiOut } from "./api";
+import { toStudentDetail, type CompanyStudentDetail } from "./company";
 
 /** A student's own view of an invitation — everything needed to give
  * informed consent before accepting (dataSharedNotice), or to decline.
@@ -42,4 +43,13 @@ export async function acceptInvitation(id: string, consent: boolean): Promise<In
 
 export async function declineInvitation(id: string): Promise<InvitationDetail> {
   return toDetail(await api.invitations.decline(id));
+}
+
+/** Exactly what the company that sent this invitation can currently see
+ * about you — the literal same data their own roster detail view shows
+ * them (reuses company.ts's toStudentDetail/CompanyStudentDetail
+ * rather than a separate type), not a description of the promise but
+ * the promise checked live. 404s until the invitation is accepted. */
+export async function fetchMyVisibility(invitationId: string): Promise<CompanyStudentDetail> {
+  return toStudentDetail(await api.invitations.visibility(invitationId));
 }
