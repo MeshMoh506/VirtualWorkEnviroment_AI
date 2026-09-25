@@ -142,6 +142,21 @@ answered and reflected in what follows:
   unset for it. `User.organization_id`, set unconditionally on accept,
   is the join that works for both cases.
 
+### Role permissions (`require_company_role` in `app/routers/company.py`)
+
+`CompanyRole` was modeled from the start but didn't gate anything until
+this pass. Two actions now are, chosen because they carry real
+organizational weight rather than being routine content curation:
+sending an invitation (**ADMIN/HR** — a hiring decision) and creating a
+company's own real project (**ADMIN/TECH_LEAD** — a technical/scope
+decision). Everything else in the company router — job titles, material
+upload, RAG query, the roster, listing — stays open to any company role,
+deliberately: over-restricting a small company's day-to-day use adds
+friction without much real benefit at this stage. `smoke_test_company_roles.py`
+covers both restrictions (the allowed roles succeed, the disallowed one
+gets a 403 naming which roles are allowed) and confirms the unrestricted
+actions still work for every role.
+
 ## Decisions worth knowing about
 
 - **Why `ProjectSource` was never touched.** A company-sourced project
@@ -258,10 +273,17 @@ every other suite in this repo already uses:
   through actual `assign-task`/`plan_week` (mocked LLM) confirming the
   roster reflects real task creation — plus a direct check that a
   written `WEEK_PROGRESS` review surfaces through the detail endpoint.
+- **`smoke_test_company_roles.py`** — each restricted action succeeds
+  for its allowed roles and 403s (naming the allowed roles) for the
+  disallowed one; confirms the unrestricted actions still work for
+  every role.
 - **`smoke_test_migrations.py`**'s Postgres section — see above.
 
-Full suite: **32 files, 872 checks, all passing** — on SQLite always,
-and now confirmed identically on real Postgres 16 too.
+Full suite: **33 files, 885 checks, all passing** — on SQLite always,
+and confirmed identically on real Postgres 16 as of the pass that added
+migrations 0007/0008 (re-run that section against your actual
+deployment target before trusting it there too — the sandbox instance
+this was checked against doesn't persist between sessions).
 
 ## Frontend
 
@@ -293,10 +315,6 @@ before this stage).
 
 - No email/invite-delivery system — see "Decisions worth knowing about"
   above.
-- No per-role permission gating yet (any company role can create job
-  titles, upload materials, create projects, and send invitations
-  today) — `CompanyRole` is stored and returned everywhere so this is a
-  small follow-up change, not a schema change, if it's wanted.
 - A student can't yet see their own view of what a company has actually
   seen about them (transparency beyond the upfront consent notice) —
   not required by the confirmed decisions above, but worth considering.
