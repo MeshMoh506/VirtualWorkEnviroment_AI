@@ -121,6 +121,9 @@ export interface UserApiOut {
   is_active: boolean;
   created_at: string;
   has_cv: boolean;
+  account_type: "student" | "company";
+  company_role: "admin" | "hr" | "tech_lead" | null;
+  organization_id: string | null;
 }
 
 export interface TaskMessageApiOut {
@@ -374,6 +377,60 @@ export interface ProjectOwnApiOut {
 
 // ---- API surface ----
 
+// ---- Stage 3: company accounts + RAG (docs/STAGE3_COMPANY_RAG.md) ----
+
+export interface OrganizationApiOut {
+  id: string;
+  name: string;
+  field: string | null;
+  join_code: string;
+}
+
+export interface JobTitleApiOut {
+  id: string;
+  title: string;
+  description: string | null;
+  created_at: string;
+  material_count: number;
+  chunk_count: number;
+}
+
+export interface KnowledgeMaterialApiOut {
+  id: string;
+  job_title_id: string;
+  filename: string | null;
+  chunk_count: number;
+  created_at: string;
+  preview: string;
+}
+
+export interface RAGChunkApiOut {
+  id: string;
+  material_id: string;
+  content: string;
+  score: number;
+}
+
+export interface RAGQueryResultApiOut {
+  query: string;
+  chunks: RAGChunkApiOut[];
+}
+
+export interface CompanyRegisterPayload {
+  email: string;
+  password: string;
+  full_name: string;
+  company_name?: string;
+  field?: string;
+  join_code?: string;
+  role?: "admin" | "hr" | "tech_lead";
+}
+
+export interface CompanyRegisterApiOut {
+  user: UserApiOut;
+  organization: OrganizationApiOut;
+}
+
 export const api = {
   auth: {
     register: (email: string, password: string, fullName: string) =>
@@ -549,5 +606,38 @@ export const api = {
           body: JSON.stringify({ content }),
         }),
     },
+  },
+
+  /** Stage 3's company side (docs/STAGE3_COMPANY_RAG.md) — see lib/company.ts. */
+  company: {
+    register: (payload: CompanyRegisterPayload) =>
+      request<CompanyRegisterApiOut>("/company/register", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    me: () => request<OrganizationApiOut>("/company/me"),
+    listJobTitles: () => request<JobTitleApiOut[]>("/company/job-titles"),
+    getJobTitle: (id: string) => request<JobTitleApiOut>(`/company/job-titles/${id}`),
+    createJobTitle: (title: string, description?: string) =>
+      request<JobTitleApiOut>("/company/job-titles", {
+        method: "POST",
+        body: JSON.stringify({ title, description: description || null }),
+      }),
+    listMaterials: (jobTitleId: string) =>
+      request<KnowledgeMaterialApiOut[]>(`/company/job-titles/${jobTitleId}/materials`),
+    uploadMaterial: (jobTitleId: string, text?: string, file?: File) => {
+      const form = new FormData();
+      if (text) form.append("text", text);
+      if (file) form.append("file", file);
+      return request<KnowledgeMaterialApiOut>(`/company/job-titles/${jobTitleId}/materials`, {
+        method: "POST",
+        body: form,
+      });
+    },
+    query: (jobTitleId: string, query: string, k = 5) =>
+      request<RAGQueryResultApiOut>(`/company/job-titles/${jobTitleId}/query`, {
+        method: "POST",
+        body: JSON.stringify({ query, k }),
+      }),
   },
 };

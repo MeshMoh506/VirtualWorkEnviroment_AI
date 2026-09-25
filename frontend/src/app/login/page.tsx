@@ -26,8 +26,8 @@ export default function LoginPage() {
     setBusy(true);
     try {
       if (mode === "login") {
-        await login(email, password);
-        router.push("/board");
+        const authUser = await login(email, password);
+        router.push(authUser.accountType === "company" ? "/company" : "/board");
       } else {
         await register(email, password, fullName);
         router.push("/onboarding/cv");
@@ -131,6 +131,13 @@ export default function LoginPage() {
         >
           {mode === "login" ? t("login.switchToRegister") : t("login.switchToLogin")}
         </button>
+
+        <Link
+          href="/company/register"
+          className="mt-2 block w-full text-center text-xs text-text-muted transition-colors hover:text-text-secondary"
+        >
+          {t("login.registerCompany")}
+        </Link>
       </div>
     </main>
   );
