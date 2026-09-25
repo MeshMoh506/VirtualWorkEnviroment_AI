@@ -7,6 +7,17 @@ thread-per-agent shape. agent_type/sender_type reuse the same enum types
 chat_messages already created (agenttype/sendertype), so create_type is
 False here — CREATE TYPE already ran for chat_messages in the baseline.
 
+Uses postgresql.ENUM specifically, not the generic sa.Enum, for the
+reused-type columns: confirmed against a real Postgres 16 instance that
+generic sa.Enum(create_type=False) does NOT reliably suppress CREATE
+TYPE inside op.create_table (SQLAlchemy's dialect-adaptation path for
+the generic type drops the create_type=False setting before the DDL
+event that actually emits CREATE TYPE fires) — it errored with
+'type "sendertype" already exists'. postgresql.ENUM(create_type=False)
+honors it correctly, and — verified — degrades to an ordinary VARCHAR-
+backed column on SQLite, so this is safe to use unconditionally rather
+than branching per dialect.
+
 Revision ID: 0006
 Revises: 0005
 Create Date: 2026-09-22 09:00:00.000000
@@ -15,6 +26,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision: str = '0006'
@@ -30,12 +42,12 @@ def upgrade() -> None:
         sa.Column('user_id', sa.String(), nullable=False),
         sa.Column(
             'sender_type',
-            sa.Enum('USER', 'AGENT', name='sendertype', create_type=False),
+            postgresql.ENUM('USER', 'AGENT', name='sendertype', create_type=False),
             nullable=False,
         ),
         sa.Column(
             'agent_type',
-            sa.Enum(
+            postgresql.ENUM(
                 'MANAGER', 'MENTOR', 'HR', 'SECURITY_REVIEWER', 'DATA_REVIEWER',
                 'CAREER_COACH', 'DEVOPS', name='agenttype', create_type=False,
             ),

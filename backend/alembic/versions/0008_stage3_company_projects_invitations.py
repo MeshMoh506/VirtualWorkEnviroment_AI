@@ -25,6 +25,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision: str = '0008'
@@ -60,7 +61,7 @@ def upgrade() -> None:
         sa.Column('invited_by_user_id', sa.String(), nullable=False),
         sa.Column(
             'status',
-            sa.Enum('PENDING', 'ACCEPTED', 'DECLINED', name='invitationstatus'),
+            postgresql.ENUM('PENDING', 'ACCEPTED', 'DECLINED', name='invitationstatus'),
             nullable=False,
         ),
         sa.Column('created_at', sa.DateTime(), nullable=False),
