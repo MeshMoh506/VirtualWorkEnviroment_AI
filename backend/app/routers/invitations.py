@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.company_roster import student_detail
 from app.database import get_db
 from app.models import (
     AccountType,
@@ -25,7 +26,12 @@ from app.models import (
     ProjectStatus,
     User,
 )
-from app.schemas import INVITATION_DATA_NOTICE, InvitationAccept, InvitationDetailOut
+from app.schemas import (
+    INVITATION_DATA_NOTICE,
+    CompanyStudentDetailOut,
+    InvitationAccept,
+    InvitationDetailOut,
+)
 
 router = APIRouter(prefix="/invitations", tags=["invitations"])
 
@@ -153,3 +159,24 @@ def decline_invitation(
     db.commit()
     db.refresh(invitation)
     return _detail(db, invitation)
+
+
+@router.get("/{invitation_id}/visibility", response_model=CompanyStudentDetailOut)
+def my_company_visibility(
+    invitation_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Exactly what the company that sent this invitation can currently
+    see about you — not a description of it, the actual data, built by
+    the literal same function (app/company_roster.py's student_detail)
+    that answers the company's own GET /company/students/{id}. The
+    upfront consent notice says what will be shared before you accept;
+    this is the ongoing answer to 'is that still true right now' —
+    checkable at any time, not just taken on faith once."""
+    invitation = _get_my_invitation(db, current_user, invitation_id)
+    if invitation.status != InvitationStatus.ACCEPTED:
+        raise HTTPException(
+            status_code=404, detail="This invitation hasn't been accepted, so nothing has been shared yet."
+        )
+    return student_detail(db, invitation, current_user)

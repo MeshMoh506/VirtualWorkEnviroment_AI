@@ -264,7 +264,7 @@ function toStudent(s: CompanyStudentApiOut): CompanyStudent {
   };
 }
 
-function toStudentDetail(s: CompanyStudentDetailApiOut): CompanyStudentDetail {
+export function toStudentDetail(s: CompanyStudentDetailApiOut): CompanyStudentDetail {
   return {
     ...toStudent(s),
     weeks: s.weeks.map((w) => ({

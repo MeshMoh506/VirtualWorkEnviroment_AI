@@ -753,5 +753,10 @@ export const api = {
       }),
     decline: (id: string) =>
       request<InvitationDetailApiOut>(`/invitations/${id}/decline`, { method: "POST" }),
+    /** Exactly what the company sees about this student — the literal
+     * same shape as api.company.getStudent, reused rather than
+     * redefined. See lib/invitations.ts's fetchMyVisibility. */
+    visibility: (id: string) =>
+      request<CompanyStudentDetailApiOut>(`/invitations/${id}/visibility`),
   },
 };

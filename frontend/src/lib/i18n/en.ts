@@ -192,6 +192,9 @@ const en = {
     acceptError: "Couldn't accept that invitation.",
     declineError: "Couldn't decline that invitation.",
     mustConsent: "Check the box above to continue.",
+    seeWhatTheySee: "See what they see",
+    visibilityTitle: "What they can see",
+    visibilityIntro: "This is the exact same view the company sees for you — not a summary of the promise, the live data behind it.",
   },
   orientation: {
     steps: ["Welcome", "Your team", "Your project", "How it works", "Ready"],
