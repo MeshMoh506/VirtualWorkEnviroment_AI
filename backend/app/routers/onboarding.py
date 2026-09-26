@@ -22,7 +22,7 @@ from langgraph.types import Command
 from sqlalchemy.orm import Session
 
 from app.agents.graph.catalog import catalog_as_dicts
-from app.agents.graph.cv_parsing import CVReadError, read_cv_upload
+from app.agents.graph.cv_parsing import CVReadError, read_cv_upload, validate_is_cv
 from app.agents.graph.onboarding_graph import build_onboarding_graph
 from app.agents.graph.onboarding_resume import NotResumable, can_resume, drop_thread, ensure_paused_at
 from app.auth import get_current_user
@@ -103,6 +103,7 @@ def upload_cv(
     content = file.file.read()
     try:
         cv_text = read_cv_upload(file.filename, content)
+        validate_is_cv(cv_text)
     except CVReadError as exc:
         raise HTTPException(exc.status_code, str(exc))
 

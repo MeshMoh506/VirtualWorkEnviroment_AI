@@ -72,6 +72,9 @@ def register_and_login(email):
 with patch(
     "app.agents.graph.onboarding_graph.small_model_chain",
     return_value=[("anthropic", FakeModel(FAKE_RESPONSES))],
+), patch(
+    "app.agents.graph.cv_parsing.call_with_tool",
+    return_value={"tool_name": "classify_document", "input": {"is_cv": True, "reason": ""}},
 ):
     headers = register_and_login("stage2-router-test@example.com")
 

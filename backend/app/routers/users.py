@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app.agents.graph.cv_parsing import CVReadError, read_cv_upload
+from app.agents.graph.cv_parsing import CVReadError, read_cv_upload, validate_is_cv
 from app.auth import get_current_user, hash_password, verify_password
 from app.database import get_db
 from app.dashboard import build_dashboard
@@ -107,6 +107,10 @@ def submit_cv(
     it to calibrate the first task's difficulty) — this endpoint just
     captures the raw input so that work can plug in without a schema change.
     """
+    try:
+        validate_is_cv(payload.cv_raw_text)
+    except CVReadError as exc:
+        raise HTTPException(exc.status_code, str(exc))
     current_user.cv_raw_text = payload.cv_raw_text
     db.commit()
     db.refresh(current_user)
@@ -139,6 +143,7 @@ def replace_cv_file(
         )
     try:
         cv_text = read_cv_upload(file.filename, file.file.read())
+        validate_is_cv(cv_text)
     except CVReadError as exc:
         raise HTTPException(exc.status_code, str(exc))
     current_user.cv_raw_text = cv_text
