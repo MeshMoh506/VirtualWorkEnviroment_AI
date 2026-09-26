@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell, Compass, Settings as SettingsIcon } from "lucide-react";
 import { useRequireAuth } from "@/lib/auth-context";
@@ -16,89 +16,11 @@ import { WeekStrip } from "@/components/dashboard/week-strip";
 import { StatRow } from "@/components/dashboard/stat-row";
 import { AgentCards } from "@/components/dashboard/agent-cards";
 import { FlowSection } from "@/components/dashboard/flow-section";
+import { AccountMenu } from "@/components/nav/account-menu";
+import { IconLink } from "@/components/nav/icon-link";
 import { useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
-
-// A small icon button matching theme-toggle.tsx's exact visual contract
-// (h-8 w-8, hairline border, no shadow — DESIGN.md's "flat surfaces"
-// rule) — the shared shape for every secondary header action, so the
-// header reads as one tidy utility cluster instead of a row of
-// differently-sized pills.
-function IconLink({
-  href,
-  label,
-  children,
-  badge,
-}: {
-  href: string;
-  label: string;
-  children: React.ReactNode;
-  badge?: number;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-label={label}
-      title={label}
-      className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
-    >
-      {children}
-      {badge !== undefined && badge > 0 && (
-        <span className="absolute -end-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-mono text-[9px] text-accent-text">
-          {badge}
-        </span>
-      )}
-    </Link>
-  );
-}
-
-// Consolidates the email display and the logout link — previously two
-// separate header items — into one control, the same way the icon
-// links above consolidated Settings/How it works into single buttons.
-function AccountMenu({ email }: { email: string }) {
-  const { t } = useLocale();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, []);
-
-  const initial = email.trim().charAt(0).toUpperCase() || "?";
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-label={t("board.accountMenu")}
-        aria-expanded={open}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border font-mono text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
-      >
-        {initial}
-      </button>
-      {open && (
-        <div className="absolute end-0 top-full z-10 mt-2 w-56 rounded border border-border bg-bg-surface-raised p-2">
-          <p dir="ltr" className="truncate px-2 py-1.5 font-mono text-xs text-text-muted">
-            {email}
-          </p>
-          <div className="my-1 border-t border-border" />
-          <Link
-            href="/logout"
-            className="block rounded px-2 py-1.5 text-sm text-text-secondary transition-colors hover:bg-bg-surface hover:text-text-primary"
-          >
-            {t("common.logOut")}
-          </Link>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // The one task the graduate should act on now: the most recent
 // non-reviewed task (todo/in_progress/submitted). Mirrors the backend's

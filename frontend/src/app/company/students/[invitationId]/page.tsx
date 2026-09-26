@@ -8,6 +8,7 @@ import { fetchCompanyStudentDetail, type CompanyStudentDetail } from "@/lib/comp
 import { useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
+import { AccountMenu } from "@/components/nav/account-menu";
 
 // One hired student's week-by-week detail (docs/STAGE3_COMPANY_RAG.md) —
 // each week's tasks plus whichever end-of-week reviews exist for it so
@@ -55,12 +56,7 @@ export default function CompanyStudentDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            href="/logout"
-            className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
-          >
-            {t("common.logOut")}
-          </Link>
+          <AccountMenu email={user.email} />
           <LocaleToggle />
           <ThemeToggle />
         </div>

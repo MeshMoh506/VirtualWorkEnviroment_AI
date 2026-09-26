@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRequireAuth, ApiError } from "@/lib/auth-context";
 import { api, type ApiTrack } from "@/lib/api";
 import { useLocale, useTrackLabels } from "@/lib/i18n/locale";
+import { AccountMenu } from "@/components/nav/account-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
 
@@ -99,12 +100,7 @@ export default function SettingsPage() {
           >
             {t("nav.workspace")}
           </Link>
-          <Link
-            href="/logout"
-            className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
-          >
-            {t("common.logOut")}
-          </Link>
+          <AccountMenu email={user.email} />
           <LocaleToggle />
           <ThemeToggle />
         </div>

@@ -22,6 +22,7 @@ import { TaskWorkspace, type SubmitPayload } from "@/components/workspace/task-w
 import { AgentsMeeting } from "@/components/workspace/agents-meeting";
 import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 import { useLocale } from "@/lib/i18n/locale";
+import { AccountMenu } from "@/components/nav/account-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
 
@@ -212,21 +213,13 @@ export default function WorkspacePage() {
           <h1 className="mt-1 text-lg font-medium text-text-primary">{t("nav.workspaceTitle")}</h1>
         </div>
         <div className="flex items-center gap-3">
-          <span dir="ltr" className="hidden font-mono text-xs text-text-muted lg:inline">
-            {user.email}
-          </span>
           <Link
             href="/settings"
             className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
           >
             {t("nav.settings")}
           </Link>
-          <Link
-            href="/logout"
-            className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
-          >
-            {t("common.logOut")}
-          </Link>
+          <AccountMenu email={user.email} />
           <LocaleToggle />
           <ThemeToggle />
         </div>

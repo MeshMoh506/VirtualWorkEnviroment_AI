@@ -7,6 +7,7 @@ import { createJobTitle, fetchJobTitles, fetchMyCompany, type JobTitle, type Org
 import { useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
+import { AccountMenu } from "@/components/nav/account-menu";
 
 // The company dashboard (docs/STAGE3_COMPANY_RAG.md): the org's join
 // code (for teammates to add themselves with their own role), the list
@@ -86,12 +87,7 @@ export default function CompanyDashboardPage() {
           >
             {t("company.studentsTitle")}
           </Link>
-          <Link
-            href="/logout"
-            className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
-          >
-            {t("common.logOut")}
-          </Link>
+          <AccountMenu email={user.email} />
           <LocaleToggle />
           <ThemeToggle />
         </div>

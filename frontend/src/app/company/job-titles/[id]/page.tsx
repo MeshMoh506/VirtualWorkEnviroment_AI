@@ -22,6 +22,7 @@ import {
 import { useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
+import { AccountMenu } from "@/components/nav/account-menu";
 
 // A job title's knowledge base (docs/STAGE3_COMPANY_RAG.md): upload
 // pasted text or a file, see what's been chunked/embedded so far, and
@@ -175,12 +176,7 @@ export default function JobTitleDetailPage() {
           <h1 className="mt-1 text-lg font-medium text-text-primary">{jobTitle?.title}</h1>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            href="/logout"
-            className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
-          >
-            {t("common.logOut")}
-          </Link>
+          <AccountMenu email={user.email} />
           <LocaleToggle />
           <ThemeToggle />
         </div>

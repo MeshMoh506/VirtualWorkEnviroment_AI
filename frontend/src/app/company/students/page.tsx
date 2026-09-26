@@ -7,6 +7,7 @@ import { fetchCompanyStudents, type CompanyStudent } from "@/lib/company";
 import { useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
+import { AccountMenu } from "@/components/nav/account-menu";
 
 // The company's live roster (docs/STAGE3_COMPANY_RAG.md) — everyone who
 // has actually accepted an invitation, with a quick snapshot of where
@@ -45,12 +46,7 @@ export default function CompanyStudentsPage() {
           <h1 className="mt-1 text-lg font-medium text-text-primary">{t("company.studentsTitle")}</h1>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            href="/logout"
-            className="rounded border border-border px-3 py-1 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
-          >
-            {t("common.logOut")}
-          </Link>
+          <AccountMenu email={user.email} />
           <LocaleToggle />
           <ThemeToggle />
         </div>
