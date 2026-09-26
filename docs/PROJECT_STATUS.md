@@ -24,12 +24,21 @@ a full ten-agent roster._
 > consent flow, and a company roster with per-week reports built from the
 > weekly cycle's existing reviews — see `docs/STAGE3_COMPANY_RAG.md` for the
 > full write-up, including the confirmed answers to all four scoping questions
-> that were open before it started. **Most recently: a full ten-agent roster**
+> that were open before it started. Then **a full ten-agent roster**
 > (`docs/TEN_AGENTS.md`) — three new specialists (QA Engineer, UX Reviewer,
 > Technical Writer) reachable everywhere the existing ones were, and Career
 > Coach's long-standing gap closed with a real dedicated action (a career
 > check-in that writes actual resume bullets, not just another chat reply).
-> **36 smoke suites, 931 checks, all
+> **Most recently: a deep, cross-agent read/write audit**
+> (`docs/AGENT_READ_WRITE.md`) — a code audit (clean: no stubs/placeholders
+> anywhere in `app/agents/`) plus a new test file held to a specifically
+> higher bar than "did this return 200": does each agent's LLM call
+> genuinely receive the real context it's supposed to, and does what it
+> writes back genuinely round-trip correctly. Closed three real gaps —
+> HR's attendance/lateness figures checked against a hand-computed exact
+> answer for the first time, the roundtable's "a real conversation, not
+> parallel monologues" claim verified directly, Mentor's vision path
+> confirmed with an actual image. **37 smoke suites, 955 checks, all
 > passing** — genuinely **confirmed on a
 > real PostgreSQL 16 instance** through the Stage 3 pass, not just SQLite: doing so
 > surfaced and fixed two real deploy-breaking migration bugs that SQLite's lack of enum
@@ -277,10 +286,18 @@ accounts, the RAG knowledge base, a company's own real projects, the
 invite-with-consent flow, the roster/report view, and the real-Postgres
 bug-hunt that verified all of it.
 
-**Ten agents** (most recent): `TEN_AGENTS.md` — three new specialists
+**Ten agents**: `TEN_AGENTS.md` — three new specialists
 (QA Engineer, UX Reviewer, Technical Writer), Career Coach's new career-
 checkin action, and the second round of Postgres-enum migration lessons
 (altering an existing, already-populated enum type for the first time).
+
+**Agent read/write audit** (most recent): `AGENT_READ_WRITE.md` — a
+code audit and a new deep test file verifying every agent's LLM calls
+genuinely receive real context and genuinely write back correctly, not
+just "returns 200." Closes three real gaps (HR's attendance figures,
+the roundtable's real-conversation claim, Mentor's vision path) and
+notes one piece of housekeeping (`co_reviewers.py` is dead code, not an
+active fallback) found but out of scope to act on this pass.
 
 **Frontend-only work with no dedicated doc** (orientation rework, Arabic i18n,
 light mode — built in a separate pass, documented only in their own PR/commit
@@ -514,6 +531,7 @@ python smoke_test_company_roles.py             # company role permissions: invit
 python smoke_test_invitation_emails.py         # real invitation emails: graceful degradation + a genuine local SMTP server (15)
 python smoke_test_student_visibility.py        # student's own view matches the company's, byte-for-byte, after a real task cycle (11)
 python smoke_test_ten_agents.py                # catalog, Meeting/task-chat/roundtable eligibility, full career-checkin lifecycle (20)
+python smoke_test_agent_read_write.py          # deep read/write audit: real context in, exact HR figures, real roundtable conversation (24)
 ```
 
 If the LLM key is missing, wrong, or out of credit, agent endpoints return a
