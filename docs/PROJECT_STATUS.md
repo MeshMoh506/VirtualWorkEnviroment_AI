@@ -38,7 +38,11 @@ a full ten-agent roster._
 > HR's attendance/lateness figures checked against a hand-computed exact
 > answer for the first time, the roundtable's "a real conversation, not
 > parallel monologues" claim verified directly, Mentor's vision path
-> confirmed with an actual image. **37 smoke suites, 955 checks, all
+> confirmed with an actual image. Most recently: **a real reported bug fixed**
+> (`docs/CV_VALIDATION.md`) — uploading any readable file as a "CV" (an
+> invoice, an essay, anything) used to be silently accepted; a wrong upload
+> is now genuinely rejected at all three CV-intake points, judged by a real
+> model rather than a fragile heuristic. **38 smoke suites, 970 checks, all
 > passing** — genuinely **confirmed on a
 > real PostgreSQL 16 instance** through the Stage 3 pass, not just SQLite: doing so
 > surfaced and fixed two real deploy-breaking migration bugs that SQLite's lack of enum
@@ -291,13 +295,20 @@ bug-hunt that verified all of it.
 checkin action, and the second round of Postgres-enum migration lessons
 (altering an existing, already-populated enum type for the first time).
 
-**Agent read/write audit** (most recent): `AGENT_READ_WRITE.md` — a
+**Agent read/write audit**: `AGENT_READ_WRITE.md` — a
 code audit and a new deep test file verifying every agent's LLM calls
 genuinely receive real context and genuinely write back correctly, not
 just "returns 200." Closes three real gaps (HR's attendance figures,
 the roundtable's real-conversation claim, Mentor's vision path) and
 notes one piece of housekeeping (`co_reviewers.py` is dead code, not an
 active fallback) found but out of scope to act on this pass.
+
+**CV content validation** (most recent): `CV_VALIDATION.md` — a real
+reported bug fixed: uploading any readable file as a "CV" used to be
+silently accepted (nothing checked the content, only that some text
+came out of the file). Now judged by a real model at all three CV-intake
+points, with the fix and testing story for what it took to update seven
+pre-existing tests that had CV upload mocked for a single LLM call.
 
 **Frontend-only work with no dedicated doc** (orientation rework, Arabic i18n,
 light mode — built in a separate pass, documented only in their own PR/commit
@@ -532,6 +543,7 @@ python smoke_test_invitation_emails.py         # real invitation emails: gracefu
 python smoke_test_student_visibility.py        # student's own view matches the company's, byte-for-byte, after a real task cycle (11)
 python smoke_test_ten_agents.py                # catalog, Meeting/task-chat/roundtable eligibility, full career-checkin lifecycle (20)
 python smoke_test_agent_read_write.py          # deep read/write audit: real context in, exact HR figures, real roundtable conversation (24)
+python smoke_test_cv_validation.py             # real bug fix: a non-CV upload genuinely refused at all 3 intake points (16)
 ```
 
 If the LLM key is missing, wrong, or out of credit, agent endpoints return a
