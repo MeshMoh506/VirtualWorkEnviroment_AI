@@ -29,7 +29,7 @@ import { api } from "@/lib/api";
 import { averageScore, fetchMyReviews, type Review } from "@/lib/reviews";
 import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 import { timeAgo } from "@/lib/format";
-import { resolveAgentDisplay, useAgents, useLocale } from "@/lib/i18n/locale";
+import { useAgents, useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
 

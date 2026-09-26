@@ -8,16 +8,11 @@ import {
   ArrowRight,
   Database,
   Upload,
-  Search,
-  Send,
   FolderGit2,
   FileText,
   Mail,
-  CheckCircle2,
   AlertCircle,
-  Building2,
   Cpu,
-  Layers,
 } from "lucide-react";
 import { useRequireAuth, ApiError } from "@/lib/auth-context";
 import {

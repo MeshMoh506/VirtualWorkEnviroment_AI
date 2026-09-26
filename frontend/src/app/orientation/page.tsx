@@ -10,8 +10,6 @@ import {
   Compass,
   CheckCircle2,
   FolderGit2,
-  Layers,
-  Sparkles,
   ArrowUpRight,
 } from "lucide-react";
 import { useRequireAuth } from "@/lib/auth-context";

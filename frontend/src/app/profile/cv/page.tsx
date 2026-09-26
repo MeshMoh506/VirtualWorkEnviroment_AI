@@ -6,7 +6,6 @@ import {
   Upload,
   ArrowLeft,
   ArrowRight,
-  FileText,
   CheckCircle2,
   AlertTriangle,
   AlertCircle,

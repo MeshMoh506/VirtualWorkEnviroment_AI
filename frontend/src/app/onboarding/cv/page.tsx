@@ -5,17 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Upload,
-  FileText,
   Sparkles,
   RotateCcw,
-  CheckCircle2,
-  FolderGit2,
-  Layers,
-  Compass,
   ArrowRight,
   ArrowLeft,
   AlertCircle,
-  HelpCircle,
 } from "lucide-react";
 import { ApiError, useRequireAuth } from "@/lib/auth-context";
 import { api, type AgentCatalogApiOut, type ApiTrack } from "@/lib/api";
