@@ -48,7 +48,7 @@ const en = {
     mentorReviewTitle: "Mentor's review",
   },
   landing: {
-    badge: "stage 1 \u00b7 ai-powered web apps",
+    badge: "ai-powered work experience",
     heroLine1: "Practice the job,",
     heroLine2: "before you get the job.",
     heroSubtitle:
@@ -59,7 +59,19 @@ const en = {
     howItWorksEyebrow: "how_it_works",
     howItWorksTitle: "Three agents. One shared file.",
     howItWorksBody:
-      "They don't keep separate notes. Everything the mentor sees, HR sees. Everything HR notes, the manager's next task accounts for. No agent works from a stale picture of you.",
+      "They don't keep separate notes. Everything the mentor sees, HR sees. Everything HR notes, the manager's next task accounts for. No agent works from a stale picture of you. Add up to seven more specialists \u2014 security, data, DevOps, QA, UX, career coaching, technical writing \u2014 whenever your track calls for it.",
+    tracksEyebrow: "two_tracks",
+    tracksTitle: "One platform, two very different doors in.",
+    tracksBody:
+      "For the graduate looking for real experience \u2014 and the company looking for real hiring signal, before they hire anyone.",
+    tracksStudentTitle: "For graduates",
+    tracksStudentBody:
+      "Upload a CV, join a team, and start doing the work \u2014 reviewed like a real employee, every week.",
+    tracksStudentCta: "Get started",
+    tracksCompanyTitle: "For companies",
+    tracksCompanyBody:
+      "Define a role, build a knowledge base, and invite real candidates to do your real work \u2014 before you hire.",
+    tracksCompanyCta: "Register your company",
     loopEyebrow: "the_loop",
     loopTitle: "A week at a time.",
     loopBody:
