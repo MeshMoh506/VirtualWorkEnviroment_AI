@@ -109,7 +109,10 @@ export type ApiAgentType =
   | "security_reviewer"
   | "data_reviewer"
   | "career_coach"
-  | "devops";
+  | "devops"
+  | "qa_engineer"
+  | "ux_reviewer"
+  | "technical_writer";
 export type ApiTaskStatus = "todo" | "in_progress" | "submitted" | "reviewed";
 export type ApiSenderType = "user" | "agent";
 
@@ -175,7 +178,7 @@ export interface TaskDetailApiOut extends TaskApiOut {
   messages: TaskMessageApiOut[];
 }
 
-export type ApiReviewKind = "task_review" | "week_progress" | "behavioral" | "skills_rollup";
+export type ApiReviewKind = "task_review" | "week_progress" | "behavioral" | "skills_rollup" | "career_checkin";
 
 export interface RubricCategoryApi {
   key: string;
@@ -212,6 +215,13 @@ export interface BehavioralMetricsApi {
   consistency_rating: "strong" | "adequate" | "needs_improvement";
 }
 
+/** The Career Coach's career check-in (docs/TEN_AGENTS.md) — its one
+ * dedicated action beyond ordinary chat. */
+export interface CareerCheckinMetricsApi {
+  resume_highlights: string[];
+  suggested_focus: string;
+}
+
 export interface ReviewApiOut {
   id: string;
   task_id: string | null;
@@ -226,6 +236,7 @@ export interface ReviewApiOut {
     | HrMetricsApi
     | WeekProgressMetricsApi
     | BehavioralMetricsApi
+    | CareerCheckinMetricsApi
     | null;
   created_at: string;
 }
@@ -641,6 +652,11 @@ export const api = {
       }),
     hrRollup: () =>
       request<ReviewApiOut>("/agents/hr/rollup", { method: "POST" }),
+    /** The Career Coach's one dedicated action beyond chat — a career
+     * check-in, saved as a Review the same way HR's rollup is. 403s if
+     * Career Coach isn't on the graduate's roster. */
+    careerCoachCheckin: () =>
+      request<ReviewApiOut>("/agents/career-coach/checkin", { method: "POST" }),
   },
 
   employeeFile: () => request<EmployeeFileApiOut>("/users/me/employee-file"),

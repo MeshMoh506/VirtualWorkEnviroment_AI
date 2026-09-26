@@ -231,3 +231,40 @@ BEHAVIORAL_REVIEW_TOOL = {
         "required": ["summary", "consistency_rating"],
     },
 }
+
+CAREER_CHECKIN_TOOL = {
+    "name": "submit_career_checkin",
+    "description": (
+        "Write this graduate's career check-in — how their work so far "
+        "would read to an employer, and what to focus on next to "
+        "strengthen that — based on their Employee File and CV."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "summary": {
+                "type": "string",
+                "description": (
+                    "2-4 sentence honest assessment of how hireable their "
+                    "work-to-date makes them look, grounded in specifics "
+                    "from the Employee File — not generic encouragement."
+                ),
+            },
+            "resume_highlights": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "2-4 concrete bullets they could actually put on a "
+                    "resume or LinkedIn, phrased the way a real resume "
+                    "bullet reads (action verb + what + impact) — not "
+                    "restated task titles."
+                ),
+            },
+            "suggested_focus": {
+                "type": "string",
+                "description": "The one thing most worth focusing on next to strengthen their story for employers.",
+            },
+        },
+        "required": ["summary", "resume_highlights", "suggested_focus"],
+    },
+}
