@@ -235,13 +235,13 @@ with patch("app.agents.llm_client._anthropic") as mock_anthropic, patch(
     o_en = register("lang-onb-en@example.com")
     client.post("/onboarding/cv", headers=o_en, files={"file": ("cv.txt", b"Built a Flask app.", "text/plain")})
     client.post("/onboarding/qa", headers=o_en, json={"answers": {}})
-    check("English onboarding: no instruction in the graph's prompts", len(SYSTEMS) == 2 and not any(MARK in s for s in SYSTEMS))
+    check("English onboarding: no instruction in the graph's prompts", len(SYSTEMS) == 3 and not any(MARK in s for s in SYSTEMS))
     SYSTEMS.clear()
     o_ar = register("lang-onb-ar@example.com", lang="ar")
     client.post("/onboarding/cv", headers=o_ar, files={"file": ("cv.txt", b"Built a Flask app.", "text/plain")})
     client.post("/onboarding/qa", headers=o_ar, json={"answers": {}})
     check("Arabic onboarding: the questions AND the track-suggestion prompts carry the instruction",
-          len(SYSTEMS) == 2 and all(MARK in s for s in SYSTEMS))
+          len(SYSTEMS) == 3 and all(MARK in s for s in SYSTEMS))
 
 # ---- the OpenAI-compatible providers (DeepSeek / Qwen / OpenAI) get it too ---------
 oa_client = MagicMock()

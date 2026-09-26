@@ -115,6 +115,9 @@ def db_update(email, **fields):
 with patch(
     "app.agents.graph.onboarding_graph.small_model_chain",
     return_value=[("anthropic", FakeModel(FAKE_RESPONSES))],
+), patch(
+    "app.agents.graph.cv_parsing.call_with_tool",
+    return_value={"tool_name": "classify_document", "input": {"is_cv": True, "reason": ""}},
 ):
     # =====================================================================
     # A. The whole wizard, restarting the server between EVERY step

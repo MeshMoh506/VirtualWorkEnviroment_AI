@@ -91,11 +91,15 @@ def post_message_reply(text: str) -> AgentReply:
 #    Project/Week/Task genuinely persist and round-trip.
 # =============================================================================
 headers = register("manager-rw@example.com")
-r = client.post(
-    "/users/me/cv",
-    json={"cv_raw_text": "Built a real-time chat app with WebSockets and Redis. Led a 3-person team."},
-    headers=headers,
-)
+with patch(
+    "app.agents.graph.cv_parsing.call_with_tool",
+    return_value={"tool_name": "classify_document", "input": {"is_cv": True, "reason": ""}},
+):
+    r = client.post(
+        "/users/me/cv",
+        json={"cv_raw_text": "Built a real-time chat app with WebSockets and Redis. Led a 3-person team."},
+        headers=headers,
+    )
 check("CV saved before assigning a task", r.status_code == 200)
 
 captured_manager_prompt = {}

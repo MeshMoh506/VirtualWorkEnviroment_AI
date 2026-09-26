@@ -165,6 +165,16 @@ def signup(email, lang=None):
 
 CV = b"Built a Flask app with basic auth and Docker."
 
+# Every /onboarding/cv call below also triggers cv_parsing.validate_is_cv
+# (a separate, unrelated call_with_tool call — not the LangChain graph
+# model these tests otherwise script). Patched once, for the rest of this
+# file: none of what follows is testing CV-content validation itself
+# (that's smoke_test_cv_validation.py), so it should always just pass.
+patch(
+    "app.agents.graph.cv_parsing.call_with_tool",
+    return_value={"tool_name": "classify_document", "input": {"is_cv": True, "reason": ""}},
+).start()
+
 
 def with_model(models):
     return patch("app.agents.graph.onboarding_graph.small_model_chain", return_value=models)
