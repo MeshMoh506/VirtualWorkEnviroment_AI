@@ -77,7 +77,7 @@ with patch(
 
     r = client.get("/onboarding/catalog")
     check("catalog -> 200, no auth required", r.status_code == 200)
-    check("catalog has all 4 seeded agents", len(r.json()) == 4)
+    check("catalog has all 7 seeded agents", len(r.json()) == 7)
     check("catalog entries have id/name/description", all(set(a) == {"id", "name", "description"} for a in r.json()))
 
     # --- step 1: upload a CV file (plain text — extract_cv_text falls

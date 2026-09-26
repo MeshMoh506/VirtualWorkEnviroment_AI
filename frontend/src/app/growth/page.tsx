@@ -16,8 +16,9 @@ import { ApiError } from "@/lib/api";
 import { fetchEmployeeFile, type EmployeeFile } from "@/lib/employee-file";
 import { api } from "@/lib/api";
 import { averageScore, fetchMyReviews, type Review } from "@/lib/reviews";
+import { fetchMyExtraAgents, type ExtraAgent } from "@/lib/team";
 import { timeAgo } from "@/lib/format";
-import { useAgents, useLocale } from "@/lib/i18n/locale";
+import { resolveAgentDisplay, useAgents, useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
 
@@ -48,19 +49,27 @@ function ChartTooltip({
 export default function GrowthPage() {
   const { user, loading: authLoading } = useRequireAuth();
   const { t } = useLocale();
-  const { hr } = useAgents();
+  const agents = useAgents();
+  const { hr } = agents;
 
   const [employeeFile, setEmployeeFile] = useState<EmployeeFile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [extraAgents, setExtraAgents] = useState<ExtraAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rollingUp, setRollingUp] = useState(false);
+  const [checkingIn, setCheckingIn] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
-      const [ef, rv] = await Promise.all([fetchEmployeeFile(), fetchMyReviews()]);
+      const [ef, rv, extras] = await Promise.all([
+        fetchEmployeeFile(),
+        fetchMyReviews(),
+        fetchMyExtraAgents(),
+      ]);
       setEmployeeFile(ef);
       setReviews(rv);
+      setExtraAgents(extras);
       setError(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("growth.loadError"));
@@ -90,7 +99,24 @@ export default function GrowthPage() {
     }
   }
 
+  async function handleCareerCheckin() {
+    setCheckingIn(true);
+    setError(null);
+    try {
+      await api.agents.careerCoachCheckin();
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("growth.careerCheckinError"));
+    } finally {
+      setCheckingIn(false);
+    }
+  }
+
+  const hasCareerCoach = extraAgents.some((a) => a.id === "career_coach");
   const mentorReviews = reviews.filter((r) => r.agentType === "mentor" && r.taskId);
+  const careerCheckin = reviews
+    .filter((r) => r.kind === "career_checkin" && r.careerCheckin)
+    .slice(-1)[0];
   const chartData = mentorReviews.map((r) => ({
     label: r.content.slice(0, 24),
     score: Number(averageScore(r).toFixed(2)),
@@ -117,6 +143,16 @@ export default function GrowthPage() {
           <h1 className="mt-1 text-lg font-medium text-text-primary">{t("nav.growthTitle")}</h1>
         </div>
         <div className="flex items-center gap-3">
+          {hasCareerCoach && (
+            <button
+              type="button"
+              onClick={handleCareerCheckin}
+              disabled={checkingIn}
+              className="rounded border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {checkingIn ? t("growth.careerCheckinUpdating") : t("growth.askCareerCheckin")}
+            </button>
+          )}
           <button
             type="button"
             onClick={handleAskHr}
@@ -195,6 +231,44 @@ export default function GrowthPage() {
                   </div>
                 </div>
               </>
+            )}
+
+            {careerCheckin?.careerCheckin && (
+              <div className="mt-8 rounded border border-border bg-bg-surface p-5">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={
+                      resolveAgentDisplay("career_coach", agents, extraAgents).colorVar
+                        ? {
+                            backgroundColor: `var(${resolveAgentDisplay("career_coach", agents, extraAgents).colorVar})`,
+                          }
+                        : { backgroundColor: "var(--text-muted)" }
+                    }
+                  />
+                  <span className="font-mono text-[11px] text-text-muted">
+                    {t("growth.careerCheckinEyebrow")}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+                  {careerCheckin.content}
+                </p>
+                <p className="mt-4 font-mono text-[11px] text-text-muted">
+                  {t("growth.resumeHighlights")}
+                </p>
+                <ul className="mt-2 flex flex-col gap-2">
+                  {careerCheckin.careerCheckin.resumeHighlights.map((item) => (
+                    <li key={item} className="flex gap-2 text-sm text-text-secondary">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-4 text-sm text-text-secondary">
+                  <span className="font-medium text-text-primary">{t("growth.suggestedFocus")}: </span>
+                  {careerCheckin.careerCheckin.suggestedFocus}
+                </p>
+              </div>
             )}
 
             {mentorReviews.length > 0 && (

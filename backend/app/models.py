@@ -53,6 +53,17 @@ class AgentType(str, enum.Enum):
     DATA_REVIEWER = "data_reviewer"
     CAREER_COACH = "career_coach"
     DEVOPS = "devops"
+    # The ten-agent pass (docs/TEN_AGENTS.md): three more optional agents,
+    # rounding out a realistic team roster without overlapping Manager's
+    # (big-picture) or Mentor's (code review) jobs. QA_ENGINEER and
+    # UX_REVIEWER join the roundtable/task-chat technical specialists
+    # (roundtable.py's ROUNDTABLE_AGENTS, task_chat.py's TASK_CHAT_AGENTS);
+    # TECHNICAL_WRITER stays chat-only, like CAREER_COACH, since
+    # documentation feedback isn't a "help me while I'm working" or
+    # "review this submission" concern the way testing/design are.
+    QA_ENGINEER = "qa_engineer"
+    UX_REVIEWER = "ux_reviewer"
+    TECHNICAL_WRITER = "technical_writer"
 
 
 class OnboardingStage(str, enum.Enum):
@@ -98,13 +109,14 @@ class WeekStatus(str, enum.Enum):
 
 
 class ReviewKind(str, enum.Enum):
-    """Distinguishes the four review shapes that now share the `reviews`
+    """Distinguishes the five review shapes that now share the `reviews`
     table — see STAGE1_PRODUCT_FLOW.md's end-of-week cascade. Each kind's
     metrics_json contract is documented at its creation site."""
     TASK_REVIEW = "task_review"        # Mentor, per submitted subtask (existing)
     WEEK_PROGRESS = "week_progress"    # Manager, end-of-week progress review
     BEHAVIORAL = "behavioral"          # HR, end-of-week attendance/consistency eval
     SKILLS_ROLLUP = "skills_rollup"    # HR, periodic Employee File rollup (existing)
+    CAREER_CHECKIN = "career_checkin"  # Career Coach, on-demand — see app/agents/career_coach.py
 
 
 class AccountType(str, enum.Enum):

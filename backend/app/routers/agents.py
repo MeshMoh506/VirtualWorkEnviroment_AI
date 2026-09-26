@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
-from app.agents import orchestrator, task_chat
+from app.agents import meeting, orchestrator, task_chat
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import Task, TaskStatus, User
+from app.models import AgentType, Task, TaskStatus, User
 from app.schemas import ReviewOut, TaskChatRequest, TaskMessageOut, TaskOut
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -111,5 +111,24 @@ def hr_rollup(
     """
     try:
         return orchestrator.hr_rollup(db, current_user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/career-coach/checkin", response_model=ReviewOut, status_code=201)
+def career_coach_checkin(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """
+    The Career Coach's one dedicated action beyond chat (docs/
+    TEN_AGENTS.md): reads the Employee File and CV, writes a career
+    check-in — real resume bullets and one thing to focus on next — as a
+    standalone Review. Requires Career Coach to actually be on the
+    graduate's roster (they added it during onboarding, or later).
+    """
+    if not meeting.is_on_users_team(db, current_user, AgentType.CAREER_COACH):
+        raise HTTPException(status_code=403, detail="Career Coach isn't on your team yet.")
+    try:
+        return orchestrator.career_coach_checkin(db, current_user)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

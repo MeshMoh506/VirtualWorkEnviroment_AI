@@ -9,7 +9,7 @@ track") live here, not in the router or in an individual agent module.
 """
 from sqlalchemy.orm import Session
 
-from app.agents import hr, manager, mentor, roundtable, task_chat, weekly_cycle
+from app.agents import career_coach, hr, manager, mentor, roundtable, task_chat, weekly_cycle
 from app.models import AgentType, Review, Task, TaskMessage, User
 
 
@@ -72,3 +72,7 @@ def start_roundtable(db: Session, task: Task, user: User, background) -> bool:
 
 def hr_rollup(db: Session, user: User) -> Review:
     return hr.run_rollup(db, user)
+
+
+def career_coach_checkin(db: Session, user: User) -> Review:
+    return career_coach.run_checkin(db, user)

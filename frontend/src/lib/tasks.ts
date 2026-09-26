@@ -4,16 +4,19 @@ import type { AgentId } from "./agents";
 /** Agents a graduate can address directly in a task's thread — mirrors
  * the backend's agents/task_chat.py TASK_CHAT_AGENTS exactly. Mentor is
  * the default (day-to-day task work); Manager only handles the big
- * picture; the three technical roster agents can weigh in on a task
- * directly if the graduate has added them. HR and Career Coach are
- * deliberately not here — task-level chat isn't their job (see
- * docs/TASK_CHAT.md) — they're still reachable in the Meeting Room. */
+ * picture; the five technical roster agents can weigh in on a task
+ * directly if the graduate has added them. HR, Career Coach, and
+ * Technical Writer are deliberately not here — task-level chat isn't
+ * their job (see docs/TASK_CHAT.md, docs/TEN_AGENTS.md) — they're still
+ * reachable in the Meeting Room. */
 export const TASK_CHAT_AGENTS: ApiAgentType[] = [
   "mentor",
   "manager",
   "security_reviewer",
   "data_reviewer",
   "devops",
+  "qa_engineer",
+  "ux_reviewer",
 ];
 export const DEFAULT_TASK_CHAT_AGENT: ApiAgentType = "mentor";
 

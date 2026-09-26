@@ -9,12 +9,14 @@ and redirects hands-on asks back to the Mentor
 (guardrails.MANAGER_DELEGATES_TASK_WORK) rather than answering them.
 
 A graduate can also address a task directly to any *technical* agent on
-their own roster — Security Reviewer, Data Reviewer, DevOps — e.g. "is
-this deployment config safe?" straight to DevOps, without waiting for a
-formal roundtable after submission. HR and Career Coach are deliberately
-not available here: HR's job is periodic/behavioral, not task-level, and
-Career Coach is about career topics, not the task at hand — both stay
-reachable in the Meeting Room and the Team Room instead.
+their own roster — Security Reviewer, Data Reviewer, DevOps, QA
+Engineer, UX Reviewer — e.g. "is this deployment config safe?" straight
+to DevOps, without waiting for a formal roundtable after submission. HR,
+Career Coach, and Technical Writer are deliberately not available here:
+HR's job is periodic/behavioral, Career Coach is about career topics,
+and Technical Writer is a review-time concern, not a "help me while I'm
+working" one — all three stay reachable in the Meeting Room and the
+Team Room instead.
 """
 from sqlalchemy.orm import Session
 
@@ -34,6 +36,8 @@ TASK_CHAT_AGENTS = {
     AgentType.SECURITY_REVIEWER,
     AgentType.DATA_REVIEWER,
     AgentType.DEVOPS,
+    AgentType.QA_ENGINEER,
+    AgentType.UX_REVIEWER,
 }
 
 DEFAULT_TASK_CHAT_AGENT = AgentType.MENTOR

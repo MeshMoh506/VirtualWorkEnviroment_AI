@@ -47,6 +47,8 @@ ROUNDTABLE_AGENTS = {
     AgentType.SECURITY_REVIEWER,
     AgentType.DATA_REVIEWER,
     AgentType.DEVOPS,
+    AgentType.QA_ENGINEER,
+    AgentType.UX_REVIEWER,
 }
 
 _SPECIALIST_FRAMING = (
