@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { GraduationCap, Building2 } from "lucide-react";
 import { AGENT_ORDER } from "@/lib/agents";
 import { useAgents, useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -114,6 +115,64 @@ export default function Home() {
                 </motion.div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* ---- two tracks: graduates and companies ---- */}
+      <section className="flex min-h-dvh snap-start flex-col justify-center px-6 py-16">
+        <div className="mx-auto w-full max-w-5xl">
+          <motion.div {...fadeUp}>
+            <p className="font-mono text-[11px] text-text-muted">{t("landing.tracksEyebrow")}</p>
+            <h2 className="mt-2 text-3xl font-medium text-text-primary">
+              {t("landing.tracksTitle")}
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-secondary">
+              {t("landing.tracksBody")}
+            </p>
+          </motion.div>
+
+          <div className="mt-10 grid gap-6 sm:grid-cols-2">
+            <motion.div
+              {...fadeUp}
+              className="relative flex flex-col overflow-hidden rounded border border-border bg-bg-surface p-6"
+            >
+              <span className="absolute inset-x-0 top-0 h-[3px] bg-accent" />
+              <GraduationCap className="h-6 w-6 text-accent-ink" strokeWidth={1.75} />
+              <h3 className="mt-4 text-xl font-medium text-text-primary">
+                {t("landing.tracksStudentTitle")}
+              </h3>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-text-secondary">
+                {t("landing.tracksStudentBody")}
+              </p>
+              <Link
+                href="/login"
+                className="mt-6 self-start rounded border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong"
+              >
+                {t("landing.tracksStudentCta")}
+              </Link>
+            </motion.div>
+
+            <motion.div
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: 0.1 }}
+              className="relative flex flex-col overflow-hidden rounded border border-border bg-bg-surface p-6"
+            >
+              <span className="absolute inset-x-0 top-0 h-[3px] bg-accent" />
+              <Building2 className="h-6 w-6 text-accent-ink" strokeWidth={1.75} />
+              <h3 className="mt-4 text-xl font-medium text-text-primary">
+                {t("landing.tracksCompanyTitle")}
+              </h3>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-text-secondary">
+                {t("landing.tracksCompanyBody")}
+              </p>
+              <Link
+                href="/company/register"
+                className="mt-6 self-start rounded border border-border px-5 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+              >
+                {t("landing.tracksCompanyCta")}
+              </Link>
+            </motion.div>
           </div>
         </div>
       </section>
