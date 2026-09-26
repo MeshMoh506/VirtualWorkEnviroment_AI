@@ -298,6 +298,7 @@ const en = {
     loadingWorkspace: "Loading your workspace...",
     yourTeam: "your_team",
     entryPoint: "entry point",
+    accountMenu: "Account menu",
     employeeFileNodeTagline: "Shared by all three agents \u2014 one record, not three separate memories.",
   },
   focusHero: {
