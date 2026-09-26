@@ -1,0 +1,26 @@
+{
+  "language": "en",
+  "steps": [
+    {
+      "step": "register + login",
+      "status": "OK",
+      "seconds": 0.8,
+      "note": ""
+    },
+    {
+      "step": "onboarding: CV -> questions",
+      "status": "FAIL",
+      "seconds": 4.2,
+      "note": "expected 1-4 questions, got 5"
+    }
+  ],
+  "plan": null,
+  "reviews": [],
+  "review_timings": null,
+  "llm_calls_by_provider": {
+    "deepseek": 1
+  },
+  "failovers": 1,
+  "repairs": [],
+  "malformed": []
+}
