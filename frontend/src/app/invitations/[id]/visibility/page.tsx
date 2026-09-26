@@ -3,6 +3,18 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ShieldCheck,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  Activity,
+  AlertCircle,
+  FileCheck2,
+  Briefcase,
+} from "lucide-react";
 import { useRequireAuth, ApiError } from "@/lib/auth-context";
 import { fetchMyVisibility } from "@/lib/invitations";
 import type { CompanyStudentDetail } from "@/lib/company";
@@ -18,7 +30,7 @@ import { LocaleToggle } from "@/components/locale-toggle";
 export default function MyVisibilityPage() {
   const { user, loading: authLoading } = useRequireAuth();
   const params = useParams<{ id: string }>();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
 
   const [detail, setDetail] = useState<CompanyStudentDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,97 +40,241 @@ export default function MyVisibilityPage() {
     if (!user) return;
     fetchMyVisibility(params.id)
       .then(setDetail)
-      .catch((err) => setError(err instanceof ApiError ? err.message : t("common.genericError")))
+      .catch((err) =>
+        setError(
+          err instanceof ApiError ? err.message : t("common.genericError"),
+        ),
+      )
       .finally(() => setLoading(false));
   }, [user, params.id, t]);
 
+  const BackArrow = locale === "ar" ? ArrowRight : ArrowLeft;
+
   if (authLoading || !user || loading) {
     return (
-      <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-text-muted">{t("common.loading")}</p>
+      <main className="flex min-h-screen flex-1 items-center justify-center bg-bg-base text-text-primary">
+        <div className="flex items-center gap-2 rounded border border-border bg-bg-surface px-4 py-3 font-mono text-xs text-text-muted">
+          <span className="h-2 w-2 animate-ping rounded-full bg-accent" />
+          <span>{t("common.loading")}</span>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="grid h-dvh grid-rows-[auto_1fr]">
-      <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <div>
-          <Link href="/invitations" className="font-mono text-xs text-text-muted hover:text-text-secondary">
-            {t("common.venv")} / {t("invitations.title")}
+    <main className="grid h-dvh grid-rows-[auto_1fr] bg-bg-base text-text-primary selection:bg-accent selection:text-accent-text">
+      {/* Top Architecture Navigation Bar */}
+      <header className="z-20 flex h-14 items-center justify-between border-b border-border bg-bg-surface/90 px-6 backdrop-blur-md">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/invitations"
+            className="group flex items-center gap-2 font-mono text-xs text-text-muted transition-colors hover:text-text-primary"
+          >
+            <BackArrow className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 rtl:group-hover:translate-x-0.5" />
+            <span>{t("common.venv")}</span>
+            <span className="text-border-strong">/</span>
+            <span>{t("invitations.title")}</span>
+            <span className="text-border-strong">/</span>
+            <span className="text-[10px] text-text-muted transition-colors group-hover:text-text-secondary">
+              DATA_VISIBILITY
+            </span>
           </Link>
-          <h1 className="mt-1 text-lg font-medium text-text-primary">{t("invitations.visibilityTitle")}</h1>
-          {detail && (
-            <p className="mt-0.5 text-sm text-text-secondary">
-              {detail.jobTitle}
-              {detail.companyProjectTitle ? ` · ${detail.companyProjectTitle}` : ""}
-            </p>
-          )}
+
+          <div className="hidden items-center gap-2 border-s border-border ps-4 sm:flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+            <h1 className="font-mono text-xs font-medium uppercase tracking-wider text-text-primary">
+              {t("invitations.visibilityTitle")}
+            </h1>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Global Toolbar */}
+        <div className="flex items-center gap-2">
           <Link
             href="/board"
-            className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+            className="inline-flex h-8 items-center gap-1.5 rounded border border-border bg-bg-base px-3 font-mono text-xs text-text-secondary transition-colors hover:border-border-strong hover:bg-bg-surface hover:text-text-primary"
           >
-            {t("nav.homeBoardTitle")}
+            <Briefcase className="h-3.5 w-3.5" />
+            <span>{t("nav.homeBoardTitle")}</span>
           </Link>
-          <LocaleToggle />
-          <ThemeToggle />
+
+          <div className="mx-1 h-4 border-s border-border" />
+
+          <LocaleToggle className="bg-bg-base" />
+          <ThemeToggle className="bg-bg-base" />
         </div>
       </header>
 
+      {/* Main Stream Area */}
       <div className="thin-scrollbar overflow-y-auto">
-        <div className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-8">
-          <p className="rounded border border-border bg-bg-surface-raised px-4 py-3 text-sm text-text-secondary">
-            {t("invitations.visibilityIntro")}
-          </p>
+        <div className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
+          {/* Header Metadata Capsule */}
+          {detail && (
+            <div className="relative rounded border border-border bg-bg-surface p-5 sm:p-6">
+              <span className="absolute inset-x-0 top-0 h-[2px] bg-accent" />
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-accent-ink" />
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                    ORGANIZATION // VISIBILITY_MIRROR
+                  </span>
+                </div>
+                <span className="font-mono text-[10px] text-text-muted">
+                  ACCESS_MODE: LIVE_READONLY
+                </span>
+              </div>
 
-          {error && <p className="text-sm text-danger">{error}</p>}
-
-          {detail && detail.weeks.length === 0 && (
-            <p className="text-sm text-text-muted">{t("company.notStartedYet")}</p>
+              <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2">
+                <div>
+                  <h2 className="text-xl font-medium text-text-primary">
+                    {detail.jobTitle}
+                  </h2>
+                  {detail.companyProjectTitle && (
+                    <p className="mt-1 font-mono text-xs text-text-secondary">
+                      PROJECT: {detail.companyProjectTitle}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
 
+          {/* Transparency Protocol Callout */}
+          <div className="flex items-start gap-3 rounded border border-border bg-bg-surface-raised/40 p-4">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" />
+            <p className="text-xs leading-relaxed text-text-secondary">
+              {t("invitations.visibilityIntro")}
+            </p>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 rounded border border-danger/30 bg-danger/10 p-3 font-mono text-xs text-danger">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {detail && detail.weeks.length === 0 && (
+            <div className="rounded border border-dashed border-border bg-bg-surface/50 p-8 text-center">
+              <Calendar className="mx-auto h-6 w-6 text-text-muted" />
+              <p className="mt-2 text-xs text-text-muted">
+                {t("company.notStartedYet")}
+              </p>
+            </div>
+          )}
+
+          {/* Week Cadence Feed */}
           {detail?.weeks
             .slice()
             .reverse()
             .map((week) => (
-              <div key={week.weekNumber} className="rounded border border-border bg-bg-surface p-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base font-medium text-text-primary">
-                    {t("company.weekLabel", { number: String(week.weekNumber) })}
-                  </h2>
-                  <span className="font-mono text-[10px] text-text-muted">
-                    {week.status === "active" ? t("company.weekActive") : t("company.weekCompleted")}
+              <div
+                key={week.weekNumber}
+                className="relative rounded border border-border bg-bg-surface p-6"
+              >
+                {/* Corner Marks */}
+                <div className="pointer-events-none absolute -start-[5px] -top-[5px] font-mono text-xs leading-none text-text-muted">
+                  +
+                </div>
+                <div className="pointer-events-none absolute -end-[5px] -top-[5px] font-mono text-xs leading-none text-text-muted">
+                  +
+                </div>
+                <div className="pointer-events-none absolute -bottom-[5px] -start-[5px] font-mono text-xs leading-none text-text-muted">
+                  +
+                </div>
+                <div className="pointer-events-none absolute -bottom-[5px] -end-[5px] font-mono text-xs leading-none text-text-muted">
+                  +
+                </div>
+
+                {/* Week Header */}
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-semibold uppercase text-text-primary">
+                      {t("company.weekLabel", {
+                        number: String(week.weekNumber),
+                      })}
+                    </span>
+                  </div>
+
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 font-mono text-[10px] ${
+                      week.status === "active"
+                        ? "border-accent/40 bg-accent/10 text-accent-ink"
+                        : "border-border bg-bg-base text-text-muted"
+                    }`}
+                  >
+                    {week.status === "active" ? (
+                      <Activity className="h-2.5 w-2.5" />
+                    ) : (
+                      <CheckCircle2 className="h-2.5 w-2.5 text-agent-mentor" />
+                    )}
+                    <span>
+                      {week.status === "active"
+                        ? t("company.weekActive")
+                        : t("company.weekCompleted")}
+                    </span>
                   </span>
                 </div>
 
-                <div className="mt-3 flex flex-col gap-1.5">
+                {/* Task Item Logs */}
+                <div className="mt-4 flex flex-col gap-2">
+                  <span className="font-mono text-[10px] uppercase text-text-muted">
+                    SUBTASK_PIPELINE:
+                  </span>
                   {week.tasks.map((task) => (
                     <div
                       key={task.id}
-                      className="flex items-center justify-between rounded border border-border bg-bg-surface-raised px-3 py-2"
+                      className="flex items-center justify-between rounded border border-border bg-bg-surface-raised px-3.5 py-2.5 transition-colors hover:border-border-strong"
                     >
-                      <p className="text-sm text-text-primary">{task.title}</p>
-                      <span className="font-mono text-[10px] text-text-muted">{task.status}</span>
+                      <p className="text-xs font-medium text-text-primary">
+                        {task.title}
+                      </p>
+                      <span className="rounded border border-border bg-bg-base px-2 py-0.5 font-mono text-[9px] uppercase text-text-muted">
+                        {task.status}
+                      </span>
                     </div>
                   ))}
                 </div>
 
+                {/* Reviews Stream */}
                 {week.reviews.length > 0 && (
-                  <div className="mt-3 flex flex-col gap-2">
+                  <div className="mt-5 flex flex-col gap-2.5 border-t border-border/60 pt-4">
+                    <span className="font-mono text-[10px] uppercase text-text-muted">
+                      EVALUATION_SYNTHESIS:
+                    </span>
                     {week.reviews.map((review) => (
-                      <div key={review.id} className="rounded border border-border/60 bg-bg-surface-raised px-3 py-2">
-                        <p className="font-mono text-[10px] uppercase tracking-wide text-text-muted">
-                          {review.kind === "week_progress" ? t("company.weekProgressReview") : t("company.behavioralReview")}
+                      <div
+                        key={review.id}
+                        className="rounded border border-border bg-bg-surface-raised/70 p-3.5 border-s-2 border-s-accent"
+                      >
+                        <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase text-text-muted">
+                          <FileCheck2 className="h-3 w-3 text-accent-ink" />
+                          <span>
+                            {review.kind === "week_progress"
+                              ? t("company.weekProgressReview")
+                              : t("company.behavioralReview")}
+                          </span>
+                        </div>
+                        <p className="mt-1.5 text-xs leading-relaxed text-text-secondary">
+                          {review.content}
                         </p>
-                        <p className="mt-1 text-sm text-text-primary">{review.content}</p>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
             ))}
+
+          {/* Footer Back Link */}
+          <div className="border-t border-border pt-4">
+            <Link
+              href="/invitations"
+              className="group inline-flex items-center gap-1.5 font-mono text-xs text-text-muted transition-colors hover:text-text-primary"
+            >
+              <BackArrow className="h-3 w-3 transition-transform group-hover:-translate-x-0.5 rtl:group-hover:translate-x-0.5" />
+              <span>{t("invitations.title")}</span>
+            </Link>
+          </div>
         </div>
       </div>
     </main>

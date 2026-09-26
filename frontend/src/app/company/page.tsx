@@ -2,8 +2,25 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  Building2,
+  Users,
+  Copy,
+  Check,
+  Plus,
+  ArrowUpRight,
+  Briefcase,
+  AlertCircle,
+  FileCode2,
+} from "lucide-react";
 import { useRequireAuth, ApiError } from "@/lib/auth-context";
-import { createJobTitle, fetchJobTitles, fetchMyCompany, type JobTitle, type Organization } from "@/lib/company";
+import {
+  createJobTitle,
+  fetchJobTitles,
+  fetchMyCompany,
+  type JobTitle,
+  type Organization,
+} from "@/lib/company";
 import { useLocale } from "@/lib/i18n/locale";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleToggle } from "@/components/locale-toggle";
@@ -35,7 +52,11 @@ export default function CompanyDashboardPage() {
         setJobTitles(jts);
         setError(null);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : t("common.genericError")))
+      .catch((err) =>
+        setError(
+          err instanceof ApiError ? err.message : t("common.genericError"),
+        ),
+      )
       .finally(() => setLoading(false));
   }, [user, t]);
 
@@ -45,13 +66,18 @@ export default function CompanyDashboardPage() {
     if (!title) return;
     setCreating(true);
     try {
-      const created = await createJobTitle(title, newDescription.trim() || undefined);
+      const created = await createJobTitle(
+        title,
+        newDescription.trim() || undefined,
+      );
       setJobTitles((prev) => [created, ...prev]);
       setNewTitle("");
       setNewDescription("");
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("company.createError"));
+      setError(
+        err instanceof ApiError ? err.message : t("company.createError"),
+      );
     } finally {
       setCreating(false);
     }
@@ -67,115 +93,247 @@ export default function CompanyDashboardPage() {
 
   if (authLoading || !user || loading) {
     return (
-      <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-text-muted">{t("common.loading")}</p>
+      <main className="flex min-h-screen flex-1 items-center justify-center bg-bg-base text-text-primary">
+        <div className="flex items-center gap-2 rounded border border-border bg-bg-surface px-4 py-3 font-mono text-xs text-text-muted">
+          <span className="h-2 w-2 animate-ping rounded-full bg-accent" />
+          <span>{t("common.loading")}</span>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="grid h-dvh grid-rows-[auto_1fr]">
-      <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <div>
-          <p className="font-mono text-xs text-text-muted">{t("common.venv")} / {t("company.nav")}</p>
-          <h1 className="mt-1 text-lg font-medium text-text-primary">{org?.name}</h1>
+    <main className="grid h-dvh grid-rows-[auto_1fr] bg-bg-base text-text-primary selection:bg-accent selection:text-accent-text">
+      {/* Top Architecture Navigation Bar */}
+      <header className="z-20 flex h-14 items-center justify-between border-b border-border bg-bg-surface/90 px-6 backdrop-blur-md">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 font-mono text-xs text-text-muted">
+            <Building2 className="h-3.5 w-3.5 text-accent-ink" />
+            <span className="font-semibold text-text-primary">
+              {t("common.venv")}
+            </span>
+            <span className="text-border-strong">/</span>
+            <span>{t("company.nav")}</span>
+            <span className="text-border-strong">/</span>
+            <span className="text-[10px] text-text-muted">{org?.name}</span>
+          </div>
+
+          <div className="hidden items-center gap-2 border-s border-border ps-4 sm:flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+            <h1 className="font-mono text-xs font-medium uppercase tracking-wider text-text-primary">
+              {org?.name}
+            </h1>
+          </div>
         </div>
+
+        {/* Global Toolbar */}
         <div className="flex items-center gap-3">
           <Link
             href="/company/students"
-            className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+            className="inline-flex h-8 items-center gap-1.5 rounded border border-border bg-bg-base px-3 font-mono text-xs text-text-secondary transition-colors hover:border-border-strong hover:bg-bg-surface hover:text-text-primary"
           >
-            {t("company.studentsTitle")}
+            <Users className="h-3.5 w-3.5" />
+            <span>{t("company.studentsTitle")}</span>
           </Link>
+
+          <div className="mx-1 h-4 border-s border-border" />
+
           <AccountMenu email={user.email} />
-          <LocaleToggle />
-          <ThemeToggle />
+          <LocaleToggle className="bg-bg-base" />
+          <ThemeToggle className="bg-bg-base" />
         </div>
       </header>
 
+      {/* Main Viewport Content */}
       <div className="thin-scrollbar overflow-y-auto">
-        <div className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
-          {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
+          {error && (
+            <div className="flex items-center gap-2 rounded border border-danger/30 bg-danger/10 p-3 font-mono text-xs text-danger">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-          {/* Org card: field + join code for teammates */}
-          <div className="rounded border border-border bg-bg-surface p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                {org?.field && (
-                  <p className="text-sm text-text-secondary">{org.field}</p>
-                )}
-                <p className="mt-1 font-mono text-xs text-text-muted">
-                  {t("company.role")}: {user.companyRole}
-                </p>
+          {/* ORGANIZATION SPECIFICATION CARD */}
+          <div className="relative rounded border border-border bg-bg-surface p-6 sm:p-7">
+            {/* Technical Corner Markers */}
+            <div className="pointer-events-none absolute -start-[5px] -top-[5px] font-mono text-xs leading-none text-text-muted">
+              +
+            </div>
+            <div className="pointer-events-none absolute -end-[5px] -top-[5px] font-mono text-xs leading-none text-text-muted">
+              +
+            </div>
+            <div className="pointer-events-none absolute -bottom-[5px] -start-[5px] font-mono text-xs leading-none text-text-muted">
+              +
+            </div>
+            <div className="pointer-events-none absolute -bottom-[5px] -end-[5px] font-mono text-xs leading-none text-text-muted">
+              +
+            </div>
+
+            <span className="absolute inset-x-0 top-0 h-[2px] bg-accent" />
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-accent-ink" />
+                <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                  ORGANIZATION_METADATA // ROOT_ADMIN
+                </span>
               </div>
-              <div className="text-end">
-                <p className="font-mono text-[10px] uppercase tracking-wide text-text-muted">
+              <span className="rounded border border-border bg-bg-base px-2 py-0.5 font-mono text-[10px] text-text-muted">
+                {t("company.role")}: {user.companyRole}
+              </span>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-medium tracking-tight text-text-primary">
+                  {org?.name}
+                </h2>
+                {org?.field && (
+                  <p className="mt-1 font-mono text-xs text-text-secondary">
+                    SECTOR // {org.field}
+                  </p>
+                )}
+              </div>
+
+              {/* Join Code Chip */}
+              <div className="flex flex-col items-start gap-1 sm:items-end">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
                   {t("company.joinCodeLabel")}
-                </p>
+                </span>
                 <button
                   type="button"
                   onClick={copyJoinCode}
                   dir="ltr"
-                  className="mt-1 rounded border border-border bg-bg-surface-raised px-3 py-1.5 font-mono text-sm text-text-primary transition-colors hover:border-border-strong"
+                  className="group inline-flex items-center gap-2 rounded border border-border bg-bg-surface-raised px-3.5 py-1.5 font-mono text-xs font-medium text-text-primary transition-colors hover:border-border-strong"
                 >
-                  {org?.joinCode} {copied ? `— ${t("company.copied")}` : ""}
+                  <span className="tracking-wider">{org?.joinCode}</span>
+                  {copied ? (
+                    <span className="flex items-center gap-1 text-[11px] text-agent-mentor">
+                      <Check className="h-3.5 w-3.5" />
+                      <span>{t("company.copied")}</span>
+                    </span>
+                  ) : (
+                    <Copy className="h-3.5 w-3.5 text-text-muted transition-colors group-hover:text-text-primary" />
+                  )}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* New job title */}
-          <form onSubmit={handleCreate} className="rounded border border-border bg-bg-surface p-5">
-            <h2 className="text-base font-medium text-text-primary">{t("company.newJobTitleTitle")}</h2>
-            <p className="mt-1 text-sm text-text-secondary">{t("company.newJobTitleBody")}</p>
-            <div className="mt-3 flex flex-col gap-2">
-              <input
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder={t("company.jobTitlePlaceholder")}
-                className="rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
-              />
-              <input
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                placeholder={t("company.jobDescriptionPlaceholder")}
-                className="rounded border border-border bg-bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-strong focus:outline-none"
-              />
-              <div>
+          {/* NEW JOB TITLE SPECIFICATION FORM */}
+          <form
+            onSubmit={handleCreate}
+            className="relative rounded border border-border bg-bg-surface p-6 sm:p-7"
+          >
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                ROSTER_CONFIGURATION // ADD_POSITION
+              </span>
+              <span className="font-mono text-[10px] text-text-muted">
+                RAG_CONTEXT_READY
+              </span>
+            </div>
+
+            <div className="mt-4">
+              <h2 className="text-base font-medium text-text-primary">
+                {t("company.newJobTitleTitle")}
+              </h2>
+              <p className="mt-1 text-xs leading-relaxed text-text-secondary">
+                {t("company.newJobTitleBody")}
+              </p>
+            </div>
+
+            <div className="mt-5 flex flex-col gap-3.5 border-t border-border/60 pt-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="font-mono text-[11px] text-text-muted">
+                  POSITION_TITLE:
+                </label>
+                <input
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder={t("company.jobTitlePlaceholder")}
+                  className="h-9 rounded border border-border bg-bg-surface-raised px-3 text-xs text-text-primary placeholder:text-text-muted transition-colors focus:border-accent focus:outline-none"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="font-mono text-[11px] text-text-muted">
+                  POSITION_DESCRIPTION:
+                </label>
+                <input
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder={t("company.jobDescriptionPlaceholder")}
+                  className="h-9 rounded border border-border bg-bg-surface-raised px-3 text-xs text-text-primary placeholder:text-text-muted transition-colors focus:border-accent focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={creating || !newTitle.trim()}
-                  className="rounded border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-9 items-center gap-1.5 rounded border border-accent bg-accent px-5 font-mono text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {creating ? t("common.working") : t("company.addJobTitle")}
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>
+                    {creating ? t("common.working") : t("company.addJobTitle")}
+                  </span>
                 </button>
               </div>
             </div>
           </form>
 
-          {/* Job titles list */}
-          <div className="flex flex-col gap-2">
-            <h2 className="text-base font-medium text-text-primary">{t("company.jobTitlesTitle")}</h2>
+          {/* JOB TITLES DIRECTORY */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                {t("company.jobTitlesTitle")}
+              </span>
+              <span className="font-mono text-[10px] text-text-muted">
+                COUNT: {jobTitles.length}
+              </span>
+            </div>
+
             {jobTitles.length === 0 ? (
-              <p className="text-sm text-text-muted">{t("company.noJobTitles")}</p>
+              <div className="rounded border border-dashed border-border bg-bg-surface/50 p-8 text-center font-mono text-xs text-text-muted">
+                {t("company.noJobTitles")}
+              </div>
             ) : (
-              jobTitles.map((jt) => (
-                <Link
-                  key={jt.id}
-                  href={`/company/job-titles/${jt.id}`}
-                  className="flex items-center justify-between rounded border border-border bg-bg-surface px-4 py-3 transition-colors hover:border-border-strong"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{jt.title}</p>
-                    {jt.description && (
-                      <p className="mt-0.5 text-xs text-text-secondary">{jt.description}</p>
-                    )}
-                  </div>
-                  <p className="font-mono text-[11px] text-text-muted">
-                    {t("company.materialsCount", { count: String(jt.materialCount) })}
-                  </p>
-                </Link>
-              ))
+              <div className="flex flex-col gap-2.5">
+                {jobTitles.map((jt) => (
+                  <Link
+                    key={jt.id}
+                    href={`/company/job-titles/${jt.id}`}
+                    className="group relative flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-bg-surface p-4 transition-colors hover:border-border-strong hover:bg-bg-surface-raised"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-bg-base text-accent-ink">
+                        <Briefcase className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-medium text-text-primary group-hover:text-accent-ink transition-colors">
+                            {jt.title}
+                          </p>
+                          <ArrowUpRight className="h-3 w-3 text-text-muted transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                        </div>
+                        {jt.description && (
+                          <p className="mt-1 text-xs text-text-secondary leading-relaxed">
+                            {jt.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded border border-border bg-bg-base/70 px-2.5 py-1 font-mono text-[10px] text-text-muted">
+                      {t("company.materialsCount", {
+                        count: String(jt.materialCount),
+                      })}
+                    </div>
+                  </Link>
+                ))}
+              </div>
             )}
           </div>
         </div>
