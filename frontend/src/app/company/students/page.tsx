@@ -6,8 +6,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Users,
-  Building2,
-  Calendar,
   ArrowUpRight,
   AlertCircle,
   GraduationCap,

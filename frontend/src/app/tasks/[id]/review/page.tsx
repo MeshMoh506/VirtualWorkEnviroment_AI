@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileText,
-  Terminal,
 } from "lucide-react";
 import { useRequireAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";

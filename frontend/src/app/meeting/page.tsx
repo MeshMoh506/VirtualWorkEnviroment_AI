@@ -11,7 +11,6 @@ import {
   AlertCircle,
   Terminal,
   Send,
-  MessageSquare,
 } from "lucide-react";
 import { AGENT_ORDER, type AgentId } from "@/lib/agents";
 import { resolveAgentDisplay, useAgents, useLocale } from "@/lib/i18n/locale";

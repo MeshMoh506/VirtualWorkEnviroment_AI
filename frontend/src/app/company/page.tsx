@@ -11,7 +11,6 @@ import {
   ArrowUpRight,
   Briefcase,
   AlertCircle,
-  FileCode2,
 } from "lucide-react";
 import { useRequireAuth, ApiError } from "@/lib/auth-context";
 import {
