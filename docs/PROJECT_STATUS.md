@@ -1,7 +1,8 @@
 # Project Status — Venv
 
 _Last updated: Sep 2026 — Stage 2 plus a full hardening pass, a
-task-chat/Team Room/settings pass, and now all of Stage 3 (companies)._
+task-chat/Team Room/settings pass, all of Stage 3 (companies), and now
+a full ten-agent roster._
 
 > **One-paragraph summary.** Stage 1 (Manager/Mentor/HR, the weekly cycle, one
 > track) and all of Stage 2 (CV-file intake with agent Q&A, six IT tracks, a
@@ -16,19 +17,27 @@ task-chat/Team Room/settings pass, and now all of Stage 3 (companies)._
 > a task thread (`docs/TASK_CHAT.md`); every agent conversation surface declines
 > off-topic requests (`agents/guardrails.py`); a Team Room gives a shared thread
 > with the whole team (`docs/TEAM_ROOM.md`); a `/settings` page
-> (`docs/SETTINGS_PAGE.md`). **Most recently, all of Stage 3**: company accounts
+> (`docs/SETTINGS_PAGE.md`). Then all of Stage 3: company accounts
 > (free-text job titles, per-rep logins with roles), a real RAG knowledge base
 > (embeddings + cosine-similarity retrieval, no vector DB), a company's own real
 > projects (distinct from a graduate's own project), an invite-with-enforced-
 > consent flow, and a company roster with per-week reports built from the
 > weekly cycle's existing reviews — see `docs/STAGE3_COMPANY_RAG.md` for the
 > full write-up, including the confirmed answers to all four scoping questions
-> that were open before it started. **35 smoke suites, 911 checks, all
-> passing** — and, for the first time this session, genuinely **confirmed on a
-> real PostgreSQL 16 instance**, not just SQLite: doing so surfaced and fixed
-> two real deploy-breaking migration bugs that SQLite's lack of enum
+> that were open before it started. **Most recently: a full ten-agent roster**
+> (`docs/TEN_AGENTS.md`) — three new specialists (QA Engineer, UX Reviewer,
+> Technical Writer) reachable everywhere the existing ones were, and Career
+> Coach's long-standing gap closed with a real dedicated action (a career
+> check-in that writes actual resume bullets, not just another chat reply).
+> **36 smoke suites, 931 checks, all
+> passing** — genuinely **confirmed on a
+> real PostgreSQL 16 instance** through the Stage 3 pass, not just SQLite: doing so
+> surfaced and fixed two real deploy-breaking migration bugs that SQLite's lack of enum
 > enforcement had hidden (see `docs/STAGE3_COMPANY_RAG.md`'s "The PostgreSQL
-> story"). Frontend eslint clean, `next build` passes (20 routes).
+> story") — the ten-agent pass's own migration (0010) applies the same reasoning
+> carefully but is **not yet re-verified against real Postgres**, per the
+> steer to treat local/SQLite as the bar for this round (see `docs/TEN_AGENTS.md`'s
+> "The PostgreSQL story, round two"). Frontend eslint clean, `next build` passes (20 routes).
 > **Nobody has clicked through the app in a browser yet** — see "What's
 > genuinely unverified" below before treating this as demo-ready.
 
@@ -124,6 +133,22 @@ onboarding and the weekly-cycle cascade):
   `smoke_test_student_visibility.py`). Migrations 0007/0008, both
   genuinely verified against a real PostgreSQL 16 instance (see that
   doc's "The PostgreSQL story" for two real bugs this caught and fixed).
+- **Ten agents** (`docs/TEN_AGENTS.md`) — three new specialists (QA
+  Engineer, UX Reviewer, Technical Writer) wired into every surface the
+  existing optional agents already had (Meeting Room, Team Room, and —
+  for QA Engineer/UX Reviewer specifically — task chat and the
+  post-submission roundtable); Technical Writer deliberately stays
+  chat-only, like Career Coach. Career Coach itself gets a real
+  dedicated action for the first time — `app/agents/career_coach.py`'s
+  career check-in, reading the actual Employee File/CV and writing real
+  resume bullets plus one concrete focus area as a proper Review
+  (`ReviewKind.CAREER_CHECKIN`), not another chat reply that evaporates.
+  Migration 0010's genuinely novel piece: the first migration that
+  alters an *existing*, already-populated Postgres enum type
+  (`ALTER TYPE ... ADD VALUE`) rather than creating a fresh one or
+  reusing one unchanged — see that doc's "PostgreSQL story, round two"
+  for why it's safe and for a second, quieter SQLite column-width bug
+  the drift guard caught along the way.
 
 **Frontend** (Next.js + React Flow, dark-by-default "blueprint" design system,
 light theme, Arabic/RTL — `frontend/DESIGN.md`):
@@ -159,6 +184,16 @@ light theme, Arabic/RTL — `frontend/DESIGN.md`):
   same week-by-week data, from the student's side). `/login` now
   branches post-login on account type; `/board` gained an "Invitations"
   nav link with a pending-count badge.
+- **Ten agents** (`docs/TEN_AGENTS.md`): no new pages — the point was that
+  optional agents' names/descriptions have always come from the backend
+  catalog, not `lib/i18n`, so three new agents needed zero new frontend
+  translation strings. `/growth` gained an "Ask Career Coach for a
+  check-in" button (shown only once Career Coach is on the roster) and
+  a real display of the resume highlights/suggested focus it returns.
+  Also fixed a real, pre-existing type-safety gap this surfaced:
+  `lib/reviews.ts`'s `Review.agentType` was typed as only ever being one
+  of the three default agents — true until Career Coach started writing
+  reviews too; widened to the full agent-type union.
 - Verified: eslint clean, full `next build` succeeds (20 routes).
 
 ## What's genuinely unverified
@@ -237,10 +272,15 @@ the big picture, the shared `agents/guardrails.py` role-boundary) ·
 `TEAM_ROOM.md` (one shared thread with the whole team, routed replies) ·
 `SETTINGS_PAGE.md` (`PATCH /users/me`, the new `/settings` page).
 
-**Stage 3 — companies** (most recent): `STAGE3_COMPANY_RAG.md` — company
+**Stage 3 — companies**: `STAGE3_COMPANY_RAG.md` — company
 accounts, the RAG knowledge base, a company's own real projects, the
 invite-with-consent flow, the roster/report view, and the real-Postgres
 bug-hunt that verified all of it.
+
+**Ten agents** (most recent): `TEN_AGENTS.md` — three new specialists
+(QA Engineer, UX Reviewer, Technical Writer), Career Coach's new career-
+checkin action, and the second round of Postgres-enum migration lessons
+(altering an existing, already-populated enum type for the first time).
 
 **Frontend-only work with no dedicated doc** (orientation rework, Arabic i18n,
 light mode — built in a separate pass, documented only in their own PR/commit
@@ -289,7 +329,8 @@ extracted and capped) — that helper was pulled out into
 │   ├── e2e_real_llm.py   real-key end-to-end check (docs above; --help for flags)
 │   └── app/
 │       ├── agents/        Manager/Mentor/HR/Meeting/roundtable/task_bank/rubric/
-│       │                  task_chat/guardrails/tool_output — see app/agents/README.md
+│       │                  task_chat/guardrails/career_coach/tool_output —
+│       │                  see app/agents/README.md
 │       │   └── graph/     LangGraph: onboarding_graph, weekly_cycle_graph,
 │       │                  collaboration, models, catalog, cv_parsing
 │       ├── routers/       onboarding, projects, tasks, meeting, agents, users,
@@ -299,7 +340,7 @@ extracted and capped) — that helper was pulled out into
 │       ├── materials.py   shared upload→text helper (own-project + company projects)
 │       ├── rag.py         chunking + embeddings + cosine-similarity retrieval
 │       └── storage.py     local-disk attachment storage
-│   └── alembic/versions/  0001 baseline … 0008 company projects/invitations
+│   └── alembic/versions/  0001 baseline … 0010 ten agents
 ├── frontend/
 │   └── src/
 │       ├── app/            landing, login, board, orientation, onboarding/cv,
@@ -363,6 +404,17 @@ extracted and capped) — that helper was pulled out into
   codebase's Enum columns store the Python member's **name**
   (`'STUDENT'`), not its `.value` (`'student'`); SQLite won't catch a
   mismatch there, Postgres will refuse it outright.
+- **Adding a value to an existing enum type** (as opposed to creating a
+  fresh one) needs `ALTER TYPE ... ADD VALUE IF NOT EXISTS` — safe on
+  Postgres 12+ inside a normal transaction as long as nothing in the
+  same migration *uses* the new value (see `docs/TEN_AGENTS.md`'s
+  "PostgreSQL story, round two"). Check SQLite too: `sa.Enum` sizes its
+  SQLite `VARCHAR` to the longest member *name* at the column's
+  original creation time, so a new, longer member name can silently
+  leave that column too narrow — a real drift the model-drift guard
+  catches (confirmed the hard way), even though SQLite never enforces
+  the length at the data level. Widen the column explicitly if the new
+  member is longer than every existing one.
 
 ## Reference: full API surface
 
@@ -394,7 +446,9 @@ endpoint at `/docs`.
   `{"agent_type": ...}`, defaults to `mentor` — the endpoint the app itself
   uses now; 403s an agent not available for task chat, `docs/TASK_CHAT.md`),
   `POST /agents/mentor/review/{task_id}` (schedules the roundtable in the
-  background), `POST /agents/hr/rollup`.
+  background), `POST /agents/hr/rollup`, `POST /agents/career-coach/checkin`
+  (docs/TEN_AGENTS.md — Career Coach's one dedicated action; 403 unless
+  Career Coach is on the graduate's roster, 400 with no Employee File yet).
 - **Meeting**: `GET/POST /meeting/{agent}` — any `AgentType`; 403s an optional
   agent the graduate hasn't added. `GET/POST /meeting/team` — the Team Room's
   shared thread, routed to whichever teammate fits (`docs/TEAM_ROOM.md`).
@@ -459,6 +513,7 @@ python smoke_test_company_students.py          # company roster + per-week repor
 python smoke_test_company_roles.py             # company role permissions: invitations ADMIN/HR, projects ADMIN/TECH_LEAD (13)
 python smoke_test_invitation_emails.py         # real invitation emails: graceful degradation + a genuine local SMTP server (15)
 python smoke_test_student_visibility.py        # student's own view matches the company's, byte-for-byte, after a real task cycle (11)
+python smoke_test_ten_agents.py                # catalog, Meeting/task-chat/roundtable eligibility, full career-checkin lifecycle (20)
 ```
 
 If the LLM key is missing, wrong, or out of credit, agent endpoints return a
