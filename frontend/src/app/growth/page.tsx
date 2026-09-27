@@ -159,16 +159,16 @@ export default function GrowthPage() {
   return (
     <main className="min-h-screen bg-bg-base text-text-primary selection:bg-accent selection:text-accent-text">
       {/* Top Architecture Navigation Bar */}
-      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-bg-surface/90 px-6 backdrop-blur-md">
-        <div className="flex items-center gap-4">
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-2 border-b border-border bg-bg-surface/90 px-4 backdrop-blur-md sm:px-6">
+        <div className="flex min-w-0 shrink items-center gap-4">
           <Link
             href="/board"
-            className="group flex items-center gap-2 font-mono text-xs text-text-muted transition-colors hover:text-text-primary"
+            className="group flex shrink-0 items-center gap-2 font-mono text-xs text-text-muted transition-colors hover:text-text-primary"
           >
             <BackArrow className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 rtl:group-hover:translate-x-0.5" />
             <span>{t("nav.venvBoard")}</span>
-            <span className="text-border-strong">/</span>
-            <span className="text-[10px] text-text-muted transition-colors group-hover:text-text-secondary">
+            <span className="hidden text-border-strong sm:inline">/</span>
+            <span className="hidden text-[10px] text-text-muted transition-colors group-hover:text-text-secondary sm:inline">
               EMPLOYEE_DOSSIER
             </span>
           </Link>
@@ -184,14 +184,15 @@ export default function GrowthPage() {
           </div>
         </div>
 
-        {/* Global Action Cluster */}
-        <div className="flex items-center gap-2">
+        {/* Global Action Cluster — see board/page.tsx's header for why
+            min-w-0 + overflow-x-auto here. */}
+        <div className="thin-scrollbar flex min-w-0 shrink-0 items-center gap-2 overflow-x-auto">
           {hasCareerCoach && (
             <button
               type="button"
               onClick={handleCareerCheckin}
               disabled={checkingIn}
-              className="inline-flex h-8 items-center gap-1.5 rounded border border-border bg-bg-base px-3 font-mono text-xs text-text-secondary transition-colors hover:border-border-strong hover:bg-bg-surface hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded border border-border bg-bg-base px-3 font-mono text-xs text-text-secondary transition-colors hover:border-border-strong hover:bg-bg-surface hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Compass className="h-3.5 w-3.5 text-accent-ink" />
               <span>
@@ -206,7 +207,7 @@ export default function GrowthPage() {
             type="button"
             onClick={handleAskHr}
             disabled={rollingUp}
-            className="inline-flex h-8 items-center gap-1.5 rounded border border-accent bg-accent px-3.5 font-mono text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded border border-accent bg-accent px-3.5 font-mono text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RefreshCw
               className={`h-3 w-3 ${rollingUp ? "animate-spin" : ""}`}
@@ -216,10 +217,12 @@ export default function GrowthPage() {
             </span>
           </button>
 
-          <div className="mx-1 h-4 border-s border-border" />
+          <div className="mx-1 h-4 shrink-0 border-s border-border" />
 
-          <LocaleToggle className="bg-bg-base" />
-          <ThemeToggle className="bg-bg-base" />
+          <div className="flex shrink-0 items-center gap-2">
+            <LocaleToggle className="bg-bg-base" />
+            <ThemeToggle className="bg-bg-base" />
+          </div>
         </div>
       </header>
 
