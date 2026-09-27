@@ -230,7 +230,7 @@ def run_roundtable(db: Session, user: User, task: Task) -> list[TaskMessage]:
         if not text:
             continue
         posted.append(_post(db, task, agent_type, text))
-        name = PERSONA[agent_type].split(" at Venv")[0].replace("You are the ", "")
+        name = PERSONA[agent_type].split(" at KHUTA")[0].replace("You are the ", "")
         transcript.append(f"{name}:\n{text}")
 
     if posted:

@@ -76,10 +76,6 @@ export default function CompanyStudentDetailPage() {
             <span className="shrink-0">{t("common.venv")}</span>
             <span className="hidden shrink-0 text-border-strong sm:inline">/</span>
             <span className="hidden shrink-0 sm:inline">{t("company.studentsTitle")}</span>
-            <span className="hidden shrink-0 text-border-strong sm:inline">/</span>
-            <span className="hidden text-[10px] text-text-muted transition-colors group-hover:text-text-secondary sm:inline">
-              STUDENT_REPORT
-            </span>
           </Link>
 
           <div className="hidden items-center gap-2 border-s border-border ps-4 sm:flex">

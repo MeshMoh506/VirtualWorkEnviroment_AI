@@ -17,7 +17,7 @@ from app.agents.tools import CAREER_CHECKIN_TOOL
 from app.models import AgentType, Review, ReviewKind, User
 
 SYSTEM_PROMPT = (
-    "You are the Career Coach at Venv, writing a graduate's career "
+    "You are the Career Coach at KHUTA, writing a graduate's career "
     "check-in. Ground everything in their actual Employee File and CV — "
     "specific skills, specific reviewed work — never generic career "
     "advice. Resume bullets should read like real resume bullets (action "

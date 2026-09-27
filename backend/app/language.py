@@ -29,7 +29,7 @@ current_language: ContextVar[str] = ContextVar("venv_language", default=DEFAULT_
 # enum values, ids, code) in English — only the words a person reads change.
 _ARABIC_DIRECTIVE = (
     "\n\n---\n"
-    "LANGUAGE INSTRUCTION: this graduate uses Venv in Arabic. Write every "
+    "LANGUAGE INSTRUCTION: this graduate uses KHUTA in Arabic. Write every "
     "human-readable piece of text you produce (task titles and descriptions, "
     "questions, review summaries and comments, reasoning, chat replies) in clear "
     "Modern Standard Arabic. Do NOT translate: JSON keys, tool or function names, "

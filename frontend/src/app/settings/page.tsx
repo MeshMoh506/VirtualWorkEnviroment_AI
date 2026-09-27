@@ -23,7 +23,7 @@ import { LocaleToggle } from "@/components/locale-toggle";
 
 // The settings page: the usual things a person expects to control on any
 // site (their name, password, language, theme) plus the one thing
-// specific to Venv — updating the CV that feeds the Manager's planning.
+// specific to KHUTA — updating the CV that feeds the Manager's planning.
 // Kept as three independent forms (profile / password / preferences) so
 // one save never risks the others: renaming yourself shouldn't require
 // re-typing a password, and vice versa.
@@ -126,11 +126,7 @@ export default function SettingsPage() {
             className="group flex shrink-0 items-center gap-2 font-mono text-xs text-text-muted transition-colors hover:text-text-primary"
           >
             <BackArrow className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 rtl:group-hover:translate-x-0.5" />
-            <span>{t("nav.venvBoard")}</span>
-            <span className="hidden text-border-strong sm:inline">/</span>
-            <span className="hidden text-[10px] text-text-muted transition-colors group-hover:text-text-secondary sm:inline">
-              SYSTEM_PREFERENCES
-            </span>
+            <span className="shrink-0">{t("nav.venvBoard")}</span>
           </Link>
 
           <div className="hidden items-center gap-2 border-s border-border ps-4 sm:flex">

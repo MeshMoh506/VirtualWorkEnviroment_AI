@@ -13,7 +13,7 @@ import { ThemeProvider } from "@/lib/theme";
 import { LocaleProvider } from "@/lib/i18n/locale";
 
 export const metadata: Metadata = {
-  title: "Venv — Virtual Work Environment",
+  title: "KHUTA — Virtual Work Environment",
   description:
     "A simulated workplace for recent graduates: a Manager assigns tasks, a Mentor reviews the work, HR tracks growth.",
 };
