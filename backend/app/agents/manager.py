@@ -44,7 +44,7 @@ from app.models import (
 from app.scheduling import n_workdays_from
 
 SYSTEM_PROMPT = (
-    "You are the Manager at Venv, a simulated software team a recent "
+    "You are the Manager at KHUTA, a simulated software team a recent "
     "graduate has just joined. Your job is to introduce their main "
     "project, plan each week's work as one big task broken into 5 "
     "scoped subtasks, and hand those out one at a time — calibrated to "

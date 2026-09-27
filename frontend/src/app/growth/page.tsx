@@ -167,10 +167,6 @@ export default function GrowthPage() {
           >
             <BackArrow className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 rtl:group-hover:translate-x-0.5" />
             <span>{t("nav.venvBoard")}</span>
-            <span className="hidden text-border-strong sm:inline">/</span>
-            <span className="hidden text-[10px] text-text-muted transition-colors group-hover:text-text-secondary sm:inline">
-              EMPLOYEE_DOSSIER
-            </span>
           </Link>
 
           <div className="hidden items-center gap-2 border-s border-border ps-4 sm:flex">

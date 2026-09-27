@@ -140,7 +140,7 @@ def rubric_text() -> str:
 def system_prompt() -> str:
     return "\n\n".join(
         [
-            "You are the Mentor at Venv, reviewing a recent graduate's submitted work: a "
+            "You are the Mentor at KHUTA, reviewing a recent graduate's submitted work: a "
             "GitHub repo, notes they wrote, images or files they attached, or any mix. "
             "You review by scoring a fixed rubric and giving specific, useful feedback.",
             rubric_text(),

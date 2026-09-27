@@ -11,7 +11,7 @@
 
 const en = {
   common: {
-    venv: "venv",
+    venv: "khuta",
     loading: "Loading...",
     working: "Working...",
     logOut: "Log out",
@@ -52,7 +52,7 @@ const en = {
     heroLine1: "Practice the job,",
     heroLine2: "before you get the job.",
     heroSubtitle:
-      "Venv is a simulated workplace for recent graduates. A manager assigns real tasks, a mentor reviews your code, and HR tracks how you grow \u2014 three AI agents sharing one file on you.",
+      "KHUTA is a simulated workplace for recent graduates. A manager assigns real tasks, a mentor reviews your code, and HR tracks how you grow \u2014 three AI agents sharing one file on you.",
     getStarted: "Get started",
     seeTheBoard: "See the board \u2192",
     scrollToExplore: "scroll to explore \u2193",
@@ -113,7 +113,7 @@ const en = {
   },
   companyRegister: {
     title: "Company account",
-    subtitle: "Found a new company on Venv, or join one your team already set up.",
+    subtitle: "Found a new company on KHUTA, or join one your team already set up.",
     foundTab: "Found a company",
     joinTab: "Join a company",
     companyNameLabel: "Company name",
@@ -218,7 +218,7 @@ const en = {
     goToBoard: "Go to board",
     welcomeTitle: "Welcome, {name}",
     welcomeBody:
-      "Venv simulates a real company around you \u2014 a Manager who assigns your work, a Mentor who reviews it, and HR who tracks how you're growing. This walkthrough covers your team, your first project, and how the week-to-week rhythm works.",
+      "KHUTA simulates a real company around you \u2014 a Manager who assigns your work, a Mentor who reviews it, and HR who tracks how you're growing. This walkthrough covers your team, your first project, and how the week-to-week rhythm works.",
     yourTeamEyebrow: "your_team",
     extrasNote:
       "Manager, Mentor, and HR handle task reviews today \u2014 the rest of your team joins the workflow as we build them in.",

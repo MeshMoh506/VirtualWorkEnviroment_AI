@@ -27,13 +27,13 @@ def _invitation_message(
     *, to_email: str, company_name: str, job_title: str, project_title: str | None, accept_url: str
 ) -> EmailMessage:
     msg = EmailMessage()
-    msg["Subject"] = f"{company_name} invited you to work under their account on Venv"
+    msg["Subject"] = f"{company_name} invited you to work under their account on KHUTA"
     msg["From"] = settings.smtp_from_email
     msg["To"] = to_email
 
-    what = f'the "{project_title}" project' if project_title else "the ordinary Venv track"
+    what = f'the "{project_title}" project' if project_title else "the ordinary KHUTA track"
     msg.set_content(
-        f"{company_name} has invited you to work under their account on Venv, "
+        f"{company_name} has invited you to work under their account on KHUTA, "
         f"as a {job_title}, on {what}.\n\n"
         f"See the full details and respond here:\n{accept_url}\n\n"
         f"You'll be shown exactly what {company_name} will — and won't — be able "
@@ -43,7 +43,7 @@ def _invitation_message(
         f"""\
 <html><body style="font-family: -apple-system, sans-serif; color: #1a1a1a; line-height: 1.5;">
   <p><strong>{company_name}</strong> has invited you to work under their account
-  on Venv, as a <strong>{job_title}</strong>, on {what}.</p>
+  on KHUTA, as a <strong>{job_title}</strong>, on {what}.</p>
   <p>
     <a href="{accept_url}"
        style="display:inline-block; padding:10px 18px; background:#0f766e;

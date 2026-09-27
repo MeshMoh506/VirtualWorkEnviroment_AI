@@ -4,7 +4,7 @@ to turn "5 workdays starting now" into concrete deadlines for a Week and
 its subtasks — see docs/STAGE1_PRODUCT_FLOW.md and Week/Task in models.py.
 
 Friday and Saturday are the weekend here, not the Western Saturday/Sunday —
-this matters because Venv is for Saudi graduates (Project-Summary.md).
+this matters because KHUTA is for Saudi graduates (Project-Summary.md).
 """
 from datetime import datetime, timedelta
 

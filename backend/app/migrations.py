@@ -89,7 +89,7 @@ def legacy_schema_problems(connection: Connection) -> list[str]:
 def _legacy_help(problems: list[str], url: str) -> str:
     listing = "\n".join(f"  - {p}" for p in problems)
     return (
-        "This database was created before Venv used migrations, and it is out of date:\n"
+        "This database was created before KHUTA used migrations, and it is out of date:\n"
         f"{listing}\n\n"
         "Fix it once, then restart:\n"
         "  * Local SQLite dev database: delete the file (it is disposable) and start the app —\n"

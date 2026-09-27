@@ -179,11 +179,7 @@ export default function MeetingPage() {
             className="group flex shrink-0 items-center gap-2 font-mono text-xs text-text-muted transition-colors hover:text-text-primary"
           >
             <BackArrow className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 rtl:group-hover:translate-x-0.5" />
-            <span>{t("nav.venvBoard")}</span>
-            <span className="hidden text-border-strong sm:inline">/</span>
-            <span className="hidden text-[10px] text-text-muted transition-colors group-hover:text-text-secondary sm:inline">
-              MEETING_CONSOLE
-            </span>
+            <span className="shrink-0">{t("nav.venvBoard")}</span>
           </Link>
 
           <div className="hidden items-center gap-2 border-s border-border ps-4 sm:flex">

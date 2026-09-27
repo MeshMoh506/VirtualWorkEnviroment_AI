@@ -147,7 +147,7 @@ class InvitationStatus(str, enum.Enum):
 
 # ---------------------------------------------------------------------------
 # Organization — not used in Stage 1, exists now so Stage 3 (companies build
-# their own Venvs) is additive instead of a schema rewrite. Every core table
+# their own KHUTAs) is additive instead of a schema rewrite. Every core table
 # below carries a nullable organization_id for the same reason.
 # ---------------------------------------------------------------------------
 

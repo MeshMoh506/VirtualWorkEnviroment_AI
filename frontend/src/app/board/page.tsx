@@ -110,10 +110,6 @@ export default function BoardPage() {
             <span className="font-semibold text-text-primary">
               {t("common.venv")}
             </span>
-            <span className="hidden text-border-strong sm:inline">/</span>
-            <span className="hidden text-[10px] text-text-muted transition-colors group-hover:text-text-secondary sm:inline">
-              ENGINEERING_FLOOR
-            </span>
           </Link>
 
           <div className="hidden items-center gap-2 border-s border-border ps-4 sm:flex">

@@ -164,7 +164,7 @@ def generate_questions(state: OnboardingState) -> dict:
         [
             SystemMessage(
                 with_language(
-                    "You are Venv's onboarding agent. Look at this graduate's "
+                    "You are KHUTA's onboarding agent. Look at this graduate's "
                     "CV and propose a short, skippable set of follow-up "
                     "questions about whatever it doesn't cover well."
                 )

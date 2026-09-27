@@ -9,7 +9,7 @@ from app.language import LanguageMiddleware
 from app.migrations import upgrade_database
 from app.routers import agents, auth, company, invitations, meeting, onboarding, projects, tasks, users
 
-app = FastAPI(title="Venv API", version="0.1.0")
+app = FastAPI(title="KHUTA API", version="0.1.0")
 
 # Reads X-Venv-Language so every agent call answers in the graduate's language
 # (app/language.py, docs/AGENT_LANGUAGE.md).

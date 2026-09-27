@@ -9,7 +9,7 @@ CREATE_PROJECT_TOOL = {
     "name": "create_project",
     "description": (
         "Introduce the graduate to the main project they'll be working on "
-        "throughout their time at Venv, calibrated to their CV/skills. "
+        "throughout their time at KHUTA, calibrated to their CV/skills. "
         "Called once per graduate, at their very first task."
     ),
     "input_schema": {
