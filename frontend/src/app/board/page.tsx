@@ -101,8 +101,8 @@ export default function BoardPage() {
   return (
     <main className="grid h-dvh grid-rows-[auto_1fr] bg-bg-base text-text-primary selection:bg-accent selection:text-accent-text">
       {/* Top Architecture Bar */}
-      <header className="z-20 flex h-14 items-center justify-between border-b border-border bg-bg-surface/90 px-6 backdrop-blur-md">
-        <div className="flex items-center gap-4">
+      <header className="z-20 flex h-14 items-center justify-between gap-2 border-b border-border bg-bg-surface/90 px-4 backdrop-blur-md sm:px-6">
+        <div className="flex shrink-0 items-center gap-4">
           <Link
             href="/"
             className="group flex items-center gap-2 font-mono text-xs text-text-muted transition-colors hover:text-text-primary"
@@ -110,8 +110,8 @@ export default function BoardPage() {
             <span className="font-semibold text-text-primary">
               {t("common.venv")}
             </span>
-            <span className="text-border-strong">/</span>
-            <span className="text-[10px] text-text-muted transition-colors group-hover:text-text-secondary">
+            <span className="hidden text-border-strong sm:inline">/</span>
+            <span className="hidden text-[10px] text-text-muted transition-colors group-hover:text-text-secondary sm:inline">
               ENGINEERING_FLOOR
             </span>
           </Link>
@@ -124,28 +124,31 @@ export default function BoardPage() {
           </div>
         </div>
 
-        {/* Global Action Cluster */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
+        {/* Global Action Cluster — scrolls within itself on a narrow
+            screen rather than ever breaking the page's own layout;
+            min-w-0 is required on a flex child for overflow-x-auto to
+            actually take effect instead of just stretching the header. */}
+        <div className="thin-scrollbar flex min-w-0 items-center gap-2 overflow-x-auto">
+          <div className="flex shrink-0 items-center gap-2">
             <Link
               href="/workspace"
-              className="inline-flex h-8 items-center gap-1.5 rounded border border-accent bg-accent px-3.5 font-mono text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong"
+              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded border border-accent bg-accent px-3.5 font-mono text-xs font-medium text-accent-text transition-colors hover:bg-accent-strong"
             >
               <span>{t("nav.workspace")}</span>
               <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
             <Link
               href="/meeting"
-              className="inline-flex h-8 items-center rounded border border-border bg-bg-base px-3 font-mono text-xs text-text-secondary transition-colors hover:border-border-strong hover:bg-bg-surface hover:text-text-primary"
+              className="inline-flex h-8 shrink-0 items-center rounded border border-border bg-bg-base px-3 font-mono text-xs text-text-secondary transition-colors hover:border-border-strong hover:bg-bg-surface hover:text-text-primary"
             >
               {t("nav.meetingRoom")}
             </Link>
           </div>
 
-          <div className="mx-1 h-4 border-s border-border" />
+          <div className="mx-1 h-4 shrink-0 border-s border-border" />
 
           {/* System Utility Cluster */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5">
             <IconLink href="/orientation" label={t("nav.howItWorks")}>
               <Compass className="h-3.5 w-3.5" strokeWidth={1.75} />
             </IconLink>
@@ -161,11 +164,13 @@ export default function BoardPage() {
             </IconLink>
           </div>
 
-          <div className="mx-1 h-4 border-s border-border" />
+          <div className="mx-1 h-4 shrink-0 border-s border-border" />
 
-          <AccountMenu email={user.email} />
-          <LocaleToggle className="bg-bg-base" />
-          <ThemeToggle className="bg-bg-base" />
+          <div className="flex shrink-0 items-center gap-2">
+            <AccountMenu email={user.email} />
+            <LocaleToggle className="bg-bg-base" />
+            <ThemeToggle className="bg-bg-base" />
+          </div>
         </div>
       </header>
 

@@ -104,17 +104,17 @@ export default function CompanyDashboardPage() {
   return (
     <main className="grid h-dvh grid-rows-[auto_1fr] bg-bg-base text-text-primary selection:bg-accent selection:text-accent-text">
       {/* Top Architecture Navigation Bar */}
-      <header className="z-20 flex h-14 items-center justify-between border-b border-border bg-bg-surface/90 px-6 backdrop-blur-md">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 font-mono text-xs text-text-muted">
-            <Building2 className="h-3.5 w-3.5 text-accent-ink" />
-            <span className="font-semibold text-text-primary">
+      <header className="z-20 flex h-14 items-center justify-between gap-2 border-b border-border bg-bg-surface/90 px-4 backdrop-blur-md sm:px-6">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex min-w-0 items-center gap-2 truncate font-mono text-xs text-text-muted">
+            <Building2 className="h-3.5 w-3.5 shrink-0 text-accent-ink" />
+            <span className="shrink-0 font-semibold text-text-primary">
               {t("common.venv")}
             </span>
-            <span className="text-border-strong">/</span>
-            <span>{t("company.nav")}</span>
-            <span className="text-border-strong">/</span>
-            <span className="text-[10px] text-text-muted">{org?.name}</span>
+            <span className="hidden shrink-0 text-border-strong sm:inline">/</span>
+            <span className="hidden shrink-0 sm:inline">{t("company.nav")}</span>
+            <span className="hidden shrink-0 text-border-strong sm:inline">/</span>
+            <span className="truncate text-[10px] text-text-muted">{org?.name}</span>
           </div>
 
           <div className="hidden items-center gap-2 border-s border-border ps-4 sm:flex">
@@ -125,21 +125,24 @@ export default function CompanyDashboardPage() {
           </div>
         </div>
 
-        {/* Global Toolbar */}
-        <div className="flex items-center gap-3">
+        {/* Global Toolbar — see board/page.tsx's header for why
+            min-w-0 + overflow-x-auto here. */}
+        <div className="thin-scrollbar flex min-w-0 shrink-0 items-center gap-3 overflow-x-auto">
           <Link
             href="/company/students"
-            className="inline-flex h-8 items-center gap-1.5 rounded border border-border bg-bg-base px-3 font-mono text-xs text-text-secondary transition-colors hover:border-border-strong hover:bg-bg-surface hover:text-text-primary"
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded border border-border bg-bg-base px-3 font-mono text-xs text-text-secondary transition-colors hover:border-border-strong hover:bg-bg-surface hover:text-text-primary"
           >
             <Users className="h-3.5 w-3.5" />
             <span>{t("company.studentsTitle")}</span>
           </Link>
 
-          <div className="mx-1 h-4 border-s border-border" />
+          <div className="mx-1 h-4 shrink-0 border-s border-border" />
 
-          <AccountMenu email={user.email} />
-          <LocaleToggle className="bg-bg-base" />
-          <ThemeToggle className="bg-bg-base" />
+          <div className="flex shrink-0 items-center gap-2">
+            <AccountMenu email={user.email} />
+            <LocaleToggle className="bg-bg-base" />
+            <ThemeToggle className="bg-bg-base" />
+          </div>
         </div>
       </header>
 

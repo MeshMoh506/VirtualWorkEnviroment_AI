@@ -172,16 +172,16 @@ export default function MeetingPage() {
   return (
     <main className="grid h-dvh grid-rows-[auto_1fr] bg-bg-base text-text-primary selection:bg-accent selection:text-accent-text">
       {/* Top Engineering Header Bar */}
-      <header className="z-20 flex h-14 items-center justify-between border-b border-border bg-bg-surface/90 px-6 backdrop-blur-md">
-        <div className="flex items-center gap-4">
+      <header className="z-20 flex h-14 items-center justify-between gap-2 border-b border-border bg-bg-surface/90 px-4 backdrop-blur-md sm:px-6">
+        <div className="flex min-w-0 shrink items-center gap-4">
           <Link
             href="/board"
-            className="group flex items-center gap-2 font-mono text-xs text-text-muted transition-colors hover:text-text-primary"
+            className="group flex shrink-0 items-center gap-2 font-mono text-xs text-text-muted transition-colors hover:text-text-primary"
           >
             <BackArrow className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 rtl:group-hover:translate-x-0.5" />
             <span>{t("nav.venvBoard")}</span>
-            <span className="text-border-strong">/</span>
-            <span className="text-[10px] text-text-muted transition-colors group-hover:text-text-secondary">
+            <span className="hidden text-border-strong sm:inline">/</span>
+            <span className="hidden text-[10px] text-text-muted transition-colors group-hover:text-text-secondary sm:inline">
               MEETING_CONSOLE
             </span>
           </Link>
@@ -194,11 +194,12 @@ export default function MeetingPage() {
           </div>
         </div>
 
-        {/* Global Toolbar */}
-        <div className="flex items-center gap-2">
+        {/* Global Toolbar — see board/page.tsx's header for why
+            min-w-0 + overflow-x-auto here. */}
+        <div className="thin-scrollbar flex min-w-0 shrink-0 items-center gap-2 overflow-x-auto">
           <Link
             href="/workspace"
-            className="inline-flex h-8 items-center gap-1.5 rounded border border-border bg-bg-base px-3 font-mono text-xs text-text-secondary transition-colors hover:border-border-strong hover:bg-bg-surface hover:text-text-primary"
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded border border-border bg-bg-base px-3 font-mono text-xs text-text-secondary transition-colors hover:border-border-strong hover:bg-bg-surface hover:text-text-primary"
           >
             <Briefcase className="h-3.5 w-3.5" />
             <span>{t("nav.workspace")}</span>
@@ -208,11 +209,13 @@ export default function MeetingPage() {
             <Terminal className="h-3.5 w-3.5" strokeWidth={1.75} />
           </IconLink>
 
-          <div className="mx-1 h-4 border-s border-border" />
+          <div className="mx-1 h-4 shrink-0 border-s border-border" />
 
-          <AccountMenu email={user.email} />
-          <LocaleToggle className="bg-bg-base" />
-          <ThemeToggle className="bg-bg-base" />
+          <div className="flex shrink-0 items-center gap-2">
+            <AccountMenu email={user.email} />
+            <LocaleToggle className="bg-bg-base" />
+            <ThemeToggle className="bg-bg-base" />
+          </div>
         </div>
       </header>
 
