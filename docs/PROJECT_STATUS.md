@@ -42,7 +42,14 @@ a full ten-agent roster._
 > (`docs/CV_VALIDATION.md`) — uploading any readable file as a "CV" (an
 > invoice, an essay, anything) used to be silently accepted; a wrong upload
 > is now genuinely rejected at all three CV-intake points, judged by a real
-> model rather than a fragile heuristic. **38 smoke suites, 970 checks, all
+> model rather than a fragile heuristic. Most recently: **a full lifecycle
+> test** (`docs/FULL_LIFECYCLE.md`) — one continuous story through nearly
+> the whole system (a company invites a graduate, she onboards, accepts,
+> works a real week including a needs_changes/resubmit cycle, the week
+> ends, HR and the Career Coach both produce real output, and her own
+> transparency view is checked byte-for-byte against the company's after
+> a full month of real history), crossing **1,000 checks** for the first
+> time. **39 smoke suites, 1,022 checks, all
 > passing** — genuinely **confirmed on a
 > real PostgreSQL 16 instance** through the Stage 3 pass, not just SQLite: doing so
 > surfaced and fixed two real deploy-breaking migration bugs that SQLite's lack of enum
@@ -303,12 +310,23 @@ the roundtable's real-conversation claim, Mentor's vision path) and
 notes one piece of housekeeping (`co_reviewers.py` is dead code, not an
 active fallback) found but out of scope to act on this pass.
 
-**CV content validation** (most recent): `CV_VALIDATION.md` — a real
+**CV content validation**: `CV_VALIDATION.md` — a real
 reported bug fixed: uploading any readable file as a "CV" used to be
 silently accepted (nothing checked the content, only that some text
 came out of the file). Now judged by a real model at all three CV-intake
 points, with the fix and testing story for what it took to update seven
 pre-existing tests that had CV upload mocked for a single LLM call.
+
+**Full lifecycle test** (most recent): `FULL_LIFECYCLE.md` — one
+continuous story through nearly the whole system (a company invites a
+graduate, she onboards, accepts with real consent, works a real week
+including a needs_changes/resubmit cycle and a real roundtable, the
+week ends via the real cascade, HR and the Career Coach both produce
+real output, and her own transparency view is checked byte-for-byte
+against the company's after a full month of real history) — crossed
+1,000 checks for the first time, plus a real near-miss caught before it
+became a real bug (an early draft would have triggered the end-of-week
+cascade twice against the real API if left as originally written).
 
 **Frontend-only work with no dedicated doc** (orientation rework, Arabic i18n,
 light mode — built in a separate pass, documented only in their own PR/commit
@@ -544,6 +562,7 @@ python smoke_test_student_visibility.py        # student's own view matches the 
 python smoke_test_ten_agents.py                # catalog, Meeting/task-chat/roundtable eligibility, full career-checkin lifecycle (20)
 python smoke_test_agent_read_write.py          # deep read/write audit: real context in, exact HR figures, real roundtable conversation (24)
 python smoke_test_cv_validation.py             # real bug fix: a non-CV upload genuinely refused at all 3 intake points (16)
+python smoke_test_full_lifecycle.py            # one continuous story end to end: invite -> onboard -> a real week -> HR/Career Coach -> byte-for-byte transparency (52)
 ```
 
 If the LLM key is missing, wrong, or out of credit, agent endpoints return a
